@@ -475,13 +475,8 @@ export interface DexCoverageWaiver {
  * and `uusd-youves`/tezos when the TzKT census was; keeping them would publish
  * "no provider supports this chain" beside a census row naming one.
  */
-// Reviewed 2026-10-06; Secret remains outside the discovery-provider registry.
 // `usdr-rise`/rise was removed when CoinGecko onchain/GeckoTerminal registered RISE.
-const EXCLUSIVE_UNSUPPORTED_STABLECOINS = [
-  ["silk-shade-protocol", "secret"],
-] as const;
-
-const COVERAGE_WAIVER_EXPIRY_SEC = Date.UTC(2026, 9, 31) / 1000;
+// `silk-shade-protocol`/secret was retired after its 2026-10-31 expiry: the coin froze on 2026-10-15.
 export const DEX_UNSUPPORTED_CHAIN_WAIVER_REASON = "No registered token-pool provider supports the coin's only deployment chain";
 
 /**
@@ -490,15 +485,7 @@ export const DEX_UNSUPPORTED_CHAIN_WAIVER_REASON = "No registered token-pool pro
  * observations into verified no-pool results; they keep the inaccessible
  * classification explicit while an adapter or provider mapping is evaluated.
  */
-export const DEX_COVERAGE_WAIVERS: readonly DexCoverageWaiver[] = EXCLUSIVE_UNSUPPORTED_STABLECOINS.map(
-  ([stablecoinId, chain]) => ({
-    stablecoinId,
-    chain,
-    owner: "data-platform",
-    reason: DEX_UNSUPPORTED_CHAIN_WAIVER_REASON,
-    expiresAt: COVERAGE_WAIVER_EXPIRY_SEC,
-  }),
-);
+export const DEX_COVERAGE_WAIVERS: readonly DexCoverageWaiver[] = [];
 
 /** Providers whose single completed response certifies the scope on its own. */
 export const DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS: Readonly<Record<DexDiscoveryProvider, boolean>> =

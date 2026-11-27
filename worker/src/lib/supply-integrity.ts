@@ -36,43 +36,16 @@ const REVIEWED_REBASELINE_TOLERANCE = 0.02;
  * accepted level: it is not a fresh finding and its held baseline is dropped.
  * Any other value, or an expired review, keeps the ordinary 0.5-2x band.
  */
-export const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
+export interface ReviewedSupplyValueRebaseline {
   stablecoinId: string;
   baselineUsd: number;
   reviewedAt: number;
   expiresAt: number;
   evidenceUrls: readonly string[];
   reason: string;
-}[] = [
-  {
-    stablecoinId: "ethenausdc-steakhouse",
-    baselineUsd: 4_536_003.46,
-    reviewedAt: Date.parse("2026-11-23T12:54:00Z") / 1000,
-    expiresAt: Date.parse("2026-11-30T12:54:00Z") / 1000,
-    evidenceUrls: [
-      "https://basescan.org/tx/0x51de1f7069a1ab8851987e0a3512a2ac56d986315b459616b98e7f887b571f89",
-      "https://basescan.org/tx/0x2325bae2c0aaadd0e103ca19425561f2625baa671a57d5d2de0e5bbc9941c661",
-      "https://basescan.org/tx/0xd6be34b871410ca1e232775a70af2a9797d5b76d68e8bacf7128e05dea5cfc24",
-      "https://basescan.org/tx/0xe9b421e6852d0a7240f01938bc47c69f912bb9eb36c4e73d142f57bea49cebef",
-      "https://basescan.org/token/0xbeeff0be997cca5b1c13a7433c2004637975739e",
-    ],
-    reason: "Re-read 2026-11-23 12:54 UTC, replacing the 2026-11-19 review at $44.95M: Base totalSupply() fell from 44,226,825.51 shares at block 59628829 to 4,463,325.12 at finalized block 61235574 (unchanged at latest block 61240543) through four allocator redemptions totaling 39.74M shares: 9,838,693.66 at 2026-11-20 17:17:12 UTC, 1,463,881.15 at 2026-11-21 13:19:42 UTC, 14,668,323.28 at 2026-11-21 13:21:39 UTC and 13,771,736.55 at 2026-11-22 11:29:45 UTC. convertToAssets(1e18) is 1.016680 USDC ($4.54M), matching the 12:45 UTC publication of $4,536,003.46. The 0.10x held finding against the pre-rollover ~$45M baseline is a real contraction.",
-  },
-  {
-    stablecoinId: "sparkusdc-spark",
-    baselineUsd: 3_574_943.02,
-    reviewedAt: Date.parse("2026-11-23T12:54:00Z") / 1000,
-    expiresAt: Date.parse("2026-11-30T12:54:00Z") / 1000,
-    evidenceUrls: [
-      "https://basescan.org/tx/0x2902b6ffd1d35a9f499eb1309f67fb97abd0a0bd632384cae08c395897ef039e",
-      "https://basescan.org/tx/0xc5b6ff077390d212283f2dc2f94db8bab4f47b5ee94e93e5c86866b038cdeed9",
-      "https://basescan.org/tx/0xb3530eddbefc5dc21189190c59ff7c6cb6c7d0781271292197b6b8f8365864b2",
-      "https://basescan.org/tx/0x7a85586f599a79678080942f7d771f9215a06bfa2551d391d7045ed0cc30cc75",
-      "https://basescan.org/token/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
-    ],
-    reason: "Re-read 2026-11-23 12:54 UTC, replacing the 2026-11-19 review at $164.42M: Base totalSupply() fell from 151,287,063.44 shares at block 59626522 to 3,287,725.39 at finalized block 61235574 (3,287,725.52 at latest block 61240544) through net redemptions (182.12M burned vs 34.12M minted), led by three allocator burns on 2026-11-22 (44,148,187.82 shares at 00:10:02 UTC, 1,983,324.93 at 00:43:27 and 85,886,876.70 at 01:10:17) and a 621,816.44-share burn on 2026-11-23 03:35:32 UTC. convertToAssets(1e18) is 1.087781 USDC ($3.58M), matching the 12:45 UTC publication of $3,574,943.02. The 0.02x held finding against the pre-rollover ~$164M baseline is a real contraction.",
-  },
-];
+}
+
+export const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly ReviewedSupplyValueRebaseline[] = [];
 
 export interface ReviewedSupplyCarry {
   stablecoinId: string;
@@ -111,8 +84,13 @@ function carryMatchesReview(
       ? "coingecko-fallback" : "onchain-total-supply");
 }
 
-function isReviewedValueRebaseline(stablecoinId: string, currentUsd: number, nowSec: number): boolean {
-  return REVIEWED_SUPPLY_VALUE_REBASELINES.some((review) =>
+function isReviewedValueRebaseline(
+  stablecoinId: string,
+  currentUsd: number,
+  nowSec: number,
+  rebaselines: readonly ReviewedSupplyValueRebaseline[],
+): boolean {
+  return rebaselines.some((review) =>
     review.stablecoinId === stablecoinId
     && nowSec >= review.reviewedAt
     && nowSec <= review.expiresAt
@@ -345,6 +323,7 @@ function unknownSnapshotIntegrity(reason: string, expectedDate: number, due: boo
 async function loadSupplyValueIntegrity(
   db: D1Database,
   nowSec: number,
+  rebaselines: readonly ReviewedSupplyValueRebaseline[],
 ): Promise<SupplyValueIntegrityReport> {
   const cache = await loadStablecoinsCache(db, { mode: "lenient" });
   if (!hasUsableStablecoinsPayload(cache)) {
@@ -463,7 +442,7 @@ async function loadSupplyValueIntegrity(
     const ratio = currentUsd / previousUsd;
     if ((ratio < STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioFloor
       || ratio > STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioCeiling)
-      && !isReviewedValueRebaseline(asset.id, currentUsd, nowSec)) {
+      && !isReviewedValueRebaseline(asset.id, currentUsd, nowSec, rebaselines)) {
       driftFindings.push({ stablecoinId: asset.id, currentUsd, previousUsd, ratio });
     }
   }
@@ -494,7 +473,7 @@ async function loadSupplyValueIntegrity(
       }
       // A reviewed real move supersedes the pre-move baseline: the observed
       // level is the accepted one, so no return to the old baseline is due.
-      if (isReviewedValueRebaseline(stablecoinId, currentUsd, nowSec)) continue;
+      if (isReviewedValueRebaseline(stablecoinId, currentUsd, nowSec, rebaselines)) continue;
       const ratio = currentUsd / baselineUsd;
       if (ratio < STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioFloor
         || ratio > STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioCeiling) {
@@ -708,6 +687,7 @@ async function loadSupplySnapshotIntegrity(
 
 export interface SupplyIntegrityReadOptions {
   signal?: AbortSignal;
+  rebaselines?: readonly ReviewedSupplyValueRebaseline[];
 }
 
 async function settle<T>(
@@ -736,7 +716,11 @@ export async function loadSupplyIntegrityReport(
     return fallback(reason);
   };
   const [value, availability, snapshot] = await Promise.all([
-    settle(() => loadSupplyValueIntegrity(db, nowSec), failed("value", unknownValueIntegrity), options.signal),
+    settle(
+      () => loadSupplyValueIntegrity(db, nowSec, options.rebaselines ?? REVIEWED_SUPPLY_VALUE_REBASELINES),
+      failed("value", unknownValueIntegrity),
+      options.signal,
+    ),
     settle(() => loadSupplyAvailabilityIntegrity(db, nowSec), failed("availability", unknownAvailabilityIntegrity), options.signal),
     settle(
       () => loadSupplySnapshotIntegrity(db, nowSec),
