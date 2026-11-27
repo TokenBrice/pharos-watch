@@ -100,7 +100,7 @@ describe("useSelector", () => {
     useStablecoinsMock.mockReturnValue({ data: { peggedAssets: [] }, dataUpdatedAt: 1, error: null });
     const queries = makePickerQueryData();
     const names = ["usePegSummary", "useReportCardsV9Table", "useStressSignals", "useDexLiquidity",
-      "useYieldRankings", "useBluechipRatings", "useRedemptionBackstops"] as const;
+      "useYieldRankings", "useRedemptionBackstops"] as const;
     for (const name of names) {
       vi.mocked(apiHooks[name]).mockReturnValue(queries[name]() as never);
     }

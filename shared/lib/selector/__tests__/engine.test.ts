@@ -847,19 +847,13 @@ describe("runSelector — universal properties", () => {
     }
   });
 
-  it("preserves reachable bluechip missing-data policy", () => {
-    const base = buildFixtureData().rows.get("usds-sky");
-    expect(base).toBeDefined();
-    const row: MergedRow = {
-      ...base!,
-      bluechipGrade: null,
-    };
-
-    const yieldScore = scoreRow(row, "yield", makeInput({ profile: "yield" }));
-    const treasuryScore = scoreRow(row, "treasury", makeInput({ profile: "treasury" }));
-
-    expect(yieldScore?.components.some((component) => component.key === "bluechip")).toBe(false);
-    expect(treasuryScore?.components.find((component) => component.key === "bluechip")?.redistributed).toBe(true);
+  it("never allocates the retired bluechip slot", () => {
+    const row = buildFixtureData().rows.get("usds-sky");
+    expect(row).toBeDefined();
+    for (const profile of ["treasury", "yield", "trading"] as const) {
+      const scored = scoreRow(row!, profile, makeInput({ profile }));
+      expect(scored?.components.some((component) => component.key === "bluechip")).toBe(false);
+    }
   });
 
   it("uses a close substitute to reduce top-3 protocol concentration", () => {
@@ -1027,13 +1021,13 @@ describe("runSelector — universal properties", () => {
   });
 
   it.each([
-    { recent: false, events: 0, bluechip: "A" as const, confidence: 100, low: false },
-    { recent: true, events: 4, bluechip: null, confidence: 73, low: false },
-    { recent: true, events: 4, bluechip: null, confidence: 65, low: true, evidence: "insufficient" as const },
+    { recent: false, events: 0, confidence: 100, low: false },
+    { recent: true, events: 4, confidence: 78, low: false },
+    { recent: true, events: 4, confidence: 65, low: true, evidence: "insufficient" as const },
   ])("sets lowConfidence from controlled non-sparse confidence $confidence", (testCase) => {
     const row = makeMergedRowWithIdentity({ id: "confidence", symbol: "C", name: "Confidence" }, {
       isRecentListing: testCase.recent, depegEventCount: testCase.events,
-      bluechipGrade: testCase.bluechip, safetyEvidenceLevel: testCase.evidence,
+      safetyEvidenceLevel: testCase.evidence,
     });
     const out = runSelector(makeInput(), { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
     expect(out.recommended.map((rec) => rec.id)).toEqual(["confidence"]);

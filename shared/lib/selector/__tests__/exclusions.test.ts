@@ -191,13 +191,6 @@ describe("treasury exclusions", () => {
       ),
     ).toBeNull();
   });
-
-  it("bluechip-d-or-f: D excluded, null passes", () => {
-    expect(evaluateExclusions(makeRow({ bluechipGrade: "D" }), input)).toEqual(
-      expect.objectContaining({ reason: "bluechip-d-or-f" }),
-    );
-    expect(evaluateExclusions(makeRow({ bluechipGrade: null }), input)).toBeNull();
-  });
 });
 
 describe("yield exclusions", () => {

@@ -15,7 +15,6 @@ import { RANK_MARGIN_CROWDED, RANK_MARGIN_NARROW } from "./ranking";
 import {
   CRITICAL_SIGNAL_SET_BY_PROFILE,
   MISSING_CRITICAL_SCORE_CAP,
-  missingSlotRedistributes,
   normalizeSelectorComponentValue,
 } from "./scoring";
 import {
@@ -52,7 +51,8 @@ const CANONICAL_SOURCES_SCHEMA = SelectorCanonicalSourceEvidenceSchema.array().l
  * replaying against the current sets rather than falling through to the legacy
  * `v1.x` ones. Add a version here only when it shares the current component
  * contract; a version that re-bases weights or critical sets starts a new
- * generation and needs its own branch.
+ * generation and needs its own branch. The one exception is the Treasury
+ * vector before `selector-v2.16` (see {@link STORED_TREASURY_WEIGHT_ENGINE_VERSIONS}).
  */
 const CURRENT_GENERATION_ENGINE_VERSIONS = new Set<string>([
   "selector-v2.0",
@@ -70,11 +70,42 @@ const CURRENT_GENERATION_ENGINE_VERSIONS = new Set<string>([
   "selector-v2.12",
   "selector-v2.13",
   "selector-v2.14",
+  "selector-v2.15",
   SELECTOR_VERSION,
 ]);
 
 function isCurrentGenerationEngine(engineVersion: string): boolean {
   return CURRENT_GENERATION_ENGINE_VERSIONS.has(engineVersion);
+}
+
+/**
+ * `selector-v2.16` retired the Treasury `bluechip` slot and re-based the
+ * Treasury vector; critical sets and the Yield and Trading vectors did not
+ * change. Treasury snapshots from these versions carry the retired slot, so
+ * they replay with their stored weights instead of the current vector.
+ */
+const STORED_TREASURY_WEIGHT_ENGINE_VERSIONS = new Set<string>([
+  "selector-v2.0",
+  "selector-v2.1",
+  "selector-v2.2",
+  "selector-v2.3",
+  "selector-v2.4",
+  "selector-v2.5",
+  "selector-v2.6",
+  "selector-v2.7",
+  "selector-v2.8",
+  "selector-v2.9",
+  "selector-v2.10",
+  "selector-v2.11",
+  "selector-v2.12",
+  "selector-v2.13",
+  "selector-v2.14",
+  "selector-v2.15",
+]);
+
+function replaysWithCurrentVector(engineVersion: string, profile: SelectorProfile): boolean {
+  return isCurrentGenerationEngine(engineVersion)
+    && !(profile === "treasury" && STORED_TREASURY_WEIGHT_ENGINE_VERSIONS.has(engineVersion));
 }
 
 const KNOWN_MISSING_SIGNALS = new Set([
@@ -197,7 +228,7 @@ function projectCurrentComponents(
         rawValue: component.rawValue,
         normalizedValue: component.normalizedValue,
         contribution: 0,
-        redistributed: missingSlotRedistributes(input.profile, component.key),
+        redistributed: true,
       };
     }
     const weight = (component.baseWeight / totalPresentWeight) * 100;
@@ -288,7 +319,7 @@ function projectRecommendation(
   ) {
     return null;
   }
-  const components = isCurrentGenerationEngine(engineVersion)
+  const components = replaysWithCurrentVector(engineVersion, input.profile)
     ? projectCurrentComponents(input, recommendation.components)
     : projectLegacyComponents(recommendation.components);
   if (!components || hasDuplicates(recommendation.whyKeys)) return null;
@@ -319,7 +350,7 @@ function projectRecommendation(
       ? {}
       : { relaxedReason: recommendation.relaxedReason }),
     isRecentListing: recommendation.isRecentListing,
-    bluechipGrade: recommendation.bluechipGrade,
+    ...(recommendation.bluechipGrade === undefined ? {} : { bluechipGrade: recommendation.bluechipGrade }),
     safetyGrade: recommendation.safetyGrade,
     supplyUsd: recommendation.supplyUsd,
     isBeta: true as const,
@@ -488,7 +519,7 @@ function projectMethodologyVersions(
     safetyScore: versions.safetyScore,
     pegScoreAndDews: versions.pegScoreAndDews,
     yieldIntelligence: versions.yieldIntelligence,
-    bluechipAlignment: versions.bluechipAlignment,
+    ...(versions.bluechipAlignment === undefined ? {} : { bluechipAlignment: versions.bluechipAlignment }),
     exclusionFilters: engineVersion,
   };
 }

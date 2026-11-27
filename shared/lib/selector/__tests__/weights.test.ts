@@ -26,7 +26,7 @@ describe("weights", () => {
     // These numbers are the public screener's ranking parameters: nothing else
     // pins them, and an edit that still sums to 100 would move rankings silently.
     expect(WEIGHT_VECTORS).toEqual({
-      treasury: { safetyOverall: 55, pegStabilityHistory: 22, dewsInverted: 13, bluechip: 10 },
+      treasury: { safetyOverall: 61, pegStabilityHistory: 24, dewsInverted: 15 },
       yield: {
         pharosYieldScore: 28,
         safetyOverall: 19,
@@ -117,7 +117,6 @@ describe("weights", () => {
     expect(activeByComposability.dewsInverted ?? 0).toBeGreaterThan(
       WEIGHT_VECTORS.treasury.dewsInverted ?? 0,
     );
-    expect(activeByComposability.bluechip).toBe(0);
     expect(activeByComposability.safetyOverall).toBeLessThan(
       WEIGHT_VECTORS.treasury.safetyOverall ?? 0,
     );

@@ -14,13 +14,14 @@ import {
   buildTradingSnapshotRecommendation,
   buildYieldSnapshotRecommendation,
 } from "./snapshot-fixture";
-import { BluechipGradeSchema } from "../../../types/bluechip";
+import { SAFETY_GRADE_VALUES } from "../../../types/report-card-grade";
 import { SELECTOR_SNAPSHOT_SUPPORTED_ENGINE_VERSIONS, SELECTOR_VERSION } from "../version";
 import { sha256Hex } from "../../sha256";
 import { runSelector } from "../engine";
 import { FIXTURE_DATASET, FIXTURE_ROWS, makeInput, makeMergedRowWithIdentity } from "./fixture";
 import { makeYieldRailRow } from "./engine.test-support";
 import { CLIENT_TRACKED_META_BY_ID } from "../../stablecoins/client-registry";
+import frozenV215TreasurySnapshot from "../__fixtures__/selector-v2.15-treasury-verified.json";
 
 function expectValid(value: unknown) {
   const result = validateSelectorSnapshot(value);
@@ -170,7 +171,10 @@ describe("selector snapshot contract", () => {
     // Captured from the pre-schema hand guards, not calculated by the new parser.
     // Re-baselined when selector-v2.10-v2.13 joined the retained replay matrix; the
     // retained versions' fingerprints are unchanged (v2.12 hash without v2.13: 97065aa5…).
-    expect(sha256Hex(JSON.stringify(sids))).toBe("62d22b606d3ff836d9990a4279e9053723e99aafa2879bc53169e1facff88c3b");
+    // Re-baselined at selector-v2.16: the matrix relabels the current engine's
+    // output, which no longer carries the retired bluechip slot. Outputs of the
+    // pre-v2.16 engine keep their SIDs on this read path.
+    expect(sha256Hex(JSON.stringify(sids))).toBe("77cd1a75e3121a2bf422f193cdcc9210675c647bb044ddc757fc0ec4dd551abc");
   });
 
   it.each([12, 13])("runs the safety gate before projection at JSON depth %i", (depth) => {
@@ -591,8 +595,8 @@ describe("selector snapshot contract", () => {
     expectValid(buildSelectorSnapshotOutput({ input }));
   });
 
-  it("validates bluechip grades from the shared schema and keeps NR safety-only", () => {
-    for (const bluechipGrade of BluechipGradeSchema.options) {
+  it("accepts retired bluechip grades on stored snapshots and keeps NR safety-only", () => {
+    for (const bluechipGrade of SAFETY_GRADE_VALUES) {
       expectValid(buildSelectorSnapshotOutput({
         recommended: [buildSnapshotRecommendation({ bluechipGrade })],
       }));
@@ -909,6 +913,40 @@ describe("selector snapshot contract", () => {
     expect(recommendation.confidenceReasons).toContain("missing-critical-safetyOverall");
   });
 
+  it("replays a stored pre-v2.16 Treasury snapshot on its stored weights, retired bluechip slot included", () => {
+    // `selector-v2.15` Treasury vector under the fixture input (`zero`, `6mplus`).
+    const slots = [
+      ["safetyOverall", 60, 90, 90],
+      ["pegStabilityHistory", 27, 96, 96],
+      ["dewsInverted", 8, 20, 80],
+      ["bluechip", 5, 95, 95],
+    ] as const;
+    const base = buildSelectorSnapshotOutput();
+    const stored = (engineVersion: string) => buildSelectorSnapshotOutput({
+      engineVersion,
+      recommended: [buildSnapshotRecommendation({ components: buildTradingSlots(slots, "bluechip") })],
+      coverageWarnings: { ...(base.coverageWarnings as Record<string, unknown>), redistributionCount: 1 },
+      methodologyVersions: { ...(base.methodologyVersions as Record<string, unknown>), exclusionFilters: engineVersion },
+    });
+
+    const snapshot = expectValid(stored("selector-v2.15"));
+    expect(snapshot.recommended[0]!.components).toEqual(buildTradingSlots(slots, "bluechip"));
+    const verified = createVerifiedSelectorSnapshot(snapshot);
+    expect(validateSelectorSnapshotResponse(JSON.parse(JSON.stringify(verified)))).toEqual({ ok: true, snapshot: verified });
+    // The current vector has no bluechip slot, so a current-engine blob carrying one is malformed.
+    expectInvalid(stored(SELECTOR_VERSION));
+  });
+
+  it("keeps the SID of a frozen selector-v2.15 Treasury snapshot that scored the retired bluechip slot", () => {
+    // Emitted by the selector-v2.15 engine before the slot was retired; replay must stay byte-identical.
+    const stored = structuredClone(frozenV215TreasurySnapshot) as unknown;
+    const result = validateSelectorSnapshotResponse(stored);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(`Expected frozen snapshot to replay, got ${result.error}`);
+    expect(JSON.stringify(result.snapshot)).toBe(JSON.stringify(frozenV215TreasurySnapshot));
+    expect(computeSelectorSnapshotSid(result.snapshot)).toBe("11ae799d200c4af5799ef635db7774e7");
+  });
+
   it("rejects unknown trading staleness inputs", () => {
     const output = buildSelectorSnapshotOutput();
     const input = { ...(output.input as Record<string, unknown>), profile: "trading" };
@@ -951,7 +989,7 @@ describe("verified selected-rail snapshot projection", () => {
     expect(rec.chainHints).toEqual(output.recommended[0]!.chainHints);
     expect(rec.whyKeys).toEqual(output.recommended[0]!.whyKeys);
     expect(rec.score).toBe(output.recommended[0]!.score);
-    expect(roundTrip.snapshot.engineVersion).toBe("selector-v2.15");
+    expect(roundTrip.snapshot.engineVersion).toBe("selector-v2.16");
   });
 
   it.each(["selector-v2.7", "selector-v2.14"])("keeps %s snapshots on the current component replay path", (engineVersion) => {

@@ -64,7 +64,7 @@ const POST_RATE_LIMIT_MAX_PER_WINDOW = 10;
 const POST_RATE_LIMIT_MAX_TRACKED_IPS = 5_000;
 const POST_DAILY_QUOTA_MAX_PER_IP = 100;
 // All-callers ceiling on the same D1 table. It bounds the total canonical
-// recomputation (seven upstream reads) an attacker can force per UTC day.
+// recomputation (six upstream reads) an attacker can force per UTC day.
 // Real use is 1-2 creations per session; 2,000/day matches the dated-scorecard
 // global cap and leaves generous headroom.
 const POST_DAILY_QUOTA_MAX_GLOBAL = 2_000;
@@ -261,7 +261,7 @@ async function handlePost(context: SelectorSnapshotContext): Promise<Response> {
   }
 
   // Reserve the durable daily quota before the canonical recomputation: the
-  // recomputation makes seven internal API fetches and runs the selector, and
+  // recomputation makes six internal API fetches and runs the selector, and
   // an over-quota client must be cut off before that work, not after it. The
   // bucket date is captured here so a refund after a midnight rollover still
   // targets the bucket this request charged.

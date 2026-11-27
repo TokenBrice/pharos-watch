@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  bluechip,
   excessApyConcave,
   hhiToDiversity,
   identity,
@@ -53,14 +52,6 @@ describe("supplyLog", () => {
   it("$1B ≈ 84", () => expect(supplyLog(1_000_000_000)).toBeCloseTo(84, 0));
   it("$0 → 0 (log of 1 floor)", () => expect(supplyLog(0)).toBe(0));
   it("null → null", () => expect(supplyLog(null)).toBeNull());
-});
-
-describe("bluechip ladder", () => {
-  it("A → 95", () => expect(bluechip("A")).toBe(95));
-  it("A+ → 100", () => expect(bluechip("A+")).toBe(100));
-  it("D → 40", () => expect(bluechip("D")).toBe(40));
-  it("F → 10", () => expect(bluechip("F")).toBe(10));
-  it("null → null", () => expect(bluechip(null)).toBeNull());
 });
 
 describe("hhiToDiversity", () => {

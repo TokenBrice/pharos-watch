@@ -1,0 +1,133 @@
+{
+  "profile": "treasury",
+  "input": {
+    "profile": "treasury",
+    "pegCurrency": "USD",
+    "horizon": "1to6m",
+    "depegTolerance": "tight",
+    "composability": "moderate",
+    "exitSpeed": "any",
+    "minApy": null,
+    "yieldNativeOnly": false,
+    "decentralization": "any",
+    "custodyOk": "any"
+  },
+  "universe": {
+    "active": 1,
+    "surviving": 1
+  },
+  "recommended": [
+    {
+      "id": "usdc-circle",
+      "symbol": "USDC",
+      "name": "USD Coin",
+      "profile": "treasury",
+      "rank": 1,
+      "score": 83.7,
+      "confidence": 100,
+      "components": [
+        {
+          "key": "safetyOverall",
+          "weight": 55.00000000000001,
+          "rawValue": 80,
+          "normalizedValue": 80,
+          "contribution": 44.00000000000001,
+          "redistributed": false
+        },
+        {
+          "key": "pegStabilityHistory",
+          "weight": 22,
+          "rawValue": 90,
+          "normalizedValue": 90,
+          "contribution": 19.8,
+          "redistributed": false
+        },
+        {
+          "key": "dewsInverted",
+          "weight": 13,
+          "rawValue": 20,
+          "normalizedValue": 80,
+          "contribution": 10.4,
+          "redistributed": false
+        },
+        {
+          "key": "bluechip",
+          "weight": 10,
+          "rawValue": 95,
+          "normalizedValue": 95,
+          "contribution": 9.5,
+          "redistributed": false
+        }
+      ],
+      "whyKeys": [
+        "strong-bluechip",
+        "low-dews",
+        "clean-peg-history",
+        "strong-resilience"
+      ],
+      "lowestSubDimension": {
+        "key": "liquidity",
+        "score": 80,
+        "contextKeys": []
+      },
+      "chainHints": {
+        "topByLiquidity": [
+          "ethereum"
+        ],
+        "topByYield": [],
+        "primary": "ethereum"
+      },
+      "relaxedReason": null,
+      "isRecentListing": false,
+      "bluechipGrade": "A",
+      "safetyGrade": "A",
+      "supplyUsd": 1000000000,
+      "isBeta": true,
+      "recommendedSource": null,
+      "perInputStaleness": null,
+      "rankRobustness": {
+        "label": "clear-margin",
+        "scoreMargin": null
+      }
+    }
+  ],
+  "lowerRanked": [],
+  "coverageWarnings": {
+    "skippedForCoverageCount": 0,
+    "skippedForCoverage": [],
+    "sparse": false,
+    "uneven": false,
+    "newListingCount": 0,
+    "redistributionCount": 0
+  },
+  "lowConfidence": false,
+  "usedRelaxedFallback": false,
+  "relaxedReasons": [],
+  "exclusionSummary": [],
+  "closestSurvivors": [],
+  "relaxableConstraints": [
+    {
+      "key": "depegTolerance",
+      "label": "Relax depeg tolerance",
+      "description": "Tight to moderate",
+      "reason": "input-strictness"
+    }
+  ],
+  "timestamp": 1700000000000,
+  "engineVersion": "selector-v2.15",
+  "methodologyVersions": {
+    "safetyScore": "safety-v1.0",
+    "pegScoreAndDews": "peg-dews-v1.0",
+    "yieldIntelligence": "yield-v1.0",
+    "bluechipAlignment": "bluechip-v1.0",
+    "exclusionFilters": "selector-v2.15"
+  },
+  "datasetHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "provenance": "pharos-verified",
+  "snapshotSchemaVersion": 3,
+  "verification": {
+    "kind": "pharos-server-recomputed-v1",
+    "datasetHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "engineVersion": "selector-v2.15"
+  }
+}

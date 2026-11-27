@@ -488,7 +488,7 @@ function buildRelaxableConstraintsFromOutput(output: SelectorOutput): SelectorRe
 }
 
 function summarizeMethodologyVersions(versions: SelectorOutput["methodologyVersions"]): string {
-  return `safety ${versions.safetyScore}, peg/DEWS ${versions.pegScoreAndDews}, yield ${versions.yieldIntelligence}, bluechip ${versions.bluechipAlignment}, exclusions ${versions.exclusionFilters}`;
+  return `safety ${versions.safetyScore}, peg/DEWS ${versions.pegScoreAndDews}, yield ${versions.yieldIntelligence}, exclusions ${versions.exclusionFilters}`;
 }
 
 function buildWhyText(rec: SelectorRecommendation): string {

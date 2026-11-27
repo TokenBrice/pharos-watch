@@ -112,9 +112,6 @@ function deriveContextKeys(row: MergedRow): ContextKey[] {
   const keys: ContextKey[] = [];
   if (row.isRecentListing) keys.push("recent-listing");
   if (row.sourceSwitch) keys.push("yield-source-switched");
-  if (row.bluechipGrade === "D" || row.bluechipGrade === "F") {
-    keys.push("bluechip-weakness");
-  }
   if (row.depegEventCount >= 1) keys.push("depeg-history");
   if (row.venueRiskTier === "high") keys.push("high-venue-risk");
   if (row.warningSignals?.includes("unstable-apy")) keys.push("unstable-apy");

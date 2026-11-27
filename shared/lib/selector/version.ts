@@ -3,7 +3,7 @@
  *
  * Bump when weights, exclusion rules, or deterministic engine behavior change.
  */
-export const SELECTOR_VERSION = "selector-v2.15";
+export const SELECTOR_VERSION = "selector-v2.16";
 
 /** Engine versions that produced persisted snapshot contracts still accepted for replay. */
 export const SELECTOR_SNAPSHOT_SUPPORTED_ENGINE_VERSIONS = [
@@ -32,5 +32,6 @@ export const SELECTOR_SNAPSHOT_SUPPORTED_ENGINE_VERSIONS = [
   "selector-v2.12",
   "selector-v2.13",
   "selector-v2.14",
+  "selector-v2.15",
   SELECTOR_VERSION,
 ] as const;

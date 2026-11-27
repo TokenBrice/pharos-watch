@@ -10,16 +10,12 @@ import { sha256Hex } from "../sha256";
 import { resolveCustodyModel } from "../report-card-policy";
 import { isOpportunityDerivedSafety } from "../yield-opportunity-provenance";
 import { isObservedPrice } from "../pricing-source-policy";
-import { isBluechipRatingCurrent } from "../bluechip-freshness";
 import { MORPHO_NET_YIELD_SOURCES } from "../yield-source-cadence";
 import type {
   AltYieldSource,
   YieldRanking,
   YieldRankingsResponse,
 } from "../../types/yield";
-import type {
-  BluechipRatingsMap,
-} from "../../types/bluechip";
 import type {
   DexLiquidityMap,
 } from "../../types/dex-liquidity";
@@ -70,7 +66,6 @@ export interface BuildSelectorRowsArgs {
   yieldData: YieldRankingsResponse | null;
   /** Yield response receipt/age-assessment clock only; never a sibling feed or publication clock. */
   yieldAgeAssessedAt?: number | null;
-  bluechipData: BluechipRatingsMap | null;
   /** `Date.now()`-style milliseconds or Unix seconds. */
   now: number;
 }
@@ -84,7 +79,6 @@ export interface BuildSelectorRowsResult {
 
 export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRowsResult {
   const rows = new Map<string, MergedRow>();
-  const nowSeconds = toUnixSeconds(args.now);
 
   const pegById = new Map((args.pegData?.coins ?? []).map((coin) => [coin.id, coin] as const));
   const reportById = new Map((args.reportData?.cards ?? []).map((card) => [card.id, card] as const));
@@ -128,7 +122,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       usesOpportunitySafety || isOpportunityDerivedSafety(yieldEntry?.provenance?.safetyProvenance)
         ? "yield-opportunity"
         : "safety-score-v9";
-    const bluechip = args.bluechipData?.[id];
     const referenceStatus = peg?.referenceAdmission?.status;
     const currentDeviationBps = peg && isObservedPrice(peg) && peg.price !== null
       ? projectCurrentPegDeviation(peg, meta.flags.pegCurrency === "USD", peg.priceObservedAt) : null;
@@ -181,7 +174,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       // exclusion prose all read the pillar directly.
       safetyLiquidityScore: safety?.pillars.exit.score ?? null,
       custodyModel: resolveCustodyModel(meta),
-      bluechipGrade: bluechip && isBluechipRatingCurrent(bluechip, nowSeconds) ? bluechip.grade : null,
 
       liquidityScore: dex?.liquidityScore ?? null,
       effectiveTvlUsd: dex?.effectiveTvlUsd ?? null,
@@ -228,7 +220,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
     safetyScore: args.reportData?.methodology?.version ?? "unversioned",
     pegScoreAndDews: joinVersions(args.pegData?.methodology?.version, args.stressData?.methodology?.version),
     yieldIntelligence: args.yieldData?.methodology?.version ?? "unversioned",
-    bluechipAlignment: "unversioned",
     exclusionFilters: SELECTOR_VERSION,
   };
 
@@ -287,7 +278,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         // keys before hashing. The explicit sorts around this object sort
         // arrays, which are order-bearing in the canonical form.
         chainTvl: row.chainTvl,
-        bluechipGrade: row.bluechipGrade,
         supplyUsd: row.supplyUsd,
         isRecentListing: row.isRecentListing,
         trackingSpanDays: row.trackingSpanDays,

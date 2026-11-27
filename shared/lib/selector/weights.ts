@@ -30,13 +30,15 @@ import {
  * spends its peg budget on exactly one slot. The peg domain stays in the
  * vectors on purpose: the Picker exists to let a user weight a domain
  * differently from the house view, which is a preference, not a re-derivation.
+ *
+ * `selector-v2.16` retired the external Bluechip slot from Treasury and spread
+ * its 10 points across the remaining slots in proportion to their weights.
  */
 
 const TREASURY_WEIGHTS: WeightVector<"treasury"> = {
-  safetyOverall: 55,
-  pegStabilityHistory: 22,
-  dewsInverted: 13,
-  bluechip: 10,
+  safetyOverall: 61,
+  pegStabilityHistory: 24,
+  dewsInverted: 15,
 } as const;
 
 const YIELD_WEIGHTS: WeightVector<"yield"> = {
@@ -137,7 +139,7 @@ export function getWeightVectorForInput(input: SelectorInput): WeightVector {
 
   if (input.depegTolerance === "zero") {
     if (input.profile === "treasury") {
-      shiftWeight(vector, "pegStabilityHistory", 5, ["bluechip", "dewsInverted"]);
+      shiftWeight(vector, "pegStabilityHistory", 5, ["dewsInverted"]);
     } else if (input.profile === "yield") {
       shiftWeight(vector, "pegStabilityLive", 5, ["excessApy", "pharosYieldScore"]);
     } else {
@@ -152,7 +154,7 @@ export function getWeightVectorForInput(input: SelectorInput): WeightVector {
     // split between the DEX liquidity domain and the V9 Exit pillar; with the
     // pillar folded into the composite, the whole shift lands on liquidity.
     if (input.profile === "treasury") {
-      shiftWeight(vector, "liquidity", 6, ["bluechip", "safetyOverall"]);
+      shiftWeight(vector, "liquidity", 6, ["safetyOverall"]);
     } else if (input.profile === "yield") {
       shiftWeight(vector, "liquidity", 3, ["excessApy", "pharosYieldScore"]);
       shiftWeight(vector, "sourceRiskInverted", 2, ["pharosYieldScore"]);
@@ -162,9 +164,9 @@ export function getWeightVectorForInput(input: SelectorInput): WeightVector {
   }
 
   if (input.profile === "treasury" && input.horizon === "6mplus") {
-    // A multi-quarter horizon prefers structural quality over live stress and
-    // third-party alignment; the structural read is the composite itself.
-    shiftWeight(vector, "safetyOverall", 5, ["dewsInverted", "bluechip", "pegStabilityHistory"]);
+    // A multi-quarter horizon prefers structural quality over live stress;
+    // the structural read is the composite itself.
+    shiftWeight(vector, "safetyOverall", 5, ["dewsInverted", "pegStabilityHistory"]);
   }
 
   if (input.composability === "high") {
@@ -178,7 +180,7 @@ export function getWeightVectorForInput(input: SelectorInput): WeightVector {
   if (treasuryActiveDeFiIntent(input)) {
     // Deploying treasury into active DeFi trades the long-horizon house view
     // for live venue depth and live stress.
-    shiftWeight(vector, "liquidity", 10, ["bluechip", "safetyOverall"]);
+    shiftWeight(vector, "liquidity", 10, ["safetyOverall"]);
     shiftWeight(vector, "dewsInverted", 4, ["safetyOverall"]);
   }
 

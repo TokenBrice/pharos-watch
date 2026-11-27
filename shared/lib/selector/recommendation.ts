@@ -1,4 +1,3 @@
-import type { BluechipGrade } from "../../types/bluechip";
 import type { ReportCardGrade } from "../../types/report-card-grade";
 import { selectLowestSubDimension } from "./lowest-sub-dimension";
 import { round1 } from "../math";
@@ -43,12 +42,6 @@ export function whyKeyTriggers(
   switch (key) {
     case "top-safety":
       return row.safetyScore != null && row.safetyScore >= 88;
-    case "strong-bluechip":
-      return (
-        row.bluechipGrade === "A+" ||
-        row.bluechipGrade === "A" ||
-        row.bluechipGrade === "A-"
-      );
     case "low-dews":
       return row.dewsScore != null && row.dewsScore <= 25;
     case "clean-peg-history":
@@ -202,7 +195,6 @@ export function buildRecommendation(
     rankRobustness,
     relaxedReason: entry.relaxedReason,
     isRecentListing: entry.row.isRecentListing,
-    bluechipGrade: (entry.row.bluechipGrade as BluechipGrade | null) ?? null,
     safetyGrade,
     supplyUsd: entry.row.supplyUsd,
     isBeta: true as const,

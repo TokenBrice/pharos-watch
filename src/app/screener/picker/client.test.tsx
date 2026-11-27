@@ -58,7 +58,6 @@ vi.mock("@shared/lib/selector/data-adapter", () => ({
       safetyScore: "v9",
       pegScoreAndDews: "v3",
       yieldIntelligence: "v8",
-      bluechipAlignment: "unversioned",
       exclusionFilters: "selector-v1.2",
     },
   })),

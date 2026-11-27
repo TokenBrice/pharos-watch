@@ -6,21 +6,6 @@
  * Binding: `agents/impl-plan-drafts/02-engine.md` §5.
  */
 import { clamp, hhiToDiversityScore } from "../math";
-import type { BluechipGrade } from "../../types/bluechip";
-
-const BLUECHIP_LADDER: Record<BluechipGrade, number> = {
-  "A+": 100,
-  "A": 95,
-  "A-": 90,
-  "B+": 85,
-  "B": 80,
-  "B-": 75,
-  "C+": 70,
-  "C": 65,
-  "C-": 60,
-  "D": 40,
-  "F": 10,
-};
 
 /** Identity for 0–100 scores. Clamps but passes null through. */
 export function identity(x: number | null): number | null {
@@ -81,13 +66,6 @@ export function supplyLog(usd: number | null): number | null {
   if (denom === 0) return 0;
   const ratio = Math.log10(Math.max(usd, 1)) / denom;
   return 100 * clamp(ratio, 0, 1);
-}
-
-/** Discrete ladder for Bluechip grades. Null returns null (policy decides). */
-export function bluechip(grade: BluechipGrade | null): number | null {
-  if (grade == null) return null;
-  const value = BLUECHIP_LADDER[grade];
-  return value ?? null;
 }
 
 /** HHI 0–1 (higher = more concentrated) → diversity score 0–100. */

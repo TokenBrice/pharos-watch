@@ -1,5 +1,4 @@
 import {
-  bluechip,
   excessApyConcave,
   hhiToDiversity,
   identity,
@@ -83,19 +82,6 @@ export const CRITICAL_SIGNAL_SET_BY_PROFILE: Readonly<Record<SelectorProfile, Re
   trading: new Set(["liquidity", "pegScoreNow", "dewsInverted", "safetyOverall"]),
 };
 
-/**
- * Whether a missing `key` slot redistributes its weight to the present
- * signals (`true` → penalty) or is silently ignored. Shared with the snapshot
- * read path so stored snapshots replay with the same redistribution flags.
- * Only `bluechip` is ignorable, and only outside the treasury profile.
- */
-export function missingSlotRedistributes(
-  profile: SelectorProfile,
-  key: WeightKey,
-): boolean {
-  return !(key === "bluechip" && profile !== "treasury");
-}
-
 function rawValueFor(
   key: WeightKey,
   row: MergedRow,
@@ -109,8 +95,6 @@ function rawValueFor(
       return row.pegScore;
     case "dewsInverted":
       return row.dewsScore;
-    case "bluechip":
-      return row.bluechipGrade != null ? bluechip(row.bluechipGrade) : null;
     case "supplyLog":
       return row.supplyUsd;
     case "pharosYieldScore":
@@ -143,8 +127,6 @@ export function normalizeSelectorComponentValue(
       return identity(raw);
     case "dewsInverted":
       return invert100(raw);
-    case "bluechip":
-      return raw;
     case "supplyLog":
       return supplyLog(raw);
     case "pharosYieldScore":
@@ -164,6 +146,7 @@ export function normalizeSelectorComponentValue(
     case "dependencyRisk":
     case "decentralization":
     case "effectiveExit":
+    case "bluechip":
       return null;
   }
 }
@@ -204,9 +187,7 @@ export function scoreRow(
       present.push(slot);
       continue;
     }
-    if (missingSlotRedistributes(profile, slot.key)) {
-      redistributedSlots += 1;
-    }
+    redistributedSlots += 1;
     if (criticalSignals.has(slot.key)) {
       confidenceReasons.add(`missing-critical-${slot.key}`);
       scoreCap = Math.min(scoreCap, MISSING_CRITICAL_SCORE_CAP);
@@ -264,7 +245,7 @@ export function scoreRow(
       rawValue: slot.rawValue,
       normalizedValue: slot.normalizedValue,
       contribution: 0,
-      redistributed: missingSlotRedistributes(profile, slot.key),
+      redistributed: true,
     });
   }
 

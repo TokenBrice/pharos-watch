@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BluechipGradeSchema } from "../../types/bluechip";
+import { ReportCardGradeSchema, SAFETY_GRADE_VALUES } from "../../types/report-card-grade";
 import { YIELD_TYPE_VALUES } from "../../types/yield-vocabulary";
 import {
   BASE_CONFIDENCE_REASON_KEYS,
@@ -118,8 +118,9 @@ const RecommendationBaseSchema = z.object({
   rankRobustness: SelectorRankRobustnessSchema.optional(),
   relaxedReason: ExclusionReasonSchema.nullish(),
   isRecentListing: z.boolean(),
-  bluechipGrade: BluechipGradeSchema.nullable(),
-  safetyGrade: z.union([BluechipGradeSchema, z.literal("NR")]),
+  /** Retired in `selector-v2.16`; only older snapshots carry it. */
+  bluechipGrade: z.enum(SAFETY_GRADE_VALUES).nullable().optional(),
+  safetyGrade: ReportCardGradeSchema,
   supplyUsd: NonNegativeSchema,
   isBeta: z.literal(true),
 });
@@ -171,7 +172,8 @@ export const MethodologyVersionsSchema = z.object({
   safetyScore: NonEmptyStringSchema,
   pegScoreAndDews: NonEmptyStringSchema,
   yieldIntelligence: NonEmptyStringSchema,
-  bluechipAlignment: NonEmptyStringSchema,
+  /** Retired in `selector-v2.16`; only older snapshots carry it. */
+  bluechipAlignment: NonEmptyStringSchema.optional(),
   exclusionFilters: NonEmptyStringSchema,
 });
 export const SelectorExclusionSummaryItemSchema = z.object({

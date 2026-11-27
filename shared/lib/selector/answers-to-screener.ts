@@ -76,13 +76,6 @@ export function selectorAnswersToScreenerFilters(
     }
   }
 
-  if (input.profile === "treasury") {
-    divergenceWarnings.push({
-      kind: "screener-cannot-express",
-      reason: "bluechip-grade-floor",
-      affectedIds: [],
-    });
-  }
   if (input.decentralization === "required") {
     divergenceWarnings.push({
       kind: "screener-cannot-express",
