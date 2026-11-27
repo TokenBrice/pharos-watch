@@ -146,6 +146,15 @@ describe("fresh data readiness telemetry", () => {
     expect(gtag).not.toHaveBeenCalled();
   });
 
+  it("reports a ready browser session once per document, only once analytics can send it", () => {
+    window.gtag = undefined;
+    analytics.trackSiteSessionReady();
+    window.gtag = gtag;
+    analytics.trackSiteSessionReady();
+    analytics.trackSiteSessionReady();
+    expect(gtag).toHaveBeenCalledExactlyOnceWith("event", "site_session_ready", {});
+  });
+
   it.each(["/admin/", "/pharoswatchbot/app/", "/privacy/"])("never reports readiness on %s", (pathname) => {
     window.location.pathname = pathname;
     analytics.trackFreshDataReady("home-hero");
