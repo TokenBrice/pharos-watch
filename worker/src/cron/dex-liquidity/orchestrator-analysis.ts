@@ -1,14 +1,9 @@
-import { assessPoolRejectionCoverage, getDexPoolRejectionCandidates, isMaterialPoolRejectionLoss } from "./process-pools";
+import { assessPoolRejectionCoverage, getDexPoolRejectionCandidates } from "./process-pools";
 import type { PoolProcessingRejection } from "./process-pool-types";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import {
-  DexLiquidityAnchorReviewDecisionSchema,
-  type DexLiquidityAnchorReviewDecision,
-  type DexLiquidityCronMetadata,
-  type DexLiquidityProtocolTvlQuarantine,
-} from "../../lib/schemas";
+import type { DexLiquidityCronMetadata, DexLiquidityProtocolTvlQuarantine } from "../../lib/schemas";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import type { DexPriceObs, FullScoreResult, GlobalAgg, LiquidityMetrics } from "./types";
 import { round4 } from "@shared/lib/math";
@@ -25,18 +20,12 @@ import {
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { DexLiquidityBaselineReadFailure } from "@shared/types/status/yield-liquidity";
 import { LiquiditySourceMixSchema, type LiquiditySourceMix } from "@shared/types/dex-liquidity";
-import { getCache } from "../../lib/db-cache";
 import {
   DexLiquidityCronHistoryInconclusiveError,
   isProductiveCronRow,
   readDexLiquidityCronHistory,
   type ParsedPreviousCronRow,
 } from "../../lib/dex-liquidity-cron-history";
-import {
-  hasMeasuredAnchorReviewTvl,
-  matchesReviewedAnchor,
-  REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION,
-} from "./reviewed-anchor-correction";
 
 type ValueBaselineSource = "dex_liquidity_global" | "cron_metadata_source_complete" | "none";
 
@@ -343,7 +332,6 @@ export async function analyzeDexLiquidityPostScoring(params: {
 }): Promise<DexLiquidityPostScoreAnalysis> {
   const currentCoverage = params.scoreResults.size;
   const activeIdsJson = JSON.stringify([...ACTIVE_IDS]);
-  const review = REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION;
   const [
     coverageRead,
     globalRead,
@@ -448,7 +436,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       logWorkerEventArgs("handler", "warn", `[dex-liquidity] ${reason}:`, toErrorMessage(read.reason));
     }
   }
-  let requiredBaselineUnavailable = [coverageRead, globalRead, topTenRead, historyRead]
+  const requiredBaselineUnavailable = [coverageRead, globalRead, topTenRead, historyRead]
     .some((read) => read.status === "rejected");
   const previousCoverageRow = coverageRead.status === "fulfilled" ? coverageRead.value : null;
   const previousGlobalRow = globalRead.status === "fulfilled" ? globalRead.value : null;
@@ -605,94 +593,11 @@ export async function analyzeDexLiquidityPostScoring(params: {
       }
     }
   }
-  const { stablecoinId, baselineBeforeSec, anchorTvlUsd, evidenceRef } = review;
-  let anchorReviewDecision: DexLiquidityAnchorReviewDecision | undefined;
-  let correctedAnchorTvlUsd: number | undefined;
-  if (matchesReviewedAnchor(carriedRejectionCoverage)) {
-    try {
-      const saved = await getCache(params.db, review.decisionKey);
-      if (saved) {
-        const committed = DexLiquidityAnchorReviewDecisionSchema.parse(JSON.parse(saved.value));
-        if (!matchesReviewedAnchor({
-          baselineBeforeSec: committed.baselineBeforeSec,
-          baselineTvlUsdByCoin: { [committed.stablecoinId]: committed.anchorTvlUsd },
-        }) || committed.evidenceRef !== evidenceRef) {
-          throw new Error("Anchor review decision does not match the reviewed episode");
-        }
-        // The publication batch can commit before the terminal cron log is written.
-        correctedAnchorTvlUsd = committed.outcome === "applied"
-          ? committed.acceptedTvlUsd : Math.max(anchorTvlUsd, committed.comparedTvlUsd);
-      } else if (nowMs >= Date.parse(review.reviewedAt) && nowMs < Date.parse(review.expiresAt)
-        && !requiredBaselineUnavailable && params.currentGenerationId) {
-        // Publishing after a failed read could replace the only comparator for a new loss.
-        requiredBaselineUnavailable = coinTvlStepBaselineUnavailable;
-        const current = params.scoreResults.get(stablecoinId);
-        let latest = previousCoinTvlRows.find((row) => row.stablecoin_id === stablecoinId);
-        const usableComparator = (row: PreviousCoinTvlRow | undefined): row is PreviousCoinTvlRow =>
-          !!row?.coverage_class && row.coverage_class !== "unobserved" && isFinitePositive(row.total_tvl_usd);
-        if (coinTvlRead.status === "fulfilled" && coinTvlRead.value.success
-          && current && current.coverageClass !== "unobserved" && isFinitePositive(current.tvl)
-          && !usableComparator(latest)) {
-          // An unobserved or zero placeholder publication must not displace the
-          // last accepted observation: keep walking back through published
-          // generations to the newest row that is still a usable comparator.
-          try {
-            latest = (await runWithOverloadRetry(() => params.db.prepare(
-              `SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json, r.source_mix_json, r.generation_id, r.coverage_class
-               FROM dex_liquidity_run_rows r
-               JOIN dex_liquidity_publication_generations g ON g.generation_id = r.generation_id
-               WHERE g.state = 'published' AND r.stablecoin_id = ?
-                 AND (? IS NULL OR r.generation_id != ?)
-                 AND r.coverage_class IS NOT NULL AND r.coverage_class != 'unobserved'
-                 AND r.total_tvl_usd > 0
-               ORDER BY g.started_at DESC, g.generation_id DESC
-               LIMIT 1`,
-            ).bind(stablecoinId, params.currentGenerationId ?? null, params.currentGenerationId ?? null)
-              .first<PreviousCoinTvlRow>())) ?? undefined;
-          } catch (error) {
-            // Publishing while blind to the displaced comparator could clear a new loss.
-            requiredBaselineUnavailable = true;
-            baselineReadFailures.push("coin-tvl-read-failed");
-            logWorkerEventArgs("handler", "warn", "[dex-liquidity] anchor review comparator read failed:", toErrorMessage(error));
-            latest = undefined;
-          }
-        }
-        if (coinTvlRead.status === "fulfilled" && coinTvlRead.value.success && usableComparator(latest)
-          && current && current.coverageClass !== "unobserved"
-          && isFinitePositive(current.tvl)) {
-          const materialLoss = isMaterialPoolRejectionLoss(latest.total_tvl_usd, current.tvl);
-          const canApply = rejectionBaseline != null && carriedRejectionCoverage.reason === "material-pool-rejections"
-            && rejectionCandidates.length === 0 && params.criticalSourceFailures.length === 0
-            && isMaterialPoolRejectionLoss(anchorTvlUsd, current.tvl)
-            && hasMeasuredAnchorReviewTvl(current, params.retainedPoolsByStablecoin.get(stablecoinId));
-          if (materialLoss || canApply) {
-            correctedAnchorTvlUsd = materialLoss ? Math.max(anchorTvlUsd, latest.total_tvl_usd) : current.tvl;
-            anchorReviewDecision = {
-              outcome: materialLoss ? "deferred-material-loss" : "applied",
-              stablecoinId, baselineBeforeSec, anchorTvlUsd, evidenceRef,
-              comparedGenerationId: latest.generation_id, comparedTvlUsd: latest.total_tvl_usd,
-              publicationGenerationId: params.currentGenerationId, acceptedTvlUsd: current.tvl,
-            };
-          }
-        }
-      }
-    } catch (error) {
-      requiredBaselineUnavailable = true;
-      baselineReadFailures.push("anchor-review-decision-read-failed");
-      logWorkerEventArgs("handler", "warn", "[dex-liquidity] anchor review decision unavailable:", toErrorMessage(error));
-    }
-    if (correctedAnchorTvlUsd !== undefined) carriedRejectionCoverage.baselineTvlUsdByCoin[stablecoinId] = correctedAnchorTvlUsd;
-  }
   const poolRejectionCoverage = assessPoolRejectionCoverage(
     params.poolRejections ?? [], rejectionBaseline,
     new Map([...params.scoreResults].map(([id, score]) => [id, score.tvl])),
     carriedRejectionCoverage, rejectionBaselineBeforeSec,
   );
-  if (correctedAnchorTvlUsd !== undefined) {
-    // Carry the committed baseline even when comparing it to the same measurement.
-    poolRejectionCoverage.baselineTvlUsdByCoin[stablecoinId] ??= correctedAnchorTvlUsd;
-  }
-  if (anchorReviewDecision) poolRejectionCoverage.anchorReviewDecision = anchorReviewDecision;
 
   // Compare observed coverage on the price-only ticker policy. The current
   // published rows can be normalized exactly from their scored source mix;

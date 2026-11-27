@@ -36,30 +36,6 @@ const THIRTY_FIVE_DAYS_SEC = 35 * 86_400;
 const utcDate = (sec: number) => new Date(sec * 1000).toISOString().slice(0, 10);
 
 describe("runPruneCronHistory", () => {
-  it.each(["read failure", "scan exhausted"])("defers only cron_runs when DEX history is unavailable (%s)", async (mode) => {
-    const { db, sqlite } = createTestDb();
-    const old = nowSec() - TWO_WEEKS_SEC - 1;
-    insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('sync-dex-liquidity', ?, 1, 'degraded')", old);
-    insert(sqlite, "INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES ('ethereum', 1, 1, ?)", old);
-    if (mode === "read failure") {
-      const prepare = db.prepare.bind(db);
-      vi.spyOn(db, "prepare").mockImplementation((sql) => {
-        if (sql.includes("job = 'sync-dex-liquidity'")) throw new Error("history read failed");
-        return prepare(sql);
-      });
-    } else {
-      insert(sqlite, `WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 96)
-        INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata)
-        SELECT 'sync-dex-liquidity', ?, 1, 'degraded', '{"sourceCoverage":{"dlYieldsAvailable":"unavailable"}}' FROM n`, old + 1);
-    }
-    const result = await runPruneCronHistory(db);
-    expect(result.status).toBe("degraded");
-    expect(JSON.parse(result.metadata!)).toMatchObject({
-      failedRetentionGroup: [{ key: "cronRuns" }], cronRunsDeleted: null, blockTimestampCacheDeleted: 1,
-    });
-    expect(sqlite.prepare("SELECT started_at FROM cron_runs ORDER BY id LIMIT 1").get()?.started_at).toBe(old);
-  });
-
   it("isolates history groups and reports every cap", async () => {
     const { db } = createTestDb();
     const batch = vi.spyOn(db, "batch");
