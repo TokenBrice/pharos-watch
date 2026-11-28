@@ -243,8 +243,8 @@ export const SUPPLY_PERIMETER_CHANGES = [
   // === #2169 Wave 2 non-USD native checkpoints + #2393 CADC legacy/successor registers (Pricing v7.1) ===
   // Undated DefiLlama caps move to clocked complete native rosters: CADD adds Solana, Tempo and Arc
   // (owner ruling D8), CADC counts its legacy and successor registers (D10), and KRWQ, XOFm, ZARm and
-  // tGBP reconcile to DefiLlama's native totals. Provisional: re-date each entry to the first released
-  // sync-stablecoins run that publishes the new quantity.
+  // tGBP reconcile to DefiLlama's native totals. Provisional: re-date each entry to the supply
+  // observation clock of the first published packet with the new quantity (see the note above).
   {
     stablecoinId: "cadd-cad-digital",
     changedAt: Date.parse("2026-11-29T00:00:00Z") / 1000,
