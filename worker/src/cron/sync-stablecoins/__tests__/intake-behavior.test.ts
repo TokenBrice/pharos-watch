@@ -499,8 +499,8 @@ describe("stablecoin intake admission", () => {
     { label: "BUIDL skipped native beats relisted supply", id: "buidl-blackrock", primary: 100, supplemental: null, expected: undefined, source: "onchain-supply-withheld", observedAt: undefined },
     { label: "EURCV preferred native beats DefiLlama list supply", id: "eurcv-societe-generale-forge", primary: 100, supplemental: 200, expected: 200, source: "onchain-total-supply", observedAt: 1_777_000_000 },
     { label: "EURC preferred circulating native beats DefiLlama list supply", id: "eurc-circle", primary: 100, supplemental: 200, expected: 200, source: "onchain-circulating-supply", observedAt: 1_777_000_000 },
-    { label: "CoinGecko-detail ZARm native beats its DefiLlama list row", id: "zarm-mento", primary: 100, supplemental: 200, expected: 200, source: "onchain-total-supply", observedAt: 1_777_000_000 },
-    { label: "USYC native beats a relisted DefiLlama 237 row", id: "usyc-hashnote", primary: 100, supplemental: 200, expected: 200, source: "onchain-total-supply", observedAt: 1_777_000_000 },
+    { label: "CoinGecko-detail ZARm native beats its DefiLlama 368 row", id: "zarm-mento", llamaId: "368", primary: 100, supplemental: 200, expected: 200, source: "onchain-total-supply", observedAt: 1_777_000_000 },
+    { label: "USYC native beats a relisted DefiLlama 237 row", id: "usyc-hashnote", llamaId: "237", primary: 100, supplemental: 200, expected: 200, source: "onchain-total-supply", observedAt: 1_777_000_000 },
     { label: "positive primary beats positive supplemental", primary: 100, supplemental: 200, expected: 100, source: "defillama", observedAt: 1_776_999_940 },
     { label: "observed zero beats positive supplemental", primary: 0, supplemental: 200, expected: 0, source: "defillama", observedAt: 1_776_999_940 },
     { label: "observed zero beats zero supplemental", primary: 0, supplemental: 0, expected: 0, source: "defillama", observedAt: 1_776_999_940 },
@@ -510,13 +510,13 @@ describe("stablecoin intake admission", () => {
     { label: "absent primary leaves supplemental unavailable", primary: "absent", supplemental: undefined, expected: undefined },
     { label: "invalid primary leaves supplemental unavailable", primary: -1, supplemental: undefined, expected: undefined },
     { label: "omitted providers leave no asset", primary: "omitted", supplemental: null, expected: undefined, source: null, observedAt: null },
-  ])("$label with original supply provenance", async ({ id = "intake-supply-fixture", primary, supplemental: supplementalSupply, expected, source = "coingecko-fallback", observedAt = source === "onchain-supply-withheld" ? undefined : 1_777_000_000 }) => {
+  ])("$label with original supply provenance", async ({ id = "intake-supply-fixture", llamaId, primary, supplemental: supplementalSupply, expected, source = "coingecko-fallback", observedAt = source === "onchain-supply-withheld" ? undefined : 1_777_000_000 }) => {
     const { db } = fixtures.open();
     const rows = Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({
       id: `intake-fixture-${index}`, circulating: { peggedUSD: 100 },
     }));
     if (primary !== "omitted") rows.push(makePeggedAsset({
-      id, circulating: typeof primary === "number" ? { peggedUSD: primary } : {},
+      id: llamaId ?? id, circulating: typeof primary === "number" ? { peggedUSD: primary } : {},
       supplySource: "defillama", supplyObservedAt: 1_776_999_940,
     }));
     vi.mocked(supplemental.fetchSupplementalTrackedTokens).mockResolvedValue({
@@ -531,6 +531,7 @@ describe("stablecoin intake admission", () => {
     const matches = result.assets.filter((asset) => asset.id === id);
     expect(result.droppedMalformedAssets).toBe(primary === "absent" || primary === -1 ? 1 : 0);
     expect(matches).toHaveLength(source === null ? 0 : 1);
+    expect(result.assets.filter((asset) => asset.id === llamaId)).toEqual([]);
     if (source === null) return;
     expect(matches.map(({ id: assetId, circulating, supplySource, supplyObservedAt }) => ({
       id: assetId, circulating, supplySource, supplyObservedAt,
