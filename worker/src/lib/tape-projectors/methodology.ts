@@ -4,9 +4,11 @@
  * Source: the `*-version.ts` constants in `shared/lib/`. Each domain exposes a
  * changelog of `{ version, title, date, effectiveAt, summary, ... }` entries.
  *
- * Pattern: first-observation. Each bounded changelog is driven through the
- * static-catalog projector, which probes source identities through the unique
- * Tape source-key index and emits only entries not yet present.
+ * Pattern: first-observation plus in-place clock/payload reconciliation. Each
+ * bounded changelog is driven through the static-catalog projector to insert
+ * unseen entries, then reconciled against existing `tape_events` rows so
+ * post-deploy `effectiveAt` re-dates update `ts` and `payload_json` without
+ * replacing `event_id` permalinks or reviving suppressed rows.
  *
  * The event type slug is `methodology.bumped:<domain>` per the wire grammar
  * in §3.3 of the implementation plan; `<domain>` is a short lowercase tag.
@@ -37,6 +39,7 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 import type { MethodologyChangelogEntry } from "@shared/types/editorial-content";
 
+import { runWithOverloadRetry } from "../d1-overload-retry";
 import { batchExecute } from "../db";
 import {
   buildTapeEventId,
@@ -123,6 +126,15 @@ const METHODOLOGY_DOMAINS: readonly MethodologyDomain[] = [
   },
 ];
 
+interface ExistingMethodologyRow {
+  event_id: string;
+  source_row_id: string;
+  ts: number;
+  payload_json: string;
+}
+
+const METHODOLOGY_TRANSITION = "updated";
+
 function buildMethodologyEvent(
   spec: MethodologyDomain,
   entry: MethodologyChangelogEntry,
@@ -132,7 +144,6 @@ function buildMethodologyEvent(
     ? entry.effectiveAt
     : Math.floor(Date.now() / 1000);
   const tsMs = tsSec * 1000;
-  const transition = "updated";
 
   return {
     eventId: buildTapeEventId({
@@ -140,7 +151,7 @@ function buildMethodologyEvent(
       type,
       sourceTable: `methodology:${spec.domain}`,
       sourceRowId: entry.version,
-      transition,
+      transition: METHODOLOGY_TRANSITION,
     }),
     type,
     severity: severityForMethodologyBump(entry.version),
@@ -162,7 +173,7 @@ function buildMethodologyEvent(
     },
     sourceTable: `methodology:${spec.domain}`,
     sourceRowId: entry.version,
-    transition,
+    transition: METHODOLOGY_TRANSITION,
     sourceUrl: spec.href,
     methodologyVersion: entry.version,
   };
@@ -179,18 +190,50 @@ export async function projectMethodologyBumps(
       buildEvent: (entry) => buildMethodologyEvent(spec, entry),
     }, options);
     total += result.projected;
-    if (spec.domain === "yield" && options?.dryRun !== true) {
-      const corrected = spec.changelog.find((entry) => entry.version === "8.55");
-      if (corrected) {
-        const event = buildMethodologyEvent(spec, corrected);
-        // Main projected the provisional clock into an already-linked permalink.
-        await batchExecute(db, [db.prepare(
-          `UPDATE tape_events SET ts = ?, payload_json = ?
-            WHERE source_table = ? AND source_row_id = ? AND transition = ? AND type = ? AND ts = ?`,
-        ).bind(event.ts, JSON.stringify(event.payload), event.sourceTable, event.sourceRowId,
-          event.transition, event.type, 1_795_046_400_000)]);
+  }
+
+  if (options?.dryRun !== true) {
+    const reconcileSpecs = METHODOLOGY_DOMAINS.filter((spec) => spec.changelog.length > 0);
+    if (reconcileSpecs.length > 0) {
+      const existingResults = await runWithOverloadRetry(
+        () =>
+          db.batch<ExistingMethodologyRow>(
+            reconcileSpecs.map((spec) =>
+              db.prepare(
+                `SELECT event_id, source_row_id, ts, payload_json
+                   FROM tape_events INDEXED BY idx_tape_source_key
+                  WHERE source_table = ? AND transition = ? AND type = ?`,
+              ).bind(`methodology:${spec.domain}`, METHODOLOGY_TRANSITION, `methodology.bumped:${spec.domain}`),
+            ),
+          ),
+        3,
+      );
+      const updates: D1PreparedStatement[] = [];
+      for (let index = 0; index < reconcileSpecs.length; index += 1) {
+        const spec = reconcileSpecs[index]!;
+        const existingRows = existingResults[index]?.results ?? [];
+        if (existingRows.length === 0) continue;
+        const existingByVersion = new Map(existingRows.map((row) => [row.source_row_id, row]));
+        for (const entry of spec.changelog) {
+          if (!Number.isFinite(entry.effectiveAt) || entry.effectiveAt <= 0) continue;
+          const existing = existingByVersion.get(entry.version);
+          if (!existing) continue;
+          const event = buildMethodologyEvent(spec, entry);
+          const expectedPayloadJson = JSON.stringify(event.payload);
+          if (existing.ts !== event.ts || existing.payload_json !== expectedPayloadJson) {
+            updates.push(
+              db.prepare(
+                `UPDATE tape_events SET ts = ?, payload_json = ? WHERE event_id = ?`,
+              ).bind(event.ts, expectedPayloadJson, existing.event_id),
+            );
+          }
+        }
+      }
+      if (updates.length > 0) {
+        await batchExecute(db, updates);
       }
     }
   }
+
   return { projected: total, advanced: null };
 }

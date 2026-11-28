@@ -31,7 +31,7 @@
     "version": "6.56",
     "title": "Long-running (>30d) open incident split, two-sample re-escalation, and materiality-tiered ranking",
     "date": "2026-11-27",
-    "effectiveAt": 1795776600,
+    "effectiveAt": 1795797915,
     "summary": "Distinguishes open confirmed depeg incidents older than 30 days from recent incidents, adds a Day-30-seeded upward-ratcheting re-escalation rule with two-sample confirmation for worsening chronic depegs, and ranks near-par/recovering unconfirmed rows below material off-peg incidents. PegScore, Safety Score V10, PSI, DEWS, DDR/DDRR core scoring, and Telegram alert dispatch are unchanged.",
     "impact": [
       "Open confirmed depegs retain their full census (`activeDepeg`, `activeDepegCount`) while exposing a sidecar `openIncidents` map (`eventId`, canonical onset `startedAt`, `escalatedAt`, and live `coverage`) alongside additive `recentActiveDepegCount` and `longRunningActiveDepegCount` totals on `/api/peg-summary`; `/api/homepage-snapshot` forwards only the split counts.",
