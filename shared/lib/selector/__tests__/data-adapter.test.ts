@@ -167,6 +167,7 @@ describe("buildSelectorRows", () => {
         "usdc-circle": {
           liquidityScore: 88,
           effectiveTvlUsd: 250_000_000,
+          effectiveDepth: { coverage: "partial", amountUsd: 250_000_000, pausedPoolCount: 0, unknownPoolCount: 1 },
           concentrationHhi: 0.2,
           chainTvl: { Ethereum: 250_000_000 },
           updatedAt: NOW / 1000,
@@ -193,6 +194,7 @@ describe("buildSelectorRows", () => {
       pegScore: 96,
       dewsScore: 42,
       liquidityScore: 88,
+      effectiveTvlUsd: 250_000_000,
       canBeBlacklisted: true,
       custodyModel: "cex",
       currentDeviationBps: 4,
@@ -232,8 +234,8 @@ describe("buildSelectorRows", () => {
 
 
 describe("yield ingestion", () => {
-  it("stamps the Morpho quote exclusion policy as selector-v2.16", () => {
-    expect(buildSelectorRows(EMPTY_ARGS).methodologyVersions.exclusionFilters).toBe("selector-v2.16");
+  it("stamps the one-hour observed depth floor as selector-v2.17", () => {
+    expect(buildSelectorRows(EMPTY_ARGS).methodologyVersions.exclusionFilters).toBe("selector-v2.17");
   });
 
   it.each(Object.values(MORPHO_NET_YIELD_SOURCES).flatMap(({ stablecoinId, sourceKey, corroboratingPoolId }) => [

@@ -2,10 +2,16 @@ import { z } from "zod";
 import { FreshnessAssessmentSchema } from "@pharos/contracts/api-meta";
 import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 
+const TvlComparisonUnavailableReasonSchema = z.enum([
+  "current-tvl-clock-unavailable", "tvl-methodology-unavailable", "methodology-basis-change", "weekly-tvl-observation-unavailable",
+]);
+export type TvlComparisonUnavailableReason = z.infer<typeof TvlComparisonUnavailableReasonSchema>;
+
 const SignalDetailSchema = z
   .object({
     value: z.number(),
     available: z.boolean(),
+    tvlDelta7dUnavailableReason: TvlComparisonUnavailableReasonSchema.optional(),
   })
   .passthrough();
 

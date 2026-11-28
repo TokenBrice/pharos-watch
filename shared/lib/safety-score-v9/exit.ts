@@ -24,6 +24,7 @@ import {
   resolveExitScoringRequest,
   resolveExitThresholdBandMultiplier,
 } from "../exit-route-scoring";
+import { exitRawUsd, exitUsdBoundary } from "./exit-execution-units";
 import { clampScore, roundTo } from "../math";
 import { assertV9ValidatedPolicyEnvelope, unknownQuality } from "./policy";
 import { resolveV9StatusCauses, v9ScoringDisposition } from "./control-primitives";
@@ -63,6 +64,7 @@ export interface V9ExitCapacityPoint {
 }
 
 export interface V9ExitEvaluationRoute {
+  retainsInputExposure?: true;
   routeSuspension?: RedemptionRouteSuspension;
   status?: V9FactStatusV2;
   factorStatuses?: V9ExitRouteFactV2["factorStatuses"];
@@ -113,6 +115,8 @@ export interface V9ExitRouteTrace {
   confidenceDimensions: V9ConfidenceDimensions | null;
   capacityEvidenceTier: ExitRouteCapacityEvidenceTier;
   rawSameNotionalCostBps: number | null;
+  testedInput?: { inputCapacityUsd: number; testedNotionalUsd: number };
+  costEvidence?: "measured" | "upper-bound";
   supportedComponentCeiling: number | null;
   factorContributions?: Readonly<Record<string, V9CauseContribution>>;
   routeKey: string;
@@ -230,39 +234,64 @@ export function resolveV9ExitCapacityAtRequest(
   points: readonly V9ExitCapacityPoint[],
   request: V9ExitStressRequest,
 ): V9ExitCapacityPoint | null {
+  return selectExitCapacityPoint(points, request)?.capacityPoint ?? null;
+}
+
+function selectExitCapacityPoint(points: readonly V9ExitCapacityPoint[], request: V9ExitStressRequest) {
   // A smaller measured point remains an executable lower bound at a larger request.
   if (points.length === 0 || curveIssue(points)) return null;
   const eligibleCosts = uniqueSorted(
     points.filter((point) => point.maxCostBps <= request.maxCostBps).map((point) => String(point.maxCostBps)),
   ).map(Number);
-  let best: V9ExitCapacityPoint | null = null;
+  let best: { capacityPoint: V9ExitCapacityPoint; sourcePoint: V9ExitCapacityPoint } | null = null;
   for (const maxCostBps of eligibleCosts) {
     const costPoints = points
       .filter((point) => point.maxCostBps === maxCostBps)
       .sort((left, right) => left.requestedNotionalUsd - right.requestedNotionalUsd);
     const exact = costPoints.find((point) => point.requestedNotionalUsd === request.requestedNotionalUsd);
     const lower = [...costPoints].reverse().find((point) => point.requestedNotionalUsd < request.requestedNotionalUsd);
-    const first = costPoints[0];
-    const executableUsd = Math.min(
-      request.requestedNotionalUsd,
-      exact?.executableUsd ?? lower?.executableUsd ?? first?.executableUsd ?? 0,
-    );
+    const sourcePoint = exact ?? lower ?? costPoints[0]!;
+    const executableUsd = Math.min(request.requestedNotionalUsd, sourcePoint.executableUsd);
     const candidate = {
       requestedNotionalUsd: request.requestedNotionalUsd,
       maxCostBps,
       executableUsd,
       completionRatio: executableUsd / request.requestedNotionalUsd,
-      executionCostBps: exact?.executionCostBps ?? lower?.executionCostBps ?? first?.executionCostBps ?? maxCostBps,
+      executionCostBps: sourcePoint.executionCostBps,
     };
     if (
       best === null ||
-      candidate.executableUsd > best.executableUsd ||
-      (candidate.executableUsd === best.executableUsd && candidate.maxCostBps < best.maxCostBps)
+      candidate.executableUsd > best.capacityPoint.executableUsd ||
+      (candidate.executableUsd === best.capacityPoint.executableUsd && candidate.maxCostBps < best.capacityPoint.maxCostBps)
     ) {
-      best = candidate;
+      best = { capacityPoint: candidate, sourcePoint };
     }
   }
   return best;
+}
+
+/** Only sources that establish sell-side input units may publish an input test. */
+export function testedExitInput(
+  route: Pick<V9ExitEvaluationRoute, "routeId" | "lane" | "evidenceKind" | "physicalToUsd" | "executionModelId" | "executionCertificate">,
+  source: Pick<V9ExitCapacityPoint, "requestedNotionalUsd" | "executableUsd" | "maxCostBps">,
+): V9ExitRouteTrace["testedInput"] {
+  // Composed DEX observations measure the intermediate token, not the holder’s input.
+  if (route.physicalToUsd || route.routeId.startsWith("composed:")) return undefined;
+  const testedNotionalUsd = source.requestedNotionalUsd;
+  if (route.executionModelId) {
+    const certificate = route.executionCertificate;
+    const proof = certificate?.points.find((point) => point.certification !== "diagnostic" &&
+      point.requestedNotionalUsd === testedNotionalUsd && point.maxCostBps === source.maxCostBps && point.executableUsd === source.executableUsd);
+    if (!proof || !certificate) return undefined;
+    const { decimals, unitValueUsd } = certificate.inputReference;
+    const inputUsd = (units: string) => exitUsdBoundary(exitRawUsd(BigInt(units), decimals, unitValueUsd));
+    const requested = inputUsd(proof.requestedRawInput);
+    const executed = inputUsd(proof.executedRawInput);
+    if (requested <= 0 || (executed === 0 && proof.executedRawInput !== "0")) return undefined;
+    return { testedNotionalUsd: requested, inputCapacityUsd: executed };
+  }
+  return route.lane === "dex" && (route.evidenceKind === "reserve-based-amm-simulation" || route.evidenceKind === "measured-executable-depth")
+    ? { testedNotionalUsd, inputCapacityUsd: source.executableUsd } : undefined;
 }
 
 function settlementDelayMultiplier(
@@ -413,7 +442,7 @@ function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9Validate
   // Missing/stale capacity backed by A/B remains diagnostic. Relief is not
   // admission, even when adjacent output or settlement metadata is incomplete.
   if (route.observationState !== "known" && routeCause(route).excluded) return "missing-runtime-route-evidence";
-  if (route.applicability === "unresolved") return "missing-same-notional-route";
+  if (route.applicability === "unresolved" || route.retainsInputExposure) return "missing-same-notional-route";
   if (route.executionModelId && (!route.executionCertificate || !route.scoreEligible || route.observationState !== "known")) {
     return "unsupported-same-notional-route";
   }
@@ -445,7 +474,7 @@ function resolveIncludedRouteCapacity(
   envelope: V9ValidatedPolicyEnvelope,
   includeDiagnosticZero = false,
 ):
-  | { state: "included"; capacityPoint: V9ExitCapacityPoint; valuedExecutableUsd: number; costEvidence: "measured" | "upper-bound" }
+  | { state: "included"; capacityPoint: V9ExitCapacityPoint; sourcePoint: V9ExitCapacityPoint; valuedExecutableUsd: number; costEvidence: "measured" | "upper-bound" }
   | { state: "excluded"; exclusionReason: V9ReasonCode | null }
   | { state: "incomparable" }
   | { state: "unsupported" } {
@@ -460,12 +489,13 @@ function resolveIncludedRouteCapacity(
         point.maxCostBps === proof.maxCostBps && point.executableUsd === proof.executableUsd &&
         point.executionCostBps === proof.executionCostBps)
     : undefined;
-  const capacityPoint = route.executionModelId
-    ? certifiedPoint ? resolveV9ExitCapacityAtRequest([certifiedPoint], request) : null
-    : resolveV9ExitCapacityAtRequest(route.capacityCurve, route.physicalToUsd
+  const selected = route.executionModelId
+    ? certifiedPoint ? selectExitCapacityPoint([certifiedPoint], request) : null
+    : selectExitCapacityPoint(route.capacityCurve, route.physicalToUsd
       ? { ...request, maxCostBps: envelope.policy.semantic.exit.physicalToUsd.maxCostBps }
       : request);
-  if (capacityPoint === null) return { state: "incomparable" };
+  if (selected === null) return { state: "incomparable" };
+  const { capacityPoint, sourcePoint } = selected;
   // A modeled zero is not an exhaustion measurement. A missing settlement
   // bound also cannot turn a zero lower bound into executable recovery.
   if (capacityPoint.executableUsd === 0 && !isExhaustionMeasurement(route) && !includeDiagnosticZero) {
@@ -483,7 +513,7 @@ function resolveIncludedRouteCapacity(
   }
   return {
     state: "included",
-    capacityPoint,
+    capacityPoint, sourcePoint,
     // Certified receipts and physical-sale models quantify cost. Legacy curves
     // used the request ceiling as an unknown-cost sentinel; keep that evidence
     // distinction here rather than relabelling a measured boundary cost.
@@ -703,6 +733,7 @@ function evaluateRoute(
     };
   }
   const { capacityPoint, valuedExecutableUsd, costEvidence } = resolvedCapacity;
+  const testedInput = testedExitInput(route, resolvedCapacity.sourcePoint);
   const policy = envelope.policy.semantic.exit;
   const completionRatio = valuedExecutableUsd / request.requestedNotionalUsd;
   // Asset-relative materiality must not erase thin measured depth when the
@@ -870,6 +901,8 @@ function evaluateRoute(
     included: true,
     exclusionReason: null,
     confidenceDimensions,
+    ...(testedInput ? { testedInput } : {}),
+    costEvidence,
     rawSameNotionalCostBps: routeCause(route, "cost").cause === null && !hasUnquantifiedFee(route) ? capacityPoint.executionCostBps : null,
     supportedComponentCeiling: totalWeight > 0 ? weightedScore / totalWeight : null,
     factorContributions,
@@ -1005,6 +1038,7 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
     minRedeemUsd: route.minRedeemUsd ?? null,
     execution: mapExecution(route),
     outputQuality: mapOutputQuality(route),
+    ...(route.retainsInputExposure ? { retainsInputExposure: true } : {}),
     outputResolved: isV9ExitRouteOutputResolved(route.output),
     outputValueRetention: Math.min(1, route.output.valuation?.valueRetentionRatio ?? 0),
     ...(route.output.unboundedDeliveryCap !== undefined ? { unboundedDeliveryCap: route.output.unboundedDeliveryCap } : {}),
@@ -1164,7 +1198,8 @@ export function evaluateV9Exit(
       requestedNotionalUsd: stressRequest.rawSupplyRequestUsd,
     }, envelope.policy.semantic.exit)) continue;
     const trace = traces[index]!;
-    negligible.set(route.routeKey, { ...trace, included: false, effectiveScoringWeight: 0,
+    const testedInput = testedExitInput(route, capacity.sourcePoint);
+    negligible.set(route.routeKey, { ...trace, ...(testedInput ? { testedInput } : {}), included: false, effectiveScoringWeight: 0,
       capacityPoint: trace.capacityPoint ?? { ...capacity.capacityPoint,
         executableUsd: roundTo(capacity.valuedExecutableUsd, 2),
         completionRatio: roundTo(capacity.valuedExecutableUsd / stressRequest.requestedNotionalUsd, 2),

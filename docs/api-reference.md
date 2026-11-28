@@ -441,6 +441,14 @@ The standalone redemption contract is described in [Redemption Backstops](./rede
 
 [Modeled results](./dependency-map.md). Current response/artifact body `schemaVersion` is 2 and scenario cache generation is v2; the route remains `/api/dependency-scenarios/v1` with operation ID `dependencyScenariosV1`. Published and modeled technical pipeline-gap scores/grades stay null and distinct from NR; deltas involving unavailable numeric values remain null, never zero or a fabricated downgrade. Status and partial metadata survive parent propagation. These generation-bound offline artifacts remain noncanonical modeled scenarios, not forecasts or changes to accepted Safety Scores. Old artifacts require explicit historical version dispatch or refusal, never relabelling a v1 artifact under a v2 cache key.
 
+## DEX liquidity availability
+
+On `/api/dex-liquidity`, `totalTvlUsd` includes retained pools with paused swaps. For nonempty inventories published under v7.57, `effectiveDepth` reports the admitted `amountUsd`, `coverage`, `pausedPoolCount` and `unknownPoolCount`. Complete coverage can include a confirmed zero. Partial coverage gives a lower bound. Unavailable swap coverage has a null amount and the reason `swap-availability-unverified`. The existing nullable NR reason field keeps its legacy vocabulary. Concentration is null with no usable swaps, and durability is null when swap availability cannot be established. The legacy numeric `effectiveTvlUsd` remains the sum of admitted contributions. Older rows omit the coverage record.
+
+In current and historical DEWS signals, optional `signals.liq.liquidityScore`, `liquidityScore7dAgo` and `tvlDelta7dUnavailableReason` explain which weekly comparison contributed. The retained method and timestamps determine comparability.
+
+The site-only `/api/dex-liquidity-coin` detail projection adds `weeklyExitRouteBaselines` for comparable external sales. The historical and current capacities refer to the same pool, payout, request size, cost limit and model. The site-only `/api/report-cards/v9-detail?stablecoin=<id>&payout=assets` carries `payoutAssets` and `costEvidence` in the accepted primary Exit capacity. The score uses the credited `executableUsd` against the requested stress size. When a frozen route proves its sell input, `inputCapacityUsd` and `testedNotionalUsd` give that input and its tested order size. Diagnostic conversions identify their own payout and tested size. Older publications can lack those fields.
+
 ## Reserve Availability
 
 For `GET /api/stablecoin-reserves/{stablecoinId}`, optional `sync.collectionEligibility` is `{ scheduled, reason }` with successful-response reasons `active`, `quarantined`, `frozen`, or `delisted`; only active is scheduled. Suspended, unconfigured and pre-launch assets return `404`, not additional eligibility values. Readable inactive configurations may serve retained historical evidence without refreshing its clocks or admitting it to active collection. See the [reserve API contract](./live-reserves.md#api-contract).
@@ -742,7 +750,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.57"
+  "currentVersion": "6.58"
 }
 ```
 
@@ -780,7 +788,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.57"
+  "currentVersion": "6.58"
 }
 ```
 
@@ -1114,7 +1122,7 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 ```json
 {
   "currentVersion": "8.63",
-  "methodologyVersion": "10.58"
+  "methodologyVersion": "10.59"
 }
 ```
 
@@ -1191,8 +1199,8 @@ Freshness threshold: 3600 s.
 
 ```json
 {
-  "currentVersion": "6.57",
-  "methodologyVersion": "6.57"
+  "currentVersion": "6.58",
+  "methodologyVersion": "6.58"
 }
 ```
 

@@ -57,3 +57,12 @@ export function formatLiquiditySourceMix(sourceMix: LiquiditySourceMix): string 
     )
     .join(" · ");
 }
+
+/** Older publications carry only the numeric sum of admitted depth. */
+export function formatEffectiveLiquidity(liq: DexLiquidityData): string | null {
+  const depth = liq.effectiveDepth;
+  if (!depth) return formatCurrency(liq.effectiveTvlUsd);
+  if (depth.amountUsd == null) return null;
+  const amount = formatCurrency(depth.amountUsd);
+  return depth.coverage === "partial" ? `≥ ${amount}` : amount;
+}

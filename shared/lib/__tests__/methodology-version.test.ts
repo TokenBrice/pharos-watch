@@ -301,6 +301,7 @@ describe("liquidity TVL-basis break list", () => {
     expect(liquidityTvlBasisEpoch("6.95")).toBeLessThan(liquidityTvlBasisEpoch("6.96"));
     expect(liquidityTvlBasisEpoch("7.51")).toBe(liquidityTvlBasisEpoch("7.5") + 1);
     expect(liquidityTvlBasisEpoch("7.56")).toBe(liquidityTvlBasisEpoch("7.55") + 1);
+    expect(liquidityTvlBasisEpoch("7.57")).toBe(liquidityTvlBasisEpoch("7.56") + 1);
   });
   it("records v10.32's hourly-cadence activation and its derived bounds", () => {
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.32")!;

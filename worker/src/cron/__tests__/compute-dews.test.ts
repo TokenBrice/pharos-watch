@@ -91,6 +91,18 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+function staleDexRow(nowSec: number) {
+  return {
+    stablecoin_id: "usdt-tether",
+    weighted_balance_ratio: 0.4,
+    avg_pool_stress: 90,
+    top_pools_json: "[]",
+    liquidity_score: 25,
+    total_tvl_usd: 1_000_000,
+    updated_at: nowSec - 3 * 3600,
+  };
+}
+
 function seededStressDb(ids: string[]) {
   const fixture = sqliteFixtures.open();
   const priorTime = Math.floor(Date.now() / 1000) - 86400;
@@ -683,12 +695,19 @@ describe("computeAndStoreDEWS", () => {
     expect(malformedEntry.input).toMatchObject({ topPools: null, topPoolsUnavailableReason: "top-pools-entry-malformed" });
 
     // Readable entries keep a missing balance measurement as null, never as perfect balance.
+    const swapClock = { checkedAtSec: nowSec, maxAgeSec: 1800, poolAddress: "0x97f32e5091d0e6aee24beb398e6592ae111dee9c" };
     const readable = await run(JSON.stringify([
       { tvlUsd: 2_000_000, extra: { feeTier: 5 } },
       { tvlUsd: 1_000_000, extra: { balanceRatio: 0.6 } },
+      { tvlUsd: 2_593_517, extra: { balanceRatio: 0.3, fluidSwapStatus: { ...swapClock, status: "paused", reason: "fluid-swaps-paused" } } },
+      { tvlUsd: 300_000, extra: { balanceRatio: 0.4, fluidSwapStatus: { ...swapClock, status: "unknown", reason: "fluid-swap-state-expired" } } },
+      { tvlUsd: 400_000, extra: { balanceRatio: 0.8, fluidSwapStatus: { ...swapClock, status: "active", reason: "fluid-swaps-active" } } },
     ]));
     expect(readable.input).toMatchObject({
-      topPools: [{ tvlUsd: 2_000_000, balanceRatio: null }, { tvlUsd: 1_000_000, balanceRatio: 0.6 }],
+      topPools: [
+        { tvlUsd: 2_000_000, balanceRatio: null }, { tvlUsd: 1_000_000, balanceRatio: 0.6 },
+        { tvlUsd: 300_000, balanceRatio: null }, { tvlUsd: 400_000, balanceRatio: 0.8 },
+      ],
       topPoolsUnavailableReason: null,
     });
 
@@ -941,17 +960,7 @@ describe("computeAndStoreDEWS", () => {
     const sqlSeen: string[] = [];
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDb(sqlSeen, {
-      dexLiqRows: [
-        {
-          stablecoin_id: "usdt-tether",
-          weighted_balance_ratio: 0.4,
-          avg_pool_stress: 90,
-          top_pools_json: "[]",
-          liquidity_score: 25,
-          total_tvl_usd: 1_000_000,
-          updated_at: nowSec - 3 * 3600,
-        },
-      ],
+      dexLiqRows: [staleDexRow(nowSec)],
       dexPublicationLatest: {
         generation_id: "dex-liquidity-1772546400",
         state: "failed",
@@ -982,26 +991,17 @@ describe("computeAndStoreDEWS", () => {
         staleFlags: expect.objectContaining({ dexLiquidity: true }),
       }),
     );
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      sourceCoverage: Record<string, number>;
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      sourceCoverage: { dexLiquidityStaleRows: 1, dexLiquidityFreshRows: 0 },
       dependencies: {
-        dexLiquidity?: {
-          latestGenerationId?: string | null;
-          latestGenerationState?: string | null;
-          latestGenerationFailureReason?: string | null;
-          latestPublishedGenerationId?: string | null;
-          latestPublishedAgeSec?: number | null;
-        };
-      };
-    };
-    expect(metadata.sourceCoverage.dexLiquidityStaleRows).toBe(1);
-    expect(metadata.sourceCoverage.dexLiquidityFreshRows).toBe(0);
-    expect(metadata.dependencies.dexLiquidity).toMatchObject({
-      latestGenerationId: "dex-liquidity-1772546400",
-      latestGenerationState: "failed",
-      latestGenerationFailureReason: "current generation incomplete: active=368 expected=369",
-      latestPublishedGenerationId: "dex-liquidity-1772539200",
-      latestPublishedAgeSec: 7_400,
+        dexLiquidity: {
+          latestGenerationId: "dex-liquidity-1772546400",
+          latestGenerationState: "failed",
+          latestGenerationFailureReason: "current generation incomplete: active=368 expected=369",
+          latestPublishedGenerationId: "dex-liquidity-1772539200",
+          latestPublishedAgeSec: 7_400,
+        },
+      },
     });
   });
 
@@ -1010,42 +1010,22 @@ describe("computeAndStoreDEWS", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDb(sqlSeen, {
       failDexPublicationDiagnostics: true,
-      dexLiqRows: [
-        {
-          stablecoin_id: "usdt-tether",
-          weighted_balance_ratio: 0.4,
-          avg_pool_stress: 90,
-          top_pools_json: "[]",
-          liquidity_score: 25,
-          total_tvl_usd: 1_000_000,
-          updated_at: nowSec - 3 * 3600,
-        },
-      ],
+      dexLiqRows: [staleDexRow(nowSec)],
     });
 
     const result = await computeAndStoreDEWS(db);
 
     expect(result.status).toBe("degraded");
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      sourceFailures: Array<{ source: string }>;
-      sourceCoverage: Record<string, number>;
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      sourceFailures: expect.arrayContaining([expect.objectContaining({ source: "dex-liquidity-freshness" })]),
+      sourceCoverage: { dexLiquidityStaleRows: 1, dexLiquidityFreshRows: 0 },
       dependencies: {
-        dexLiquidity?: {
-          diagnosticsError?: string;
-          latestGenerationId?: string | null;
-          latestPublishedAgeSec?: number | null;
-        };
-      };
-    };
-    expect(metadata.sourceFailures).toContainEqual(
-      expect.objectContaining({ source: "dex-liquidity-freshness" }),
-    );
-    expect(metadata.sourceCoverage.dexLiquidityStaleRows).toBe(1);
-    expect(metadata.sourceCoverage.dexLiquidityFreshRows).toBe(0);
-    expect(metadata.dependencies.dexLiquidity).toMatchObject({
-      diagnosticsError: "publication diagnostics unavailable",
-      latestGenerationId: null,
-      latestPublishedAgeSec: null,
+        dexLiquidity: {
+          diagnosticsError: "publication diagnostics unavailable",
+          latestGenerationId: null,
+          latestPublishedAgeSec: null,
+        },
+      },
     });
   });
 

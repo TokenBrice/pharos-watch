@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.58",
+    "title": "Use the assessment clock for liquidity erosion inputs",
+    "date": "2026-11-28",
+    "effectiveAt": 1795893660,
+    "summary": "DEWS admits a DEX liquidity observation against the evaluation time, including observations completed after the DEX job started.",
+    "impact": [
+      "A replay of two November 28 generations restored all 512 observation clocks. No weekly TVL baseline qualified, and all 512 published scores and bands were reproduced. A same-methodology control on earlier data confirmed the TVL leg can affect erosion when both observations qualify.",
+      "The weekly score and TVL comparisons retain independent eligibility. Missing or incompatible TVL history leaves partial input coverage. The detail view identifies the available comparison and reports measured pool-balance coverage.",
+      "The liquidity-erosion curve and its weights stay the same. Restoring a comparable TVL observation can move newly computed scores or bands. Historical publications retain their original inputs. Activation time is provisional until the first accepted DEWS run."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.57",
     "title": "Duplicate-repair gap supersession and replayed pre-Day-30 re-escalation quotes",
     "date": "2026-11-28",

@@ -7,7 +7,9 @@ import { buildBreakdownEntries, BreakdownBar, BreakdownLegend } from "@/componen
 import { useDexLiquidityHistory } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { ChartAreaGradient, useNiceValueAxis } from "@/components/chart-primitives/axes";
-import { formatAddress, formatCurrency, formatChartDate, formatPercentFromRatio, formatUsdPriceAdaptive } from "@shared/lib/format";
+import { formatAddress, formatCurrency, formatChartDate, formatChartPercent, formatPercentFromRatio, formatUsdPriceAdaptive } from "@shared/lib/format";
+import { isDexExitPayoutConversion } from "@shared/lib/exit-route-output";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { CHART_AXIS_TICK, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-theme";
@@ -157,6 +159,46 @@ export function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
   );
 }
 
+export function ExitCapacityTrend({ stablecoinId, liq }: { stablecoinId: string; liq: DexLiquidityData }) {
+  const rows = (liq.exitRouteObservations ?? []).flatMap((route) => {
+    const outputs = route.output.trackedAssetIds;
+    if (!route.scoreEligible || route.scope.kind !== "chain-contract" || route.output.kind !== "tracked-stablecoin" ||
+        outputs?.length !== 1 || route.output.assetKeys?.length !== 1 ||
+        isDexExitPayoutConversion(stablecoinId, outputs, CLIENT_TRACKED_META_BY_ID)) return [];
+    const payout = CLIENT_TRACKED_META_BY_ID.get(outputs[0]);
+    if (!payout) return [];
+    const prior = liq.weeklyExitRouteBaselines?.find((candidate) => candidate.routeId === route.routeId);
+    const change = prior && prior.executableUsd > 0 ? route.executableUsd / prior.executableUsd - 1 : null;
+    return [{ route, payout, scope: route.scope, prior, change }];
+  });
+  if (rows.length === 0) {
+    return liq.exitRouteObservationCoverage ? (
+      <p className="text-xs text-muted-foreground">Weekly sell-capacity comparison into other stablecoins unavailable.</p>
+    ) : null;
+  }
+  return (
+    <div className="space-y-2">
+      <p className="pharos-label">Sell capacity into other stablecoins</p>
+      <ul className="space-y-2 text-sm">
+        {rows.map(({ route, payout, scope, prior, change }) => (
+          <li key={route.routeId}>
+            <span className="font-medium">{payout.symbol}</span> on {prettifyProtocol(scope.protocol)} · {normalizeChain(scope.chain)} <span title={scope.contractOrPoolId} className="font-mono text-xs text-muted-foreground">{formatAddress(scope.contractOrPoolId.replace(scope.chain + ":", ""))}</span>
+            {" · "}<span className="font-mono tabular-nums">{formatCurrency(route.executableUsd)}</span>
+            <span className="text-muted-foreground"> of {formatCurrency(route.requestedNotionalUsd)} at up to {route.maxCostBps} bps ({route.evidenceKind === "reserve-based-amm-simulation" ? "modeled" : "quoted"})</span>
+            <div className="text-xs text-muted-foreground">
+              {prior ? (
+                <>{formatCurrency(prior.executableUsd)} on {formatChartDate(prior.observedAt * 1000, "short")}
+                  {" → "}{formatCurrency(route.executableUsd)} on {formatChartDate(route.observedAt * 1000, "short")}
+                  {change != null ? ` (${formatChartPercent(change * 100, 1)} over 7d)` : " (7d percentage unavailable)"}</>
+              ) : `As of ${formatChartDate(route.observedAt * 1000, "short")} · 7d comparison unavailable`}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPool[]; totalPoolCount?: number }) {
   if (pools.length === 0) return null;
   const displayed = Math.min(pools.length, 5);
@@ -226,6 +268,12 @@ export function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPo
                   <span className="font-medium">{pool.symbol}</span>
                   <span className="text-xs text-muted-foreground">({pool.project})</span>
                 </div>
+                {pool.extra?.fluidSwapStatus?.status === "paused" && (
+                  <span className="block text-xs text-muted-foreground">Swaps paused</span>
+                )}
+                {pool.extra?.fluidSwapStatus?.status === "unknown" && (
+                  <span className="block text-xs text-muted-foreground">Swap availability unverified</span>
+                )}
                 {pool.extra?.organicFraction != null && (
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     <span className="text-xs text-muted-foreground sm:hidden">{pool.chain}</span>

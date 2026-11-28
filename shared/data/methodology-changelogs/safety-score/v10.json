@@ -1,5 +1,20 @@
 [
   {
+    "version": "10.59",
+    "title": "Separate wrapper conversions from independent exits",
+    "date": "2026-11-28",
+    "effectiveAt": 1795893720,
+    "summary": "The selected Exit route identifies the payout asset and the basis for its cost. A swap into a staking receipt for the asset being sold retains exposure to that asset.",
+    "impact": [
+      "Two accepted fixed-input generations preserved all grades with the directional payout rule. On the later input, trUSD moved from 49 to 48 (D). A separate 366-asset simulation that added a qualifying Monad AUSD route selected that payout; trUSD moved from 48 (D) to 50 (C−). The simulated grade depends on new venue and price evidence.",
+      "Parent-to-wrapper conversions remain visible in route evidence. Independent exit credit requires a payout outside the sold asset’s own claim. A reverse sale of a staking share into its underlying is evaluated in its own direction.",
+      "The summary identifies which asset the holder receives and distinguishes a modeled ceiling from an observed cost. Older publications keep the identity evidence they actually recorded.",
+      "Activation time is provisional until the first accepted Safety Score publication."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.58",
     "title": "Keyed X Layer CCIP history and shared-ramp sibling-pool discovery for the re-authored sUSDat census",
     "date": "2026-11-28",

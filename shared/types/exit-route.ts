@@ -492,6 +492,8 @@ const ExitRouteObservationBaseSchema = z.object({
   completionRatio: z.number().finite().min(0).max(1),
   output: ExitRouteOutputSchema,
   evidenceKind: ExitRouteEvidenceKindSchema,
+  /** Reserve simulator capability used for historical comparisons. */
+  reserveModelId: z.string().min(1).optional(),
   /** Exact measured-adapter identity when a DEX observation came from a reviewed runtime adapter. */
   adapterProfileId: z.string().min(1).optional(),
   /** Reviewed fee disclosure without a same-notional execution cost bound. */
@@ -532,6 +534,8 @@ const ExitRouteObservationBaseSchema = z.object({
   scoreEligible: z.boolean(),
   observedAt: z.number().int().nonnegative(),
   freshnessSeconds: z.number().int().nonnegative(),
+  /** Oldest contributing market mark or reserve block used for freshnessSeconds. */
+  freshnessBasisAt: z.number().int().positive().optional(),
   commonModeKeys: z.array(z.string().min(1)).max(MAX_EXIT_ROUTE_COMMON_MODE_KEYS),
   /** One physical inventory reused across routes; never additive capacity. */
   sharedResourceKey: z.string().trim().min(1).optional(),

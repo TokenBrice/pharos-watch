@@ -1,5 +1,20 @@
 [
   {
+    "version": "7.57",
+    "title": "Fluid swap availability and Monad Curve Lite liquidity",
+    "date": "2026-11-28",
+    "effectiveAt": 1795893360,
+    "summary": "Fluid pool inventory carries swap availability across sources. Monad Curve Lite supplies exact pool balances and execution evidence for qualifying routes.",
+    "impact": [
+      "On the November 28 frozen DEX inventory (273 scored assets), the Fluid correction preserved gross TVL and removed $2.204M from trUSD effective depth. Its DEX score moved from 62 to 61. In a separate Monad simulation three seconds after the production score, the new independent AUSD route admitted $59,852 within 2% and the combined DEX score was 59.",
+      "Fluid swap status applies to the physical pool across providers. Confirmed paused pools retain gross inventory and measured historical volume, with no usable depth. Missing, stale or ambiguous status leaves the usable contribution unverified. With no usable TVL, concentration is unavailable. If swap availability is unverified throughout, the score and durability are unavailable as well.",
+      "Monad Curve Lite reserves qualify by exact pool and token identities. Independent marks and pinned StableSwap-NG validation govern directional exit capacity. The AUSD and strUSD pools on Monad hold distinct assets and count separately. Exact Curve valuations replace DeFiLlama valuations on matched pools, starting a new retained-TVL comparison epoch.",
+      "The scoring stage requires payload v12. Earlier payloads cannot publish under the new methodology. Activation time is provisional until the first accepted DEX generation."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "7.56",
     "title": "General Curve exact-address identity, below-floor twin guards, and SundaeSwap ADA-paired valuation",
     "date": "2026-11-25",

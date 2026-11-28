@@ -1,3 +1,5 @@
+import type { ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-projections";
+import { projectKeyedExitBreakdown } from "../lib/report-cards-v9-projection";
 import { jsonResponse } from "../lib/api-response";
 import { safetyScoreSnapshotHeaders, withSafetyScoreRepresentationEtag as withRepresentationEtag } from "../lib/safety-score-v9/http-response";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
@@ -8,9 +10,15 @@ async function respond(db: D1Database, representationKey: string, url?: URL): Pr
   try {
     const snapshot = await loadV9PublicMaterializedResponse(db, representationKey);
     const options = readV9WireOptions(url);
-    const body = representationKey === "table" ? snapshot.body : projectV9WireBody(snapshot.body, options);
+    const includePayout = url?.searchParams.get("payout") === "assets";
+    let body: BodyInit = representationKey === "table" ? snapshot.body : projectV9WireBody(snapshot.body, options);
+    if (representationKey.startsWith("coin:") && !includePayout) {
+      // A legacy detail request carries one materialized card. Older clients require its original strict schema.
+      const detail = await new Response(body).json() as ReportCardsV9DetailResponse;
+      body = JSON.stringify({ ...detail, cards: detail.cards.map(projectKeyedExitBreakdown) });
+    }
     return withRepresentationEtag(new Response(body, { headers: safetyScoreSnapshotHeaders(snapshot, snapshot.representationIdentity.generationId) }), {
-      representationKey, ...(options.operands ? { freshness: "operands" } : {}),
+      representationKey, ...(includePayout ? { payout: "assets" } : {}), ...(options.operands ? { freshness: "operands" } : {}),
       ...(options.reserveAdmission ? { reserveAdmission: "diagnostics" } : {}),
       ...snapshot.representationIdentity, publicationHealth: snapshot.publicationHealth,
     });

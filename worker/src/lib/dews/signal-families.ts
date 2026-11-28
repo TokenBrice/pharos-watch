@@ -238,7 +238,7 @@ export function computePoolSignal(input: DEWSInput): SignalResult {
 }
 
 export function computeLiquiditySignal(input: Pick<DEWSInput,
-  "liquidityScore" | "liquidityScore7dAgo" | "tvlCurrent" | "tvl7dAgo"
+  "liquidityScore" | "liquidityScore7dAgo" | "tvlCurrent" | "tvl7dAgo" | "tvlDelta7dUnavailableReason"
 >): SignalResult {
   const { liquidityScore, liquidityScore7dAgo, tvlCurrent, tvl7dAgo } = input;
 
@@ -249,8 +249,11 @@ export function computeLiquiditySignal(input: Pick<DEWSInput,
     && tvl7dAgo !== null && Number.isFinite(tvl7dAgo) && tvl7dAgo > 0;
   const componentCoverage = (scoreDeltaComputable ? 0.5 : 0) + (tvlDeltaComputable ? 0.5 : 0);
 
+  const tvlDiagnostic = !tvlDeltaComputable && input.tvlDelta7dUnavailableReason
+    ? { tvlDelta7dUnavailableReason: input.tvlDelta7dUnavailableReason } : {};
+
   if (!currentScoreAvailable || componentCoverage === 0) {
-    return { value: 0, available: false, componentCoverage: 0, scoreDelta7d: null, tvlDelta7d: null };
+    return { value: 0, available: false, componentCoverage: 0, scoreDelta7d: null, tvlDelta7d: null, ...(!currentScoreAvailable ? { liquidityScore: null } : {}), ...tvlDiagnostic };
   }
 
   const scoreDelta = scoreDeltaComputable ? (liquidityScore - liquidityScore7dAgo) / Math.max(liquidityScore7dAgo, 1) : null;
@@ -296,6 +299,8 @@ export function computeLiquiditySignal(input: Pick<DEWSInput,
     value,
     available: true,
     componentCoverage,
+    ...tvlDiagnostic,
+    ...(scoreDeltaComputable ? { liquidityScore, liquidityScore7dAgo } : {}),
     scoreDelta7d: scoreDelta == null ? null : Math.round(scoreDelta * 10000) / 100,
     tvlDelta7d: tvlDelta == null ? null : Math.round(tvlDelta * 10000) / 100,
   };

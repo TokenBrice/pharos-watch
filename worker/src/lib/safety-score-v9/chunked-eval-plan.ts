@@ -881,7 +881,7 @@ export function* compileV9ChunkAssets(input: V9ChunkCompilerInput & {
     const id = facts.assetId;
     yield {
       facts,
-      ...projectV9PublicationAssetFacts(facts, input.factSetHeader, input.fixedInput, ACTIVE_META_BY_ID.get(id), reserveRejections),
+      ...projectV9PublicationAssetFacts(facts, input.factSetHeader, input.fixedInput, ACTIVE_META_BY_ID, reserveRejections),
       marketRank: input.marketRanks[id] ?? null,
       dependencySignals: input.commonModeSignals[id] ?? [],
     };

@@ -33,7 +33,7 @@ USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exac
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v7.0`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v7.1`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -233,6 +233,8 @@ Replacement retains diagnostic candidates but discards their pre-replacement pri
 If the selected primary price is a severe fixed-peg downside and at least two live candidate sources independently corroborate that downside by source family, including at least one depeg-authoritative source such as Curve on-chain, pool challenge can still downgrade confidence but cannot replace the selected price with a DEX pool median. The same candidate corroboration also satisfies the temporal-jump guard when the previous trusted price was near peg, so near-peg or stale DEX liquidity cannot erase a corroborated severe depeg while weak, uncorroborated soft sources keep the normal challenge behavior.
 
 Promotion consumes protocol aggregates; pool challenges consume dedicated challenger snapshots, not display-oriented top-pool summaries. These views cannot substitute for one another.
+
+Pricing v7.1 requires fresh evidence that a Fluid pool accepts swaps before its prices can enter the aggregate DEX median or the pool challenge. The physical-pool check also applies to observations arriving through other providers.
 
 Dead or explicitly blocked DEX ids, including Bunni and its chain-scoped variants, are filtered upstream and cannot contribute challenger pools, promoted DEX bridge sources, or pool-challenge replacement marks.
 

@@ -103,7 +103,7 @@ export function projectPoolChallenger(
   ) {
     return null;
   }
-  const price = projectRetainedPoolPrice(pool, stablecoinId);
+  const price = projectRetainedPoolPrice(pool, stablecoinId, nowSec);
   if (!price || price.tvl < minPoolTvlUsd) return null;
   if (
     rejectionFilter?.hasIntegrityRejection &&
@@ -170,7 +170,7 @@ export function evaluateDexPriceChallengerPoolAdmission(
   const verifiedNonCurvePoolRefs = new Set<PoolEntry>();
   for (const pool of pools) {
     if (pool.curveNavSpotQuote !== undefined) continue;
-    const obs = projectRetainedPoolPrice(pool, stablecoinId);
+    const obs = projectRetainedPoolPrice(pool, stablecoinId, nowSec);
     if (obs && isIndependentlyVerifiedClockedObservation(obs, nowSec) && obs.poolKey) {
       verifiedNonCurvePoolRefs.add(pool);
       const existing = verifiedNonCurveByPoolKey.get(obs.poolKey);
@@ -195,7 +195,7 @@ export function evaluateDexPriceChallengerPoolAdmission(
     if (pool.curveNavSpotQuote === undefined) continue;
     const key = canonicalCurveNavPoolKey(pool.chain, pool.poolId) ?? pool.poolId;
     const list = curveGroups.get(key) ?? [];
-    list.push({ pool, obs: projectRetainedPoolPrice(pool, stablecoinId) });
+    list.push({ pool, obs: projectRetainedPoolPrice(pool, stablecoinId, nowSec) });
     curveGroups.set(key, list);
   }
 

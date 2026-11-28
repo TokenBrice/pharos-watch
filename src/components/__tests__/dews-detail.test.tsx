@@ -205,6 +205,8 @@ describe("DEWSDetail", () => {
       current: { score: 20, band: "CALM", signals: {
         supply: { value: 55, available: true },
         pool: { value: 0, available: true },
+        liq: { value: 0, available: true, componentCoverage: 0.5, liquidityScore7dAgo: 62, liquidityScore: 62,
+          scoreDelta7d: 0, tvlDelta7d: null, tvlDelta7dUnavailableReason: "methodology-basis-change" },
         price: { value: 99, available: false },
         diverg: { value: 80, available: true },
       } }, history: [],
@@ -212,8 +214,9 @@ describe("DEWSDetail", () => {
     const { container } = render(<DEWSDetail stablecoinId="fixture" />);
     const rows = [...container.querySelectorAll<HTMLElement>("[data-dews-signal]")];
     // One row-major list at every width; the odd last signal spans the lg row.
-    expect(rows.map((row) => row.dataset.dewsSignal)).toEqual(["diverg", "supply", "pool"]);
-    expect(screen.getAllByLabelText(/out of 100$/).map((element) => element.textContent)).toEqual(["80", "55", "0"]);
+    expect(rows.map((row) => row.dataset.dewsSignal)).toEqual(["diverg", "supply", "pool", "liq"]);
+    expect(screen.getAllByLabelText(/out of 100$/).map((element) => element.textContent)).toEqual(["80", "55", "0", "0"]);
+    expect(rows[3].textContent).toContain("7d score change 0.0% (62 → 62) · 7d TVL change unavailable (TVL measurement basis changed) · 1 of 2 inputs");
     expect(rows.every((row) => row.className.includes("lg:odd:last:col-span-2"))).toBe(true);
     // A measured zero reads at full contrast, not dimmed as if disabled.
     expect(rows[2].className).not.toMatch(/opacity/);

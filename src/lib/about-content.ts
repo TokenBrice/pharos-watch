@@ -100,7 +100,7 @@ export const DATA_SOURCE_GROUPS = [
     label: "DEX data",
     summary: "Yield and liquidity APIs, subgraphs, and direct pool reads across DEXs and lending markets.",
     sources:
-      "DeFiLlama Yields & Protocols, protocol-native yield APIs and on-chain readers (Morpho, Aave V3, Compound V3, Yearn Kong, Beefy, Pendle, Curve, Hashnote, Re Protocol, Royco Dawn), The Graph, Curve Finance API, Fluid, Balancer, Raydium, Orca, Jupiter, Meteora, Bluefin, Stellar Horizon, Aquarius, TzKT, Balanced, Kava, SundaeSwap, PancakeSwap, SUN.io, Uniswap V3/V4, Aerodrome, Velodrome, Aero, Shadow Exchange, GeckoTerminal, and DexScreener.",
+      "DeFiLlama Yields & Protocols, protocol-native yield APIs and on-chain readers (Morpho, Aave V3, Compound V3, Yearn Kong, Beefy, Pendle, Curve, Hashnote, Re Protocol, Royco Dawn), The Graph, Curve Finance API and Curve Lite on Monad, Fluid pool states and tickers, Balancer, Raydium, Orca, Jupiter, Meteora, Bluefin, Stellar Horizon, Aquarius, TzKT, Balanced, Kava, SundaeSwap, PancakeSwap, SUN.io, Uniswap V3/V4, Aerodrome, Velodrome, Aero, Shadow Exchange, GeckoTerminal, and DexScreener.",
   },
   {
     label: "AI generation",

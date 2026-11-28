@@ -1,3 +1,4 @@
+import { CURVE_LITE_DEPLOYMENTS } from "@shared/lib/dex-deployment-coverage";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import { setCache } from "../../lib/db-cache";
@@ -20,8 +21,7 @@ import type {
 import {
   DEFILLAMA_YIELDS_URL,
   DEFILLAMA_PROTOCOLS_URL,
-  CURVE_API_BASE,
-  CURVE_API_CHAIN_PATHS,
+  curvePoolsApiUrl,
   CURVE_CHAINS,
   DEX_LIQUIDITY_POOL_MIN_TVL_USD,
 } from "./constants";
@@ -61,6 +61,7 @@ import { requirePoolIdentity } from "./process-pool-admission-identity";
 import { ExpectedPoolInputError, POOL_REJECTION_POOL_ID_LIMIT, type PoolProcessingRejection } from "./process-pool-types";
 import { attachReviewedQuoterV2SourcePoolIdentities } from "./pool-identity";
 
+import { curveApiCoinBalance, curveApiTotalBalance } from "./curve-api-balances";
 import { parseStrictFiniteDecimal } from "./direct-api-json";
 import { DEX_CURVE_FETCH_CONCURRENCY } from "@shared/lib/cron-jobs";
 const PRIMARY_SOURCE_JSON_TIMEOUT_MS = 30_000;
@@ -495,12 +496,13 @@ export async function fetchDataSources(
     const curveResults = await mapWithConcurrency(CURVE_CHAINS, DEX_CURVE_FETCH_CONCURRENCY, async (chain) => {
       const readStartedAtSec = Math.floor(Date.now() / 1000);
       const result = await fetchJsonWithRetry<CurveApiPayload>(
-        `${CURVE_API_BASE}/${CURVE_API_CHAIN_PATHS[chain] ?? chain}`,
+        curvePoolsApiUrl(chain),
         { headers: { "User-Agent": USER_AGENT }, signal },
         2,
         { timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS, maxResponseBytes: CURVE_MAX_RESPONSE_BYTES },
       );
-      if (result?.body) result.body.readStartedAtSec = readStartedAtSec;
+      if (!Array.isArray(result?.body?.data?.poolData)) return null;
+      result.body.readStartedAtSec = readStartedAtSec;
       return result;
     });
     curvePayloads = curveResults.map((result) => result?.body ?? null);
@@ -579,20 +581,9 @@ export async function buildCurveLookups(
         const A = parseInt(pool.amplificationCoefficient, 10);
         if (isNaN(A)) continue;
 
-        const coinBalances = pool.coins.map((coin) => {
-          const raw = parseStrictFiniteDecimal(coin.poolBalance);
-          const decimals = parseStrictFiniteDecimal(coin.decimals);
-          const usdBalance =
-            raw != null && raw >= 0 &&
-            decimals != null && Number.isInteger(decimals) && decimals >= 0 && decimals <= 255 &&
-            Number.isFinite(coin.usdPrice) && coin.usdPrice > 0
-              ? (raw / 10 ** decimals) * coin.usdPrice
-              : null;
-          return { coin, raw, decimals, usdBalance };
-        });
-
-        // A failed leg is unavailable, not an observed empty reserve.
-        const totalUsd = coinBalances.reduce((sum, { usdBalance }) => sum + (usdBalance ?? Number.NaN), 0);
+        const lite = CURVE_LITE_DEPLOYMENTS.has(chain);
+        const coinBalances = pool.coins.map(curveApiCoinBalance);
+        const totalUsd = curveApiTotalBalance(coinBalances);
         const balanceComplete = Number.isFinite(totalUsd);
         let balanceRatio: number | null = null;
         if (balanceComplete) {
@@ -634,7 +625,7 @@ export async function buildCurveLookups(
           .join("-");
         const tokenPrices: Record<string, number> = {};
         for (const c of pool.coins) {
-          if (Number.isFinite(c.usdPrice) && c.usdPrice > 0) {
+          if (!lite && Number.isFinite(c.usdPrice) && c.usdPrice > 0) {
             tokenPrices[normalizeDexSymbol(c.symbol)] = c.usdPrice;
           }
         }
@@ -712,6 +703,11 @@ export async function buildCurveLookups(
           pool.coins.length <= 8 &&
           executionCoins.every((coin) => coin !== null);
 
+        const liteNgCoins = !executionComplete && lite && !pool.isMetaPool &&
+          pool.registryId === "factory-stable-ng" && coinBalances.every(({ coin, decimals }) =>
+            !coin.isBasePoolLpToken && decimals != null && Number.isInteger(decimals) && decimals >= 0 && decimals <= 36)
+          ? coinBalances.map(({ coin, decimals }) => ({ address: coin.address, symbol: coin.symbol, decimals: decimals! }))
+          : undefined;
         const permanentLiquidity = resolvePermanentLiquidity(chain, pool.address, pool.totalSupply);
         const curveBasePoolOverlap = resolveCurveBasePoolOverlap(chain, pool, coinBalances);
         const entry: CurvePoolEntry = {
@@ -743,6 +739,7 @@ export async function buildCurveLookups(
                   underlyingCoins as NonNullable<CurvePoolEntry["underlyingCoins"]>,
               }
             : {}),
+          ...(liteNgCoins ? { liteNgCoins } : {}),
           ...(executionComplete
             ? { executionCoins: executionCoins as NonNullable<CurvePoolEntry["executionCoins"]> }
             : {}),
@@ -816,7 +813,8 @@ export async function buildCurveLookups(
 
         // Extract per-token price observations for DEX cross-validation
         // Filter: pool TVL >= $50K, balance ratio >= 0.3, coin has valid usdPrice
-        if (pool.usdTotal >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && balanceRatio != null && balanceRatio >= 0.3) {
+        // API Core can infer its USD prices from this same pool, without an observation clock.
+        if (!lite && pool.usdTotal >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && balanceRatio != null && balanceRatio >= 0.3) {
           const identity = buildPoolIdentity({
             chain,
             protocol: "curve",

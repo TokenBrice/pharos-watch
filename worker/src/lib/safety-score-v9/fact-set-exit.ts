@@ -1,4 +1,5 @@
 import { redemptionRouteId } from "@shared/lib/redemption-route-identity";
+import { hasUnresolvedFluidSwaps } from "@shared/lib/fluid-swap-status";
 import { normalizeFailureDomains } from "@shared/lib/safety-score-v9/primitives";
 import { z } from "zod";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
@@ -665,7 +666,7 @@ function buildRoute(
   // score-bearing contract after the review has been materialized.
   const settlementBoundUnproven = args.review.settlementBoundUnproven ??
     (args.observation.settlementBoundUnproven === true);
-  const scoreEligible = physicalDeliveryCapacityNotApplicable
+  const meetsExecutionRequirements = physicalDeliveryCapacityNotApplicable
     ? false
     : isDexExitRouteScoreEligible({
     producerScoreEligible: args.observation.scoreEligible && executionAdmission?.state !== "unavailable",
@@ -719,7 +720,7 @@ function buildRoute(
     ...(args.observation.physicalToUsd ? { physicalToUsd: args.observation.physicalToUsd } : {}),
     ...(args.observation.executionModelId ? { executionModelId: args.observation.executionModelId } : {}),
     ...(certificate ? { executionCertificate: certificate } : {}),
-    coverageClass: !usableCapacity ? "diagnostic" : executionAdmission
+    coverageClass: !usableCapacity || (args.review.retainsInputExposure && !meetsExecutionRequirements) ? "diagnostic" : executionAdmission
       ? executionAdmission.state === "unavailable" ? "diagnostic" : executionAdmission.point.certification
       : args.review.coverageClass,
     capacityScoringHorizon: args.review.capacityScoringHorizon ?? "unknown",
@@ -744,7 +745,8 @@ function buildRoute(
       ...(output.status.observationState !== "known" ? { output: output.status } : {}),
       ...rejectedFactorStatuses,
     },
-    scoreEligible,
+    scoreEligible: meetsExecutionRequirements && args.review.retainsInputExposure !== true,
+    ...(args.review.retainsInputExposure ? { retainsInputExposure: true as const } : {}),
     settlementBoundUnproven,
     request: capacityCurve.length === 0 ? null : {
       requestedNotionalUsd: args.observation.requestedNotionalUsd,
@@ -797,7 +799,7 @@ function isModelUnsupportedCapabilityGate(reason: string): boolean {
 function classifyUnsupportedDexSurface(
   coverage: ExitRouteObservationCoverage | undefined,
 ): V9DexSurfaceUnsupportedKind | null {
-  if (coverage == null) return null;
+  if (coverage == null || hasUnresolvedFluidSwaps(coverage.unsupportedReasons)) return null;
   if (coverage.retainedPoolCount === 0) {
     return (coverage.unsupportedReasons["deploymentCensusUnsupportedMethod"] ?? 0) > 0
       ? "census-unsupported"
@@ -1349,8 +1351,12 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
       gapIds: [gapId], evidenceRefIds: [runtime.evidence.evidenceId],
     }), exitRoutes: routes };
   }
+  const coverage = context.fixedInput.dexLiqMap[context.asset.assetId]?.exitRouteObservationCoverage;
+  const fluidStateUnknown = coverage != null && hasUnresolvedFluidSwaps(coverage.unsupportedReasons);
+  const unresolvedFluidMessage = "Fluid swap state is unresolved, so the independent exit census is incomplete.";
   if (routes.length === 0) {
     const resolvePriorVerifiedEmptyExitCeiling = (): V9AssetFactsV3["priorVerifiedEmptyExitCeiling"] => {
+      if (fluidStateUnknown) return undefined;
       const witness = context.verifiedEmptyExitByAssetId?.[context.asset.assetId];
       if (witness === undefined) return undefined;
       const maxAgeSec = policy.policy.semantic.exit.verifiedEmptyCarryMaxAgeSec;
@@ -1366,12 +1372,12 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
     };
     // Local 0/0 pool coverage proves global exhaustion only when the captured
     // deployment census also accounts for every supply-bearing chain.
-    const emptyCoverage = context.fixedInput.dexLiqMap[context.asset.assetId]?.exitRouteObservationCoverage;
     const locallyEmptySurface =
-      emptyCoverage != null &&
-      emptyCoverage.status === "populated" &&
-      emptyCoverage.retainedPoolCount === 0 &&
-      emptyCoverage.unsupportedPoolCount === 0;
+      coverage != null &&
+      coverage.status === "populated" &&
+      !fluidStateUnknown &&
+      coverage.retainedPoolCount === 0 &&
+      coverage.unsupportedPoolCount === 0;
     const chainSupply = context.fixedInput.chainCirculatingById[context.asset.assetId] ?? {};
     let capturedChainSupplyUsd = 0;
     for (const chain in chainSupply) capturedChainSupplyUsd += chainSupply[chain]!.current;
@@ -1434,7 +1440,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
             disposition: "observed",
             observedAtSec: context.fixedInput.dexLiqMap[context.asset.assetId]!.updatedAt,
             contentSha256: domainDigest("safety-score-v9.exit-route-observation-coverage.v1", {
-              coverage: emptyCoverage,
+              coverage,
               supplyCoverage: supplyCoverage ?? null,
               chainSupply,
             }),
@@ -1448,7 +1454,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
         ? supplyCoverage!.verifiedNoPoolsSupplyRatio : null;
       if (!fullSupplyVerifiedEmpty) {
         const priorVerifiedEmptyExitCeiling =
-          (supplyCoverage?.observedSupplyUsd ?? 0) === 0 && (emptyCoverage?.retainedPoolCount ?? 0) === 0
+          (supplyCoverage?.observedSupplyUsd ?? 0) === 0 && (coverage?.retainedPoolCount ?? 0) === 0
             ? resolvePriorVerifiedEmptyExitCeiling()
             : undefined;
         return {
@@ -1514,7 +1520,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
     // reclassified gap `path-kind-not-permitted` in the evidence queue. The
     // `unsupported` observation state plus the explicit responsibility already
     // carry the ruling; the code swap rides the v9.04 policy bump.
-    const zeroRouteUnsupportedSurface = classifyUnsupportedDexSurface(emptyCoverage);
+    const zeroRouteUnsupportedSurface = classifyUnsupportedDexSurface(coverage);
     if (zeroRouteUnsupportedSurface === "census-unsupported") {
       return {
         exitStatus: missingLocalFact(context, {
@@ -1551,7 +1557,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
       };
     }
     const priorVerifiedEmptyExitCeiling =
-      (supplyCoverage?.observedSupplyUsd ?? 0) === 0 && (emptyCoverage?.retainedPoolCount ?? 0) === 0
+      (supplyCoverage?.observedSupplyUsd ?? 0) === 0 && (coverage?.retainedPoolCount ?? 0) === 0
         ? resolvePriorVerifiedEmptyExitCeiling()
         : undefined;
     return {
@@ -1561,7 +1567,8 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
         ownerDomain: "exit",
         responsibility: "producer-failed",
         policyRuleId: "v9.exit.same-notional-route",
-        message: "No exact DEX, redemption, or retained route observation is available.",
+        message: fluidStateUnknown ? unresolvedFluidMessage
+          : "No exact DEX, redemption, or retained route observation is available.",
       }).status,
       exitRoutes: [],
       ...(priorVerifiedEmptyExitCeiling === undefined ? {} : { priorVerifiedEmptyExitCeiling }),
@@ -1592,7 +1599,6 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
   // DEX surface stays bounded-unknown. Truly absent redemption evidence does
   // not demote the state. Configured live-only rails with unavailable telemetry
   // carry an explicit producer gap above.
-  const coverage = context.fixedInput.dexLiqMap[context.asset.assetId]?.exitRouteObservationCoverage;
   // "known" upgrades the exit surface and arms the reviewed-complete zero-score
   // path, so it requires populated DEX coverage. An `unknown`/`unsupported`
   // surface stays bounded-unknown even when its retained-pool count is zero: a
@@ -1602,6 +1608,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
   const dexSurfaceComplete =
     coverage != null &&
     coverage.status === "populated" &&
+    !fluidStateUnknown &&
     (coverage.retainedPoolCount === 0 || isDexExitRouteCoverageWithinRouteBudget(coverage));
   const portfolioGapIds = [...gapIds];
   const independentExitUnresolved = routes.some((route) => route.routeSuspension) &&
@@ -1685,6 +1692,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
               ? "The deployment census carries no registered discovery provider for at least one deployment chain, so the DEX exit surface could not be certified."
               : unsupportedSurface === "no-exact-capable-venue"
                 ? "No reviewed execution model recognizes any retained pool, so this asset has no exact-capable DEX venue."
+                : fluidStateUnknown ? unresolvedFluidMessage
                 : coverage != null && coverage.retainedPoolCount === 0
                   ? "The deployment census could not certify this asset's DEX footprint, so no reviewed execution-capability pool exists."
                   : "Reviewed DEX execution-capability pools do not all carry score-eligible exact route observations.",

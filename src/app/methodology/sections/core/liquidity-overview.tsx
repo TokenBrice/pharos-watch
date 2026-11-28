@@ -10,6 +10,11 @@ export function LiquidityOverview() {
       </p>
       <MethodologyDetails summary="Current pool admission and measurement rules">
         <p>
+          Fluid pools can still hold assets while swaps are paused. Their reserves remain in total AMM TVL.
+          Effective liquidity counts usable depth from pools with verified swap availability. On Monad, Curve Lite
+          supplies pool balances. A directional exit estimate also needs a verified pool model and current prices.
+        </p>
+        <p>
           Liquidity v7.56 generalizes v7.51&apos;s exact Curve pool-address identification across all DeFiLlama Curve
           pools, with fail-closed below-floor twin guards and a &lt;2h neutral outage hold while keeping DeFiLlama Yields
           as the measurement authority. Each physical pool contributes once, even when Curve omits a twin&apos;s

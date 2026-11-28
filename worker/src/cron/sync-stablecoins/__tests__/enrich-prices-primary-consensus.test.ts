@@ -16,6 +16,7 @@ import { validateCompositePricingSourceFreshness } from "../../../lib/pricing-so
 import { classifyPrimaryDepegTrust, getDexAggregateObservedAt } from "../../../lib/depeg-trust-policy";
 import { decodeCurrentReserveNavPrice } from "../../../lib/reserve-nav-price";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { FLUID_SWAP_STATUS_MAX_AGE_SEC } from "@shared/lib/fluid-swap-status";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -23,11 +24,16 @@ import { decideDepegAsset } from "../../depeg-detection/decision-engine";
 import { attachDetectionReferenceContext } from "../../depeg-detection/reference-policy";
 import { referenceState } from "../../depeg-detection/__tests__/reference-fixtures";
 import {
-  createEmptyPrimaryConsensusQuoteMaps,
+  createEmptyPrimaryConsensusQuoteMaps as emptyQuotes,
   type PrimaryConsensusQuoteMaps,
   type PrimaryDexRows,
 } from "../enrich-prices-primary-provider-collection";
 import type { PeggedAsset, PriceValidationStats, PrimaryPriceResult } from "../enrich-prices-shared";
+
+function activeFluidPool(poolAddress: string, checkedAtSec: number) {
+  return { fluidSwapStatus: { status: "active", reason: "fluid-swaps-active",
+    poolAddress, checkedAtSec, maxAgeSec: FLUID_SWAP_STATUS_MAX_AGE_SEC } } as const;
+}
 
 function createStats(): PriceValidationStats {
   return {
@@ -56,7 +62,7 @@ const usgNow = 1_800_000_000;
 const usgPool = "ethereum:0xf000000000000000000000000000000000000001";
 const usgSecondPool = "ethereum:0xf000000000000000000000000000000000000002";
 function usgCurveQuotes() {
-  const maps = createEmptyPrimaryConsensusQuoteMaps();
+  const maps = emptyQuotes();
   maps.curvePrices.set(usg.id, 0.98);
   maps.curveObservedAtByCoinId.set(usg.id, usgNow);
   maps.curvePricePoolKeysByCoinId.set(usg.id, ["ethereum:0x97ba10115da528c113462ede9c20d7adc806d93f"]);
@@ -103,11 +109,12 @@ describe("buildPrimaryConsensusResults", () => {
         await computeDexPrices({ db, generationId, nowSec, references: refs, exactPriceEvidenceByStablecoin: evidence,
           primaryPrices: new Map([[id, 0.2]]), retainedPoolsByStablecoin: makePricePoolMap(pools.map((pool) => ({
             stablecoinId: id, poolId: `ethereum:${pool.poolAddress}`, project: pool.source, chain: pool.chain, tvlUsd: pool.tvlUsd,
+            extra: pool.source === "fluid" ? activeFluidPool(pool.poolAddress, nowSec) : undefined,
           }))),
         });
         const loaded = await loadDexPrices(db, nowSec);
         const result = consensusFor({ id, name: "BRZ", symbol: "BRZ", pegType: "peggedREAL" },
-          createEmptyPrimaryConsensusQuoteMaps(), { references: refs, dexRows: loaded.dexPriceRows,
+          emptyQuotes(), { references: refs, dexRows: loaded.dexPriceRows,
             dexPriceSources: loaded.dexPriceSources, nowSec });
         if (mode !== "independent") {
           expect(loaded.dexPriceRows.has(id)).toBe(false);
@@ -146,7 +153,7 @@ describe("buildPrimaryConsensusResults", () => {
     const tracked: DexPriceObs = { ...usgObservation,
       counterpartyPrice: { stablecoinId: "usdc-circle", source: "bitstamp", priceUsd: 0.98, observedAtSec: nowSec } };
     const untracked: DexPriceObs = { ...usgObservation, price: 0.999, tvl: 1e4, poolKey: usgSecondPool };
-    const bitstampOnly = createEmptyPrimaryConsensusQuoteMaps();
+    const bitstampOnly = emptyQuotes();
     bitstampOnly.bitstampPrices.set("USG", 0.98);
     bitstampOnly.bitstampObservedAtBySymbol.set("USG", nowSec);
     for (const rows of [[tracked, untracked], [tracked, { ...untracked, poolKey: tracked.poolKey, price: tracked.price }]]) {
@@ -201,7 +208,8 @@ describe("buildPrimaryConsensusResults", () => {
     };
     const sibling = { ...pool, project: "balancer", poolId: usgSecondPool,
       priceCounterparty: { ...pool.priceCounterparty, source: "kraken" } };
-    const stale = { ...sibling, project: "fluid", poolId: "ethereum:0xf000000000000000000000000000000000000003",
+    const fluidAddress = "0xf000000000000000000000000000000000000003";
+    const stale = { ...sibling, project: "fluid", poolId: `ethereum:${fluidAddress}`, extra: activeFluidPool(fluidAddress, nowSec),
       tvlUsd: 2e6, priceObservedAt: nowSec - 36 * 60 };
     const { db, sqlite, generationId } = seedPublishedDexGeneration({ nowSec });
     try {
@@ -245,7 +253,7 @@ describe("buildPrimaryConsensusResults", () => {
         });
         const wire = JSON.parse(readPublicPriceRows(sqlite)[0]!.price_sources_json!);
         const { dexPriceRows, dexPriceSources } = await loadDexPrices(db, nowSec);
-        const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+        const quoteMaps = emptyQuotes();
         quoteMaps.krakenPrices.set("USDT", 0.96);
         quoteMaps.krakenObservedAt = at;
         quoteMaps.cgQuotes.set("tether", { price: 1, observedAt: at, observedAtMode: "upstream" });
@@ -264,7 +272,7 @@ describe("buildPrimaryConsensusResults", () => {
   });
 
   it("withholds an undated CoinGecko price from primary consensus", () => {
-    const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+    const quoteMaps = emptyQuotes();
     quoteMaps.cgQuotes.set("freedom-dollar", { price: 0.842295, observedAt: null, observedAtMode: null });
     expect(consensusFor({ id: "fusd-freedom-dollar", name: "Freedom Dollar", symbol: "FUSD", geckoId: "freedom-dollar" },
       quoteMaps)).toBeUndefined();
@@ -273,7 +281,7 @@ describe("buildPrimaryConsensusResults", () => {
   it("uses a dated Bitstamp quote without borrowing its clock for a Kraken trade", () => {
     const nowSec = 1_800_000_000;
     const asset = { id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD" };
-    const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+    const quoteMaps = emptyQuotes();
     quoteMaps.bitstampPrices.set("USDT", 0.991);
     quoteMaps.bitstampObservedAtBySymbol.set("USDT", nowSec - 12);
     quoteMaps.krakenPrices.set("USDT", 0.987);
@@ -292,7 +300,7 @@ describe("buildPrimaryConsensusResults", () => {
   it("preserves the oldest clock and weakest clock mode in Kraken composites and never re-clocks stale Depth books", () => {
     const now = 1_800_000_000;
     const asset = { id: "paxg-paxos", name: "PAX Gold", symbol: "PAXG", geckoId: "pax-gold", pegType: "peggedGOLD" };
-    const quotes = createEmptyPrimaryConsensusQuoteMaps();
+    const quotes = emptyQuotes();
     quotes.krakenPrices.set("PAXG", 3_000);
     quotes.krakenObservedAtBySymbol.set("PAXG", now - 100);
     quotes.krakenQuoteBasisBySymbol.set("PAXG", "bid-ask-midpoint");
@@ -335,7 +343,7 @@ describe("buildPrimaryConsensusResults", () => {
     const pegType = pegTypeFromCurrency(meta.flags.pegCurrency)!;
     const asset = { id, name: meta.name, symbol: meta.symbol, geckoId: meta.geckoId, pegType, circulating: { [pegType]: supply } };
     const symbol = asset.symbol.toUpperCase();
-    const quotes = createEmptyPrimaryConsensusQuoteMaps();
+    const quotes = emptyQuotes();
     quotes.krakenPrices.set(symbol, baselinePrice);
     quotes.krakenObservedAt = baselineAt;
     quotes.krakenQuoteBasisBySymbol.set(symbol, "bid-ask-midpoint");
@@ -382,7 +390,7 @@ describe("buildPrimaryConsensusResults", () => {
   it.each([["audx-aussie-dollar-token", "AUDX"], ["qcad-stablecorp", "QCAD"]])(
     "counts one venue for the reviewed %s mirror and withholds expired Depth books", (id, symbol) => {
       const nowSec = 1_800_000_000;
-      const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+      const quoteMaps = emptyQuotes();
       quoteMaps.krakenPrices.set(symbol, 1.02);
       quoteMaps.krakenObservedAt = nowSec - 5;
       quoteMaps.krakenQuoteBasisBySymbol.set(symbol, "bid-ask-midpoint");
@@ -412,7 +420,7 @@ describe("buildPrimaryConsensusResults", () => {
     const nowSec = 1_800_000_000;
     const id = "qcad-stablecorp";
     const geckoId = "stablecorp-qcad";
-    const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+    const quoteMaps = emptyQuotes();
     quoteMaps.krakenPrices.set("QCAD", 0.695);
     quoteMaps.krakenObservedAt = nowSec;
     quoteMaps.krakenQuoteBasisBySymbol.set("QCAD", "last-trade");
@@ -438,7 +446,7 @@ describe("buildPrimaryConsensusResults", () => {
       config_fingerprint: fingerprint, state_config_fingerprint: fingerprint,
       last_attempt_id: "success", pending_attempt_id: null,
     }, meta, fetchedAt)!;
-    const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+    const quoteMaps = emptyQuotes();
     quoteMaps.navPrices.set(id, quote);
     const asset = { id, name: meta.name, symbol: meta.symbol, pegType: "peggedUSD", navToken: true };
     const build = (nowSec: number) => consensusFor(asset, quoteMaps, { nowSec });
@@ -448,7 +456,7 @@ describe("buildPrimaryConsensusResults", () => {
 
   it("keeps the valid native candidate through family collapse and final peg validation, only for HBD", () => {
     const nowSec = 1_800_000_000;
-    const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+    const quoteMaps = emptyQuotes();
     quoteMaps.cgQuotes.set("hive_dollar", { price: 2.25, observedAt: nowSec, observedAtMode: "upstream" });
     quoteMaps.hiveNativeQuote = { price: 0.98662, observedAt: nowSec - 4, observedAtMode: "local_fetch" };
     const results = new Map<string, PrimaryPriceResult>();
@@ -465,7 +473,7 @@ describe("buildPrimaryConsensusResults", () => {
     const usdc: PeggedAsset = { id: "usdc-circle", name: "USD Coin", symbol: "USDC", pegType: "peggedUSD" };
 
     function build(input: { dexAgeSec: number | null; withIndependentLegs: boolean; aggregatorLegsOnly?: boolean; dexPrice?: number }, asset = usdc, sourceTotalTvl = 2_411_298_816): PrimaryPriceResult | undefined {
-      const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+      const quoteMaps = emptyQuotes();
       if (input.aggregatorLegsOnly) {
         asset.geckoId = "usd-coin";
         quoteMaps.cgQuotes.set("usd-coin", { price: 0.9999, observedAt: nowSec - 30, observedAtMode: "upstream" });
@@ -519,7 +527,7 @@ describe("buildPrimaryConsensusResults", () => {
     const routePoolKey = "ethereum:0xecb0f0d68c19bdaadaebe24f6752a4db34e2c2cb", independentPoolKeys = ["ethereum:0x0000000000000000000000000000000000000001"];
 
     function build(laneAgeSec: number, cgPrice: number | null = 0.534161, pricePoolKeys: string[] | null = independentPoolKeys, protocol = "curve"): PrimaryPriceResult | undefined {
-      const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+      const quoteMaps = emptyQuotes();
       if (cgPrice != null) quoteMaps.cgQuotes.set("precious-metals-usd", { price: cgPrice, observedAt: nowSec - 20, observedAtMode: "upstream" });
       quoteMaps.curvePrices.set(pmusd.id, 0.53416);
       quoteMaps.curveObservedAtByCoinId.set(pmusd.id, nowSec - 30);
@@ -576,7 +584,7 @@ describe("buildPrimaryConsensusResults", () => {
       [0.545, 0.54505, 0.53416, "curve-dex+curve-onchain", "high", nowSec - 1_500, "authoritative"],
       [0.537, 0.537, 0.535, "coingecko+defillama-list", "single-source", nowSec - 25, "confirm_required"],
     ] as const)("handles list-pair vs Curve rejoin (cg=%s lane=%s -> %s)", (cgPrice, dlPrice, lanePrice, source, confidence, observedAt, trust) => {
-      const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+      const quoteMaps = emptyQuotes();
       quoteMaps.cgQuotes.set("precious-metals-usd", { price: cgPrice, observedAt: nowSec - 20, observedAtMode: "upstream" });
       quoteMaps.curvePrices.set(pmusd.id, 0.53416);
       quoteMaps.curveObservedAtByCoinId.set(pmusd.id, nowSec - 30);
@@ -609,24 +617,16 @@ describe("buildPrimaryConsensusResults", () => {
   it("does not treat two chains of one promoted DEX protocol as independent corroboration", () => {
     const nowSec = 1_800_000_000;
     const asset: PeggedAsset = { id: "cgusd-cygnus-finance", name: "Cygnus USD", symbol: "cgUSD", pegType: "peggedUSD" };
-    const results = new Map<string, PrimaryPriceResult>();
-    buildPrimaryConsensusResults({
-      candidates: [asset],
-      quoteMaps: createEmptyPrimaryConsensusQuoteMaps(),
-      dexRows: new Map(),
+    const result = consensusFor(asset, emptyQuotes(), {
       dexPriceSources: new Map([[asset.id, ["ethereum", "base"].map((chain) => ({
         protocol: "uniswap-v3", chain, price: 0.99, tvl: 50_000, updatedAt: nowSec - 60,
-      }))]]),
-      nowSec,
-      resolveDlListQuote: () => undefined,
-      results,
-      stats: createStats(),
+      }))]]), nowSec,
     });
-    expect(results.size).toBe(0);
+    expect(result).toBeUndefined();
   });
 
   it("quarantines CG micro-volume outliers, records R1 unknown volume, and exempts NAV", () => {
-    const nowSec = 1_800_000_000, quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+    const nowSec = 1_800_000_000, quoteMaps = emptyQuotes();
     quoteMaps.cgQuotes.set("a7a5", { price: 0.001774, observedAt: nowSec - 10, observedAtMode: "upstream", volume24hUsd: 7.06 });
     quoteMaps.cgQuotes.set("u", { price: 0.85, observedAt: nowSec - 10, observedAtMode: "upstream", volume24hUsd: null });
     quoteMaps.cgQuotes.set("n", { price: 1.4, observedAt: nowSec - 10, observedAtMode: "upstream", volume24hUsd: 5 });
@@ -655,7 +655,7 @@ describe("buildPrimaryConsensusResults", () => {
     [null, 0.93, null, undefined, undefined, "no_cg_quote"],
     [1.13, null, "rpc_timeout", 1.13, undefined, "unavailable"],
   ] as const)("HBD Hive veto-only check (cg=%s hive=%s -> %s)", (cgUsd, hiveMid, unavail, expectedPrice, expectedReject, status) => {
-    const nowSec = 1_800_000_000, quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+    const nowSec = 1_800_000_000, quoteMaps = emptyQuotes();
     if (cgUsd != null) quoteMaps.cgQuotes.set("hive_dollar", { price: cgUsd, observedAt: nowSec - 10, observedAtMode: "upstream", volume24hUsd: 200_000 });
     if (hiveMid != null) quoteMaps.hiveVetoMid = { price: hiveMid, observedAt: nowSec - 5, observedAtMode: "local_fetch", admittedForPublication: false, rejectionReason: "insufficient_depth" };
     quoteMaps.hiveVetoUnavailableReason = unavail;

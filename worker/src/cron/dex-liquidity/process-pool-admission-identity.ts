@@ -1,3 +1,4 @@
+import { CURVE_LITE_DEPLOYMENTS } from "@shared/lib/dex-deployment-coverage";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import {
   canonicalExitRouteAssetKey,
@@ -95,11 +96,12 @@ export function admitAndResolvePoolIdentity(
     : undefined;
   const addrCurveKey = canonicalExitRouteAssetKey(chainNorm, exactCurveAddress ?? pool.pool);
   // A missing exact observation must never enrich an exact or reviewed ID with its twin's state.
+  const requireExactCurveJoin = exactCurveAddress != null || CURVE_LITE_DEPLOYMENTS.has(chainNorm);
   const fpCurveKey =
-    protocol === "curve" && !exactCurveAddress
+    protocol === "curve" && !requireExactCurveJoin
       ? buildPoolFingerprint(chainNorm, "curve", pool.underlyingTokens ?? [])
       : null;
-  const symCurveKey = exactCurveAddress ? null : `${chainNorm}:${poolSymbols
+  const symCurveKey = requireExactCurveJoin ? null : `${chainNorm}:${poolSymbols
     .map((symbol) => symbol.toUpperCase())
     .sort()
     .join("-")}`;

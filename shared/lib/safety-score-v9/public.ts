@@ -16,7 +16,7 @@ import {
   SafetyScoreV9CurrentResponseSchema,
   type SafetyScoreV9CurrentResponse,
 } from "../../types/safety-score-v9-publication-response";
-import { computeV9UnknownPricedWeightShare, type SafetyScoreV9IssuanceSummary } from "../../types/safety-score-v9-public-breakdowns";
+import { computeV9UnknownPricedWeightShare, type SafetyScoreV9IssuanceSummary, type SafetyScoreExitPayoutAssets, type SafetyScoreExitConversion } from "../../types/safety-score-v9-public-breakdowns";
 import type {
   V9DocumentationReason,
   V9EvidenceLevel,
@@ -110,6 +110,8 @@ export interface V9PublicCardProjectionInput {
       chain: string | null;
       protocol: string | null;
       poolId: string | null;
+      payoutAssets?: SafetyScoreExitPayoutAssets | null;
+      conversion?: SafetyScoreExitConversion;
       evidenceKind: string;
       observedAtSec: number | null;
     }>>;
@@ -363,36 +365,47 @@ function projectExitBreakdown(
   const alternatives = exit.routes
     .filter((route) => route.routeKey !== completePrimary?.routeKey)
     .sort((left, right) => compareText(left.routeKey, right.routeKey))
-    .map((route) => ({
-      ...(route.capacityPoint === null
-        ? { capacity: null }
-        : {
-            capacity: {
-              executableUsd: route.capacityPoint.executableUsd,
-              requestedNotionalUsd: route.capacityPoint.requestedNotionalUsd,
-              completionRatio: route.capacityPoint.completionRatio,
-            },
-          }),
-      key: route.routeKey,
-      routeId: route.routeId,
-      lane: route.lane,
-      label: isV9NegligibleDexDiagnostic(route)
-        ? `Negligible measured DEX route: ${routeLabel(input, route).slice(0, 120)}`
-        : routeLabel(input, route),
-      routeFamily: route.routeFamily,
-      score: route.score,
-      included: route.included,
-      exclusionReason: route.exclusionReason,
-      confidenceFactor: route.confidenceFactor,
-      confidenceDimensions: route.confidenceDimensions,
-      capacityEvidenceTier: route.capacityEvidenceTier,
-      rawSameNotionalCostBps: route.rawSameNotionalCostBps,
-      capacityScoringHorizon: route.capacityScoringHorizon,
-      settlementDelaySec: route.settlementDelaySec,
-      ...(route.physicalToUsd ? { physicalToUsd: route.physicalToUsd } : {}),
-      ...(route.routeSuspension ? { routeSuspension: route.routeSuspension } : {}),
-      ...(route.executionCertificate ? { executionCertificate: projectExitExecutionCertificate(route.executionCertificate) } : {}),
-    }));
+    .map((route) => {
+      const details = input.display?.exitRouteDetails?.[route.routeKey];
+      let label = routeLabel(input, route);
+      if (details?.conversion && details.payoutAssets?.length) {
+        const payout = details.payoutAssets.map((asset) => asset.symbol ?? asset.key).join(" + ");
+        label = `Conversion to ${payout} · ${label}`.slice(0, 160);
+      } else if (isV9NegligibleDexDiagnostic(route)) {
+        label = `Negligible measured DEX route: ${label.slice(0, 120)}`;
+      }
+      return {
+        ...(route.capacityPoint === null
+          ? { capacity: null }
+          : {
+              capacity: {
+                executableUsd: route.capacityPoint.executableUsd,
+                requestedNotionalUsd: route.capacityPoint.requestedNotionalUsd,
+                completionRatio: route.capacityPoint.completionRatio,
+              },
+            }),
+        ...(details?.conversion ? { conversion: details.conversion } : {}),
+        ...(details?.payoutAssets !== undefined && route.testedInput ? { testedInput: route.testedInput } : {}),
+        ...(details?.payoutAssets !== undefined ? { payoutAssets: details.payoutAssets } : {}),
+        key: route.routeKey,
+        routeId: route.routeId,
+        lane: route.lane,
+        label,
+        routeFamily: route.routeFamily,
+        score: route.score,
+        included: route.included,
+        exclusionReason: route.exclusionReason,
+        confidenceFactor: route.confidenceFactor,
+        confidenceDimensions: route.confidenceDimensions,
+        capacityEvidenceTier: route.capacityEvidenceTier,
+        rawSameNotionalCostBps: route.rawSameNotionalCostBps,
+        capacityScoringHorizon: route.capacityScoringHorizon,
+        settlementDelaySec: route.settlementDelaySec,
+        ...(route.physicalToUsd ? { physicalToUsd: route.physicalToUsd } : {}),
+        ...(route.routeSuspension ? { routeSuspension: route.routeSuspension } : {}),
+        ...(route.executionCertificate ? { executionCertificate: projectExitExecutionCertificate(route.executionCertificate) } : {}),
+      };
+    });
   const publishedScore = input.scoreInput.pillars.exit.score;
   return {
     evaluatedScore,
@@ -440,6 +453,9 @@ function projectExitBreakdown(
                     executionCostBps: completePrimary.capacityPoint.executionCostBps,
                     settlementDelaySec: completePrimary.settlementDelaySec,
                     capacityScoringHorizon: completePrimary.capacityScoringHorizon,
+                    ...(primaryRouteDetails?.payoutAssets !== undefined ? { payoutAssets: primaryRouteDetails.payoutAssets } : {}),
+                    ...(primaryRouteDetails?.payoutAssets !== undefined ? completePrimary.testedInput : {}),
+                    ...(completePrimary.costEvidence ? { costEvidence: completePrimary.costEvidence } : {}),
                     chain: primaryRouteDetails?.chain ?? null,
                     protocol: primaryRouteDetails?.protocol ?? null,
                     poolId: primaryRouteDetails?.poolId ?? null,
