@@ -30,7 +30,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "tGBP has issuer-native StableTokenV1OFT deployments on Ethereum, Base, BSC, Polygon, Avalanche, Arbitrum, and Gnosis plus an issuer-native Solana SPL mint. LayerZero V2 supplies a separate direct OFT burn/mint mesh: EVM owners configure peers and bridge options, while the Solana OFT Store 9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb is one signer of the 1-of-2 mint multisig for inbound bridge credits. The shared EVM owner can mint, pause, configure OFT peers, and authorize upgrades without a verified immutable numeric ceiling, so its bridge cap semantics are conservatively raiseable. Recent LayerZero Scan observations show V302, ten confirmations, three required DVNs, and route-specific executors; the OFT route is therefore externally validated, while direct native minting remains independently scored under Mint Authority.",
+    "summary": "tGBP has issuer-native StableTokenV1OFT deployments on Ethereum, Base, BSC, Polygon, Avalanche, Arbitrum, Gnosis, and Arc plus an issuer-native Solana SPL mint. LayerZero V2 supplies a separate direct OFT burn/mint mesh: EVM owners configure peers and bridge options, while the Solana OFT Store 9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb is one signer of the 1-of-2 mint multisig for inbound bridge credits. The shared EVM owner can mint, pause and configure OFT peers on all eight EVM deployments, and authorize upgrades through the ProxyAdmin it owns on seven of them (Avalanche's ProxyAdmin is self-owned), without a verified immutable numeric ceiling, so its bridge cap semantics are conservatively raiseable. LayerZero Scan observations of the Solana-to-Ethereum route show V302, ten confirmations, three required DVNs, and a route-specific executor, so that route is externally validated; Arc uses a different Endpoint V2, has no Avalanche or Gnosis peer, and its DVN quorum is unknown pending evidence. Direct native minting remains independently scored under Mint Authority.",
     "reviewedAt": "2026-08-28",
     "reviewer": "Codex mint-bridge-boundary migration; BRDG cap-semantics review 2026-08-28",
     "confidence": "verified",
@@ -313,6 +313,35 @@
             "url": "https://raw.githubusercontent.com/bcp-markets/tGBPv2/main/contracts/StableTokenV1OFT.sol"
           }
         ]
+      },
+      {
+        "id": "arc:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+        "destinationChain": "arc",
+        "contractAddress": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
+        "protocol": "Tokenised StableTokenV1OFT (issuer-deployed LayerZero OFT)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native issuer-owned StableTokenV1OFT deployment on arc (listed by the issuer API alongside the other eight deployments): endpoint() = LayerZero EndpointV2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0, EIP-1967 implementation 0xc608f7750b91f2e655ce7702bce3d30b8504abf2 and ProxyAdmin 0x666b8f67969a22a4015d6d523d8671ee714b114f verified at block 33493732 on 2026-11-27; peers() resolve to the Ethereum, Base, BSC, Polygon and Arbitrum deployments and the Solana OFT Store at block 33495162, while the Avalanche and Gnosis peers are zero. Arc's DVN configuration and quorum were not read and remain unknown. totalSupply was 0.000361 tGBP. The direct owner-only mint/burn path is native issuance; the LayerZero OFT burn/mint overlay and peer controls are scored separately in bridgeRouteRisk.controls.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 33493732,
+        "sources": [
+          {
+            "label": "Arc mainnet RPC (pinned block 33493732)",
+            "url": "https://rpc.mainnet.arc.io"
+          },
+          {
+            "label": "tGBP StableTokenV1OFT source",
+            "url": "https://raw.githubusercontent.com/bcp-markets/tGBPv2/main/contracts/StableTokenV1OFT.sol"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:tgbp-tokenised"
+        ]
       }
     ],
     "controls": [
@@ -326,14 +355,14 @@
           "polygon:0x27f6c8289550fce67f6b50bed1f519966afe5287",
           "avalanche:0x27f6c8289550fce67f6b50bed1f519966afe5287",
           "arbitrum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
-          "gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f"
+          "gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f",
+          "arc:0x27f6c8289550fce67f6b50bed1f519966afe5287"
         ],
         "capabilities": [
           "bridge-mint",
           "bridge-burn",
           "admin",
           "pause",
-          "upgrade",
           "peer-config"
         ],
         "controllerChain": "multichain",
@@ -347,15 +376,16 @@
           "contract:polygon:0x27f6c8289550fce67f6b50bed1f519966afe5287",
           "contract:avalanche:0x27f6c8289550fce67f6b50bed1f519966afe5287",
           "contract:arbitrum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
-          "contract:gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f"
+          "contract:gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f",
+          "contract:arc:0x27f6c8289550fce67f6b50bed1f519966afe5287"
         ],
         "authorityType": "eoa",
         "routeChecks": {
           "lockboxOrEscrow": "LayerZero V2 direct OFT burn/mint: source transfers debit or burn tGBP and destination transfers credit or mint tGBP. No independent lockbox or escrow was identified.",
-          "trustedPeerOrRemote": "All seven EVM StableTokenV1OFT deployments use Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c and current nonzero peers to the other authored EVM deployments plus the Solana OFT Store 9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb; the owner can replace setPeer configuration and enforced options.",
-          "attestorQuorum": "LayerZero Scan observations show V302 with ten confirmations, three required DVNs (LayerZero Labs, Nethermind, and Google), no optional DVNs, no optional threshold, and route-specific executors. The active route is externally validated by this DVN stack.",
+          "trustedPeerOrRemote": "At the 2026-08-16 reads, the Ethereum, Base, BSC, Polygon, Avalanche, Arbitrum and Gnosis StableTokenV1OFT deployments used Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c with nonzero peers to one another plus the Solana OFT Store 9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb. Arc uses Endpoint V2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b; at Arc block 33495162 its peers resolved to the Ethereum, Base, BSC, Polygon and Arbitrum deployments and the Solana OFT Store, while its Avalanche and Gnosis peers were zero. The owner can replace setPeer configuration and enforced options on every deployment.",
+          "attestorQuorum": "LayerZero Scan observations of the Solana-to-Ethereum route show V302 with ten confirmations, three required DVNs (LayerZero Labs, Nethermind, and Google), no optional DVNs, no optional threshold, and a route-specific executor; that route is externally validated by this DVN stack. Arc's DVN configuration and quorum were not observed and are unknown pending evidence.",
           "rateLimits": "Exact live remaining token-specific route quotas were not available from the reviewed OFT interfaces; the LayerZero Scan observations provide active DVN and executor configuration, not those remaining quotas.",
-          "pausersAdminsUpgraders": "The common issuer EOA controls owner-only bridge surfaces including setPeer, enforced options, Endpoint delegate/OApp configuration, pause/unpause, and upgrade surfaces on the seven EVM OFT deployments. These bridge capabilities are separate from its native owner-only mint/burn capability.",
+          "pausersAdminsUpgraders": "The common issuer EOA controls owner-only bridge surfaces including setPeer, enforced options, Endpoint delegate/OApp configuration and pause/unpause on the eight EVM OFT deployments, including Arc (owner re-verified at Arc block 33493732). Upgrades are a separate control (tgbp-evm-proxyadmin-upgrade) on the seven deployments whose ProxyAdmin the EOA owns; Avalanche's ProxyAdmin is self-owned. These bridge capabilities are separate from its native owner-only mint/burn capability.",
           "signingModel": "The EVM bridge controller is the issuer EOA 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0; no Safe, timelock, module, guard, or delay was verified."
         },
         "capDescription": "No aggregate bridge mint cap was verified; OFT route-level conservation is supplied by source debit/burn and destination credit/mint, not by a native issuance cap.",
@@ -379,7 +409,53 @@
             "url": "https://eth.blockscout.com/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
           }
         ],
-        "evidence": "At the 2026-08-16 observations (Ethereum block 25771292, Base 50069042, BSC 116370461, Polygon 92148275, Avalanche 92987083, Arbitrum 495314108, and Gnosis 47763307), owner() on every authored EVM StableTokenV1OFT returned issuer EOA 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 and endpoint() returned LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c. Current peers bind the EVM deployments to one another and to the Solana OFT Store. The owner's setPeer, enforced-options, endpoint delegate/OApp, pause, and upgrade surfaces are bridge machinery; native direct mint/burn remains separately authored in Mint Authority. A recent Solana-to-Ethereum LayerZero message delivered on Ethereum block 25753011 used ULN V302, ten confirmations, required LayerZero Labs, Nethermind, and Google DVNs, no optional DVNs or optional threshold, and a route-specific executor."
+        "evidence": "At the 2026-08-16 observations (Ethereum block 25771292, Base 50069042, BSC 116370461, Polygon 92148275, Avalanche 92987083, Arbitrum 495314108, and Gnosis 47763307), owner() on each of those seven EVM StableTokenV1OFT deployments returned issuer EOA 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0 and endpoint() returned LayerZero Endpoint V2 0x1a44076050125825900e736c501f859c50fe728c; their peers bound them to one another and to the Solana OFT Store. At Arc block 33493732 (2026-11-27) owner() returned the same EOA and endpoint() returned Endpoint V2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b; at Arc block 33495162 its peers resolved to Ethereum, Base, BSC, Polygon, Arbitrum and the Solana OFT Store, with zero Avalanche and Gnosis peers. The owner's setPeer, enforced-options, endpoint delegate/OApp and pause surfaces are bridge machinery, and its ProxyAdmin upgrade path is recorded separately for the seven deployments where it owns the ProxyAdmin; native direct mint/burn remains separately authored in Mint Authority. A recent Solana-to-Ethereum LayerZero message delivered on Ethereum block 25753011 used ULN V302, ten confirmations, required LayerZero Labs, Nethermind, and Google DVNs, no optional DVNs or optional threshold, and a route-specific executor. That quorum is evidenced for the observed route only; Arc's DVN quorum is unknown pending evidence."
+      },
+      {
+        "id": "tgbp-evm-proxyadmin-upgrade",
+        "label": "tGBP EVM StableTokenV1OFT ProxyAdmin owner",
+        "routeRefs": [
+          "ethereum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "base:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "bsc:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "polygon:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "arbitrum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+          "gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f",
+          "arc:0x27f6c8289550fce67f6b50bed1f519966afe5287"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "multichain",
+        "controllerAddress": "0xAF4fCE2984Fb307a368f3Ff01f900909956595C0",
+        "failureDomainKeys": [
+          "eoa:0xaf4fce2984fb307a368f3ff01f900909956595c0",
+          "proxy-admin:ethereum:0x666b8f67969a22a4015d6d523d8671ee714b114f",
+          "proxy-admin:base:0x666b8f67969a22a4015d6d523d8671ee714b114f",
+          "proxy-admin:bsc:0x666b8f67969a22a4015d6d523d8671ee714b114f",
+          "proxy-admin:polygon:0x666b8f67969a22a4015d6d523d8671ee714b114f",
+          "proxy-admin:arbitrum:0x666b8f67969a22a4015d6d523d8671ee714b114f",
+          "proxy-admin:gnosis:0xe7dc79cd19c604ed5846cbae6ed4401ed92a23d4",
+          "proxy-admin:arc:0x666b8f67969a22a4015d6d523d8671ee714b114f"
+        ],
+        "authorityType": "eoa",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "ProxyAdmin 0x666b8f67969a22a4015d6d523d8671ee714b114f on Ethereum, Base, BSC, Polygon, Arbitrum and Arc, and ProxyAdmin 0xe7dc79cd19c604ed5846cbae6ed4401ed92a23d4 on Gnosis, are owned by the issuer EOA, which can replace the StableTokenV1OFT implementation, including its bridge logic, with no verified timelock. Avalanche's ProxyAdmin returns itself as owner, so that deployment has no externally controlled upgrade path and is outside this control.",
+          "signingModel": "The upgrade controller is the issuer EOA 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0; no Safe, timelock, module, guard, or delay was verified."
+        },
+        "canRaiseCap": true,
+        "observedAt": "2026-08-16",
+        "sources": [
+          {
+            "label": "Verified StableTokenV1OFT source",
+            "url": "https://raw.githubusercontent.com/bcp-markets/tGBPv2/main/contracts/StableTokenV1OFT.sol"
+          },
+          {
+            "label": "Ethereum tGBP token",
+            "url": "https://eth.blockscout.com/address/0x27f6c8289550fce67f6b50bed1f519966afe5287"
+          }
+        ],
+        "evidence": "At the 2026-08-16 Mint Authority reads (Ethereum block 25771292, Base 50069042, BSC 116370461, Polygon 92148275, Arbitrum 495314108 and Gnosis 47763307), the transparent-proxy ProxyAdmin 0x666b8f67969a22a4015d6d523d8671ee714b114f on Ethereum, Base, BSC, Polygon and Arbitrum, and ProxyAdmin 0xe7dc79cd19c604ed5846cbae6ed4401ed92a23d4 on Gnosis, were owned by issuer EOA 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0. At Arc block 33493732 (2026-11-27) ProxyAdmin 0x666b8f67969a22a4015d6d523d8671ee714b114f was owned by the same EOA. At Avalanche block 92987083 the ProxyAdmin returned itself as owner, so the Avalanche deployment is excluded."
       },
       {
         "id": "tgbp-solana-oft-mint-multisig",

@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "CADC is issued by Loon through issuer-controlled owner/masterMinter Safes. All five EVM tokens are upgradeable legacy ZeppelinOS FiatTokenProxy deployments: Ethereum, Polygon, Arbitrum, and Base share a 1-of-1 proxy-admin Safe, while Linea is immediately upgradeable by a single EOA. The Solana SPL mint has a separate direct-minter control for its live mint authority.",
+    "summary": "CADC has a legacy and a successor register. Legacy CADC is issued by Loon through issuer-controlled owner/masterMinter Safes: its five EVM tokens are upgradeable ZeppelinOS FiatTokenProxy deployments, Ethereum, Polygon, Arbitrum, and Base share a 1-of-1 proxy-admin Safe, Linea is immediately upgradeable by a single EOA, and the legacy Solana mint has its own direct-minter control. The November 2026 successor FiatTokenProxy deployments on Ethereum, Base, and Polygon are instead controlled by EOAs: one owner, pauser, and blacklister, a separate masterMinter, and an immediate proxy admin. The successor Solana mint is controlled by a 1-of-2 SPL multisig.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -106,7 +106,7 @@
             "url": "https://etherscan.io/address/0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef"
           }
         ],
-        "evidence": "Loon controls 1:1 mint on CAD deposit and burn on redemption against segregated trust reserves; minting is issuer-operated with no permissionless route. The issuer-controlled masterMinter Safes can authorize minters and change mint allowances, so this issuer failure domain can raise the effective mint cap."
+        "evidence": "Loon controls 1:1 mint on CAD deposit and burn on redemption against segregated trust reserves; minting is issuer-operated with no permissionless route. On these legacy contracts the issuer-controlled masterMinter Safes can authorize minters and change mint allowances, so this issuer failure domain can raise the effective mint cap; successor-contract controls are authored separately below."
       },
       {
         "label": "CADC Ethereum owner/masterMinter — Gnosis Safe v1.3.0 (2/3)",
@@ -353,13 +353,150 @@
           }
         ],
         "evidence": "At finalized Solana context slot 452345314 on 2026-10-01, getMultipleAccounts(jsonParsed) for CADC mint 9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7 returned mintAuthority and freezeAuthority 5qxWg4NfA6iUMNC4TqzFyWue3BE6bHZGEVu2sz2wbWvg. In the same response, the authority account was System Program-owned, non-executable and zero-data, not an SPL multisig. This is an externally signable direct-issuance and freeze controller. Loon's general institutional multisignature claim does not identify an off-chain signing arrangement for this exact authority; no MPC, HSM or custody tier is inferred."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0a142ecf77eca988fc057e98223738832f29e835",
+        "deploymentRefs": [
+          "ethereum:0x49a6f6aeab68ea001beaa4815186eb22fbdccf2a",
+          "base:0x5e63e9c06c3f2c779ef29a8071f94f5a724eb5e4",
+          "polygon:0x74d9423a2886618522f7c992edf647ea707a38eb"
+        ],
+        "label": "CADC successor owner/pauser/blacklister EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-28",
+        "observedBlock": 26512977,
+        "sources": [
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          },
+          {
+            "label": "Loon CADC (successor and legacy contracts)",
+            "url": "https://loon.finance/cadc"
+          }
+        ],
+        "evidence": "At Ethereum block 26512977 (hash 0xbdb7bab8d5c254fa2f239d705a280295e1b75d1f70fc4a116a0f4937fed36116, 2026-11-28T09:57:59Z), Base block 63348201 (hash 0x0361c713ce6b310f4173525fa2f4608c19c91448278bc9250669262d574a13a7, 10:00:15Z) and Polygon block 98102999 (hash 0x25678b753fa83f08e8888482fbb056870ca8b5aad59b8152c7400dd898e4b98c, 09:59:37Z), each read by block hash with a closing header recheck, owner(), pauser() and blacklister() on the three successor CADC FiatTokenProxy deployments returned 0x0a142ecf77eca988fc057e98223738832f29e835, whose code was empty at each pin. As FiatToken owner it can replace the masterMinter, pauser and blacklister, so it controls who may authorize successor minting. It is separate from the legacy owner/masterMinter Safes, which control only the legacy contracts."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x99b582c209b976ae05f8f1cb899285f5ab15cae2",
+        "deploymentRefs": [
+          "ethereum:0x49a6f6aeab68ea001beaa4815186eb22fbdccf2a",
+          "base:0x5e63e9c06c3f2c779ef29a8071f94f5a724eb5e4",
+          "polygon:0x74d9423a2886618522f7c992edf647ea707a38eb"
+        ],
+        "label": "CADC successor masterMinter EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-28",
+        "observedBlock": 26512977,
+        "sources": [
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          },
+          {
+            "label": "Loon CADC (successor and legacy contracts)",
+            "url": "https://loon.finance/cadc"
+          }
+        ],
+        "evidence": "At the same pins, masterMinter() on the Ethereum, Base and Polygon successor deployments returned 0x99b582c209b976ae05f8f1cb899285f5ab15cae2, whose code was empty at each pin. The masterMinter configures minters and their allowances; the set of currently configured successor minters and their allowances was not enumerated, so no minter or cap is inferred."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x02d65dedf568258182513e09057a21000417cce6",
+        "deploymentRefs": [
+          "ethereum:0x49a6f6aeab68ea001beaa4815186eb22fbdccf2a",
+          "base:0x5e63e9c06c3f2c779ef29a8071f94f5a724eb5e4",
+          "polygon:0x74d9423a2886618522f7c992edf647ea707a38eb"
+        ],
+        "label": "CADC successor proxy admin EOA",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-28",
+        "observedBlock": 26512977,
+        "sources": [
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          },
+          {
+            "label": "Loon CADC (successor and legacy contracts)",
+            "url": "https://loon.finance/cadc"
+          }
+        ],
+        "evidence": "At the same pins, the ZeppelinOS admin slot (0x10d6a54a...) and admin() on each successor deployment returned 0x02d65dedf568258182513e09057a21000417cce6, whose code was empty at each pin; the EIP-1967 slots are empty. The implementation slot and implementation() returned 0xcdad8ba818bbe1c4de7329e896ccb15ce7ef887b on Ethereum, 0x44c46cd89a784bc6ba96a0fe4c10c84430a3d10e on Base and 0xc16eabf49e1541bffc2b87f4a6f222ca3a3c86d1 on Polygon. This EOA can replace successor token logic immediately; no timelock was observed."
+      },
+      {
+        "chain": "solana",
+        "address": "FYUwdj3PPNEzcwee5KoFHxz49M7kjcjNrF1EfHHEQTvm",
+        "deploymentRefs": [
+          "solana:52spLAAFjKMwhNJ3TL2PUAUGYGgXsbvipP4whRtBp82S"
+        ],
+        "label": "CADC successor Solana mint-authority multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 1,
+        "signerCount": 2,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-28",
+        "observedBlock": 474911430,
+        "sources": [
+          {
+            "label": "Alchemy Solana mainnet RPC (finalized getMultipleAccounts)",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Loon CADC (successor and legacy contracts)",
+            "url": "https://loon.finance/cadc"
+          }
+        ],
+        "evidence": "At finalized Solana slot 474911430 (2026-11-28T10:00:28Z), getMultipleAccounts(jsonParsed) returned successor mint 52spLAAFjKMwhNJ3TL2PUAUGYGgXsbvipP4whRtBp82S as an initialized SPL Token mint with mintAuthority FYUwdj3PPNEzcwee5KoFHxz49M7kjcjNrF1EfHHEQTvm and freezeAuthority 5qxWg4NfA6iUMNC4TqzFyWue3BE6bHZGEVu2sz2wbWvg. The mint authority is an initialized 1-of-2 SPL Token multisig whose signers are 5qxWg4... (the System Program-owned legacy mint authority) and 54NDwhi5dWeKBjBh8EkWH7mhsP2LLWw6y921gPRtPmQ5, an account owned by program G1US6gZ41fXPGZCndwMQpjQd6ohekptSnPUNPpHuywvh that was not identified. Either signer can mint alone."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Sourcify verifies all five EVM deployments as FiatTokenProxy/ZeppelinOSProxy contracts whose AdminUpgradeabilityProxy path exposes upgradeTo and upgradeToAndCall. At Ethereum block 25531348, Polygon block 90221803, Arbitrum block 483787112, Base block 48624176, and Linea block 31369755, the legacy implementation slot resolved in contract order to 0x0c9b0169..., 0x82d095da..., 0x30828472..., 0xdd022586..., and 0x8056da37.... The legacy admin slot resolved to 0x616c8314... on the first four chains and 0xa0f5c8e8... on Linea. The shared-address admin is a 1-of-1 Safe on each of the first four chains with sole owner 0x568b35d8..., no modules, and no guard; the Linea admin is an EOA. The previously reviewed logic-level owner/masterMinter Safes remain separate controls. Solana mint 9ewjJpmD... remains owned by the SPL Token program with its distinct mint and freeze authorities and is now explicitly represented by the Solana direct-minter control; it is not included in the EVM proxy arrays. Mint-tier review (2026-07-15): HDCPA Professional Corporation independently attests CADC reserves monthly; the latest archive entry covers June 2026 and was uploaded 2026-07-06, reconciling CADC supply to CAD held at ATB Financial. FINTRAC's registry match for Loon Finance Inc. is an AML/MSB registration, not prudential stablecoin-issuer supervision. Economic-posture fields reviewed 2026-08-15: the issuer backend and owner Safes can raise mint allowances, while a 1-of-1 Safe or EOA can immediately replace proxy logic; monthly independent reserve reconciliation exists without prudential issuer supervision. Current evidence retrieved 2026-10-20 supersedes only those favorable process claims: the newest API object CADC_Bank_Attestation_Sep_2026.pdf was uploaded 2026-10-20T17:58:10.609Z and visually shows an ATB bank confirmation dated September 30 for PayTrie AB Inc's Business Growth Plus savings balance of CAD 1,824,204.09. It has no CADC token-liability denominator, reserve-to-supply comparison, named requesting accountant, accountant opinion or recurring whole-book reconciliation procedure.",
+      "evidence": "Sourcify verifies all five EVM deployments as FiatTokenProxy/ZeppelinOSProxy contracts whose AdminUpgradeabilityProxy path exposes upgradeTo and upgradeToAndCall. At Ethereum block 25531348, Polygon block 90221803, Arbitrum block 483787112, Base block 48624176, and Linea block 31369755, the legacy implementation slot resolved in contract order to 0x0c9b0169..., 0x82d095da..., 0x30828472..., 0xdd022586..., and 0x8056da37.... The legacy admin slot resolved to 0x616c8314... on the first four chains and 0xa0f5c8e8... on Linea. The shared-address admin is a 1-of-1 Safe on each of the first four chains with sole owner 0x568b35d8..., no modules, and no guard; the Linea admin is an EOA. The previously reviewed logic-level owner/masterMinter Safes remain separate controls. Solana mint 9ewjJpmD... remains owned by the SPL Token program with its distinct mint and freeze authorities and is now explicitly represented by the Solana direct-minter control; it is not included in the EVM proxy arrays. Mint-tier review (2026-07-15): HDCPA Professional Corporation independently attests CADC reserves monthly; the latest archive entry covers June 2026 and was uploaded 2026-07-06, reconciling CADC supply to CAD held at ATB Financial. FINTRAC's registry match for Loon Finance Inc. is an AML/MSB registration, not prudential stablecoin-issuer supervision. Economic-posture fields reviewed 2026-08-15: the issuer backend and owner Safes can raise mint allowances, while a 1-of-1 Safe or EOA can immediately replace proxy logic; monthly independent reserve reconciliation exists without prudential issuer supervision. Current evidence retrieved 2026-10-20 supersedes only those favorable process claims: the newest API object CADC_Bank_Attestation_Sep_2026.pdf was uploaded 2026-10-20T17:58:10.609Z and visually shows an ATB bank confirmation dated September 30 for PayTrie AB Inc's Business Growth Plus savings balance of CAD 1,824,204.09. It has no CADC token-liability denominator, reserve-to-supply comparison, named requesting accountant, accountant opinion or recurring whole-book reconciliation procedure. Successor register (read 2026-11-28; not a renewal of this review): the Ethereum, Base and Polygon successor FiatTokenProxy deployments are controlled by EOAs for owner/pauser/blacklister, masterMinter and proxy admin, and the Solana successor mint by a 1-of-2 SPL multisig; the legacy Safes and admins above do not control them.",
       "reviewer": "Codex SOL-V mint-tier research; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-16",
       "sources": [

@@ -15,46 +15,28 @@ import {
   prefersOnChainSupplyMcap,
   prefersReviewedNativeFiatSupply,
   REVIEWED_ONCHAIN_SUPPLY_PLANS,
+  requiresOnchainSupplyStateClock,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSingleOnchainSupplyProbeContract,
   supportsOnchainSupplyProbe,
 } from "@shared/lib/onchain-supply-probe";
 
 function makeMeta(contracts: StablecoinMeta["contracts"], id = "test-stablecoin"): StablecoinMeta {
-  return {
-    id,
-    name: "Test Stablecoin",
-    symbol: "TEST",
-    detailProvider: "coingecko",
-    contracts,
-    flags: {
-      pegCurrency: "USD",
-      backing: "rwa-backed",
-      governance: "centralized",
-      yieldBearing: false,
-      rwa: false,
-      navToken: false,
-    },
-  } as StablecoinMeta;
+  return { id, name: "Test Stablecoin", symbol: "TEST", detailProvider: "coingecko", contracts,
+    flags: { pegCurrency: "USD", backing: "rwa-backed", governance: "centralized", yieldBearing: false, rwa: false, navToken: false } } as StablecoinMeta;
 }
-
+const EVM_ONE = "0x0000000000000000000000000000000000000001";
+const SOL_MINT = "So11111111111111111111111111111111111111112";
+const probe = (chain: string, address: string, decimals = 6) => supportsOnchainSupplyProbe({ chain, address, decimals });
 
 describe("supportsOnchainSupplyProbe", () => {
   it("accepts strict EVM addresses and Solana addresses", () => {
-    expect(supportsOnchainSupplyProbe({ chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 6 })).toBe(true);
-    expect(supportsOnchainSupplyProbe({ chain: "solana", address: "So11111111111111111111111111111111111111112", decimals: 6 })).toBe(true);
+    expect([probe("ethereum", EVM_ONE), probe("solana", SOL_MINT)]).toEqual([true, true]);
   });
 
   it("rejects malformed EVM, Tron, Stellar, and unknown-chain contracts", () => {
-    expect(supportsOnchainSupplyProbe({ chain: "ethereum", address: "0xnot-an-address", decimals: 6 })).toBe(false);
-    expect(supportsOnchainSupplyProbe({ chain: "tron", address: "TY7copxkSQZBym6eTGMEdrqPHaNNsmjxKe", decimals: 6 }))
-      .toBe(false);
-    expect(supportsOnchainSupplyProbe({ chain: "stellar", address: "TEST.STELLAR", decimals: 7 })).toBe(false);
-    expect(supportsOnchainSupplyProbe({
-      chain: "unknown",
-      address: "0x0000000000000000000000000000000000000001",
-      decimals: 18,
-    })).toBe(false);
+    expect([probe("ethereum", "0xnot-an-address"), probe("tron", "TY7copxkSQZBym6eTGMEdrqPHaNNsmjxKe"), probe("stellar", "TEST.STELLAR", 7),
+      probe("unknown", EVM_ONE, 18)]).toEqual([false, false, false, false]);
   });
 
   it.each(["movement", "aptos"])("validates %s metadata addresses without conflating reader families", (chain) => {
@@ -79,38 +61,17 @@ describe("supportsOnchainSupplyProbe", () => {
   });
 
   it("accepts Starknet felts and ICP canister ids and reports their reader family", () => {
-    const starknet = {
-      chain: "starknet",
-      address: "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
-      decimals: 18,
-    };
-    const icp = { chain: "icp", address: "6c7su-kiaaa-aaaar-qaira-cai", decimals: 8 };
-
-    expect(onchainSupplyProbeFamily(starknet)).toBe("starknet");
-    expect(onchainSupplyProbeFamily(icp)).toBe("icp");
-    expect(onchainSupplyProbeFamily({ chain: "ethereum", address: `0x${"1".repeat(40)}`, decimals: 6 })).toBe("evm");
-    expect(onchainSupplyProbeFamily({
-      chain: "solana",
-      address: "So11111111111111111111111111111111111111112",
-      decimals: 6,
-    })).toBe("solana");
+    expect([
+      { chain: "starknet", address: "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc", decimals: 18 },
+      { chain: "icp", address: "6c7su-kiaaa-aaaar-qaira-cai", decimals: 8 },
+      { chain: "ethereum", address: `0x${"1".repeat(40)}`, decimals: 6 }, { chain: "solana", address: SOL_MINT, decimals: 6 },
+    ].map((contract) => onchainSupplyProbeFamily(contract))).toEqual(["starknet", "icp", "evm", "solana"]);
   });
 
   it("rejects malformed Starknet and ICP addresses", () => {
-    expect(supportsOnchainSupplyProbe({ chain: "starknet", address: "0xnot-a-felt", decimals: 18 })).toBe(false);
-    expect(supportsOnchainSupplyProbe({ chain: "starknet", address: `0x${"1".repeat(65)}`, decimals: 18 }))
-      .toBe(false);
     // Self-authenticating (user) principals are longer than a canister id.
-    expect(supportsOnchainSupplyProbe({
-      chain: "icp",
-      address: "thrhh-hnmzu-kjquw-6ebmf-vdhed-yf2ry-avwy7-2jrrm-byg34-zoqaz-wqe",
-      decimals: 8,
-    })).toBe(false);
-    expect(supportsOnchainSupplyProbe({
-      chain: "icp",
-      address: "0x0000000000000000000000000000000000000001",
-      decimals: 8,
-    })).toBe(false);
+    expect([probe("starknet", "0xnot-a-felt", 18), probe("starknet", `0x${"1".repeat(65)}`, 18),
+      probe("icp", "thrhh-hnmzu-kjquw-6ebmf-vdhed-yf2ry-avwy7-2jrrm-byg34-zoqaz-wqe", 8), probe("icp", EVM_ONE, 8)]).toEqual([false, false, false, false]);
   });
 });
 
@@ -133,6 +94,13 @@ describe("selectSingleOnchainSupplyProbeContract", () => {
   });
 });
 
+// Dropping any one reviewed deployment must fail the curated roster closed.
+function expectEveryLegRequired(meta: StablecoinMeta) {
+  for (const missing of meta.contracts!) {
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts({ ...meta, contracts: meta.contracts!.filter((contract) => contract !== missing) })).toBeNull();
+  }
+}
+
 describe("curated on-chain supply paths", () => {
   it.each([
     { id: "buidl-blackrock", chains: ["ethereum", "ethereum", "bsc", "optimism", "arbitrum", "avalanche", "polygon", "solana", "aptos", "tempo"], zero: [] },
@@ -152,7 +120,9 @@ describe("curated on-chain supply paths", () => {
     { id: "eurcv-societe-generale-forge", chains: ["ethereum", "xrpl", "stellar", "solana"], zero: [] },
     { id: "zchf-frankencoin", chains: ["ethereum", "optimism", "gnosis", "base", "arbitrum", "polygon", "avalanche", "sonic"], zero: ["avalanche", "sonic"] },
     { id: "euri-banking-circle", chains: ["ethereum", "bsc"], zero: [] },
-    { id: "cadd-cad-digital", chains: ["ethereum", "base", "solana", "tempo"], zero: ["tempo"] },
+    { id: "cadd-cad-digital", chains: ["ethereum", "base", "solana", "tempo", "arc"], zero: ["arc"] },
+    { id: "tgbp-tokenised", chains: ["ethereum", "base", "bsc", "polygon", "avalanche", "solana", "arbitrum", "gnosis", "arc"], zero: ["avalanche", "arc"] },
+    { id: "cadc-cad-coin", chains: ["ethereum", "polygon", "arbitrum", "base", "linea", "solana", "ethereum", "base", "polygon", "solana"], zero: ["ethereum", "polygon", "arbitrum", "base", "linea", "solana"] },
     { id: "dgld-gold-token-sa", chains: ["ethereum", "base", "solana"], zero: [] },
     { id: "jpym-mento", chains: ["celo", "monad"], zero: [], canonical: "celo" },
     { id: "mxnb-juno", chains: ["ethereum", "polygon", "arbitrum", "avalanche", "base", "arc"], zero: [] },
@@ -166,11 +136,7 @@ describe("curated on-chain supply paths", () => {
     expect(selected?.filter(({ config }) => config.allowZeroSupply).map(({ config }) => config.chain)).toEqual(zero);
     expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[id]).toBe(canonical);
     expect(hasRuntimeOnchainSupplyPath(meta)).toBe(true);
-    for (const missing of meta.contracts!) {
-      expect(selectCuratedAggregateOnchainSupplyProbeContracts({
-        ...meta, contracts: meta.contracts!.filter((contract) => contract !== missing),
-      })).toBeNull();
-    }
+    expectEveryLegRequired(meta);
   });
 
   it("selects PAXG's reviewed issuer-native Base leg and rejects an omitted catalog deployment", () => {
@@ -207,9 +173,14 @@ describe("curated on-chain supply paths", () => {
     expect(prefersOnChainSupplyMcap(TRACKED_META_BY_ID.get("jtrsy-anemoy")!)).toBe(true);
     expect(prefersOnChainSupplyMcap(TRACKED_META_BY_ID.get("usdcx-movement")!)).toBe(true);
     expect(selectSingleOnchainSupplyProbeContract(meta)?.chain).toBe("ethereum");
-    for (const id of ["eurc-circle", "eurcv-societe-generale-forge", "brla-brla-digital", "zchf-frankencoin", "euri-banking-circle"]) {
-      expect(prefersReviewedNativeFiatSupply(TRACKED_META_BY_ID.get(id)!)).toBe(true);
+    for (const id of ["eurc-circle", "eurcv-societe-generale-forge", "brla-brla-digital", "zchf-frankencoin", "euri-banking-circle",
+      "cadd-cad-digital", "krwq-iq", "xofm-mento", "zarm-mento", "tgbp-tokenised", "cadc-cad-coin"]) {
+      expect([prefersReviewedNativeFiatSupply(TRACKED_META_BY_ID.get(id)!), requiresOnchainSupplyStateClock(id)]).toEqual([true, true]);
     }
+    expect(["buidl-blackrock", "kau-kinesis", "kag-kinesis", "susds-sky", "paxg-paxos", "wm-m0", "wtgxx-wisdomtree", "tbill-openeden",
+      "cetes-etherfuse", "jpym-mento", "usyc-hashnote"].map(requiresOnchainSupplyStateClock)).toEqual([...Array(9).fill(true), false, false]);
+    const krwq = CURATED_AGGREGATE_ESCROW_RESIDUALS["krwq-iq"]!;
+    expect([krwq.escrowAddress, resolveChainId(krwq.unattributedChainLabel)]).toEqual(["0xbdc82654f3574a113cdbd62f39cbe02e5b522d57", null]);
     expect(prefersReviewedNativeFiatSupply(TRACKED_META_BY_ID.get("kau-kinesis")!)).toBe(false);
     const eurcvStellar = TRACKED_META_BY_ID.get("eurcv-societe-generale-forge")!.contracts!.find((c) => c.chain === "stellar")!;
     expect(onchainSupplyProbeFamily(eurcvStellar)).toBeNull();
@@ -246,11 +217,7 @@ describe("curated on-chain supply paths", () => {
     expect(excluded.map(({ chain, canonicalChain }) => `${chain}->${canonicalChain}`))
       .toEqual(["polygon->ethereum", "sonic->ethereum", "tempo->ethereum", "cardano->ethereum", "optimism->ethereum"]);
     expect(selected.length + excluded.length).toBe(meta.contracts!.length);
-    for (const missing of meta.contracts!) {
-      expect(selectCuratedAggregateOnchainSupplyProbeContracts({
-        ...meta, contracts: meta.contracts!.filter((contract) => contract !== missing),
-      })).toBeNull();
-    }
+    expectEveryLegRequired(meta);
     expect(selectCuratedAggregateOnchainSupplyProbeContracts({
       ...meta,
       contracts: meta.contracts!.map((contract) => contract.chain === "optimism"
@@ -290,11 +257,7 @@ describe("curated on-chain supply paths", () => {
       { chain: "stellar", address: "CDV6U7OEVY6KUEJ4WNS63AYB6RFU3BAE7AZJOQ7LPH447C6NWUXEZZSO", canonicalChain: "ethereum" },
     ]);
     expect(selected.length + excluded.length).toBe(meta.contracts!.length);
-    for (const missing of meta.contracts!) {
-      expect(selectCuratedAggregateOnchainSupplyProbeContracts({
-        ...meta, contracts: meta.contracts!.filter((contract) => contract !== missing),
-      })).toBeNull();
-    }
+    expectEveryLegRequired(meta);
     expect(selectCuratedAggregateOnchainSupplyProbeContracts({
       ...meta, contracts: meta.contracts!.map((contract) => contract.chain === "solana"
         ? { ...contract, address: "So11111111111111111111111111111111111111112" } : contract),

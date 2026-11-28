@@ -47,7 +47,7 @@ export const pendingCarriedSupplyBaselines = Symbol("pending-carried-supply-base
 export const producerSupplyBaselines = Symbol("producer-supply-baselines");
 
 export interface PeggedAsset extends Pick<StablecoinData, "circulatingNative" | "valuationPriceUsd" | "valuationObservedAtSec" |
-  "priceQuoteBasis" | "upstreamKeys" | "pricePoolKeys" | "commodityEntitlement" | "parityQuoteUnit"> {
+  "priceQuoteBasis" | "upstreamKeys" | "pricePoolKeys" | "commodityEntitlement" | "parityQuoteUnit" | "supplyObservedAtKind"> {
   id: string;
   name: string;
   symbol: string;

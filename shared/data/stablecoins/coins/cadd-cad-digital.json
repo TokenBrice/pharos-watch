@@ -85,6 +85,11 @@
       "chain": "tempo",
       "address": "0x20c000000000000000000000d65b4808c85dbb81",
       "decimals": 6
+    },
+    {
+      "chain": "arc",
+      "address": "0x24bf8ae7b8e073d766a3509c25b45a6ad30e9046",
+      "decimals": 18
     }
   ],
   "custodyModel": "institutional-regulated",

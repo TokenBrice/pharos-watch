@@ -50,6 +50,12 @@ function intakeRows(overrides: Parameters<typeof makePeggedAsset>[0] = {}) {
   }));
 }
 
+async function mainIntake(db: Parameters<typeof loadStablecoinsIntake>[0]["db"], syncStartSec: number) {
+  const result = await loadStablecoinsIntake({ db, syncStartSec, fallbackToCoingecko: async () => fallbackResult });
+  if (result.kind !== "main") throw new Error("Expected main intake");
+  return result;
+}
+
 function datedHistoryFixture() {
   const now = 1_777_000_000;
   vi.spyOn(Date, "now").mockReturnValue(now * 1000);
@@ -75,8 +81,7 @@ describe("stablecoin intake admission", () => {
       referenceSourceSamples: { "peggedEUR:openExchangeRates": { observation, evidence } },
     })) sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(row.key, row.value, row.updated_at);
     upstream({ peggedAssets: intakeRows() });
-    const result = await loadStablecoinsIntake({ db, syncStartSec: nowSec, fallbackToCoingecko: async () => fallbackResult });
-    if (result.kind !== "main") throw new Error("Expected main intake");
+    const result = await mainIntake(db, nowSec);
     expect(result.validationReferences?.fxReferenceEvidenceByPeg?.peggedEUR).toMatchObject({
       ...evidence, observation, generation: expect.stringMatching(/^fx:/),
     });
@@ -90,8 +95,7 @@ describe("stablecoin intake admission", () => {
       makePeggedAsset({ id: "1", symbol: "USDT", price: 10, priceSource: "defillama",
         circulating: { peggedUSD: 100_000_000 } }),
     ] });
-    const result = await loadStablecoinsIntake({ db, syncStartSec: nowSec, fallbackToCoingecko: async () => fallbackResult });
-    if (result.kind !== "main") throw new Error("Expected main intake");
+    const result = await mainIntake(db, nowSec);
     expect(result.assets.find((row) => row.id === "usdt-tether")).toMatchObject({
       circulating: { peggedUSD: 100_000_000 },
       circulatingNative: null,
@@ -117,9 +121,7 @@ describe("stablecoin intake admission", () => {
       const { db, sqlite } = fixtures.open();
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
         .run("stablecoins", JSON.stringify({ peggedAssets: [previous] }), nowSec - 60);
-      upstream({ peggedAssets: Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({
-        id: `intake-fixture-${index}`, circulating: { peggedUSD: 100 },
-      })) });
+      upstream({ peggedAssets: intakeRows() });
       vi.mocked(supplemental.fetchCoinGeckoMarketData).mockResolvedValue({
         [meta.geckoId!]: { usd: 1.14, usd_market_cap: 1_000_000, last_updated_at: nowSec },
       });
@@ -134,8 +136,7 @@ describe("stablecoin intake admission", () => {
       ) }));
       const originalMetas = FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, meta);
       try {
-        const result = await loadStablecoinsIntake({ db, syncStartSec: nowSec, fallbackToCoingecko: async () => fallbackResult });
-        if (result.kind !== "main") throw new Error("Expected main intake");
+        const result = await mainIntake(db, nowSec);
         expect(nativeRead).toHaveBeenCalledOnce();
         expect(result.assets.filter((asset) => asset.id.startsWith("intake-fixture-"))).toHaveLength(MIN_VALID_ASSET_COUNT);
         const asset = result.assets.find((row) => row.id === meta.id);
@@ -185,13 +186,10 @@ describe("stablecoin intake admission", () => {
       peggedAssets: [
         unitedStables,
         untracked,
-        ...Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({
-          id: `intake-fixture-${index}`, circulating: { peggedUSD: 100 },
-        })),
+        ...intakeRows(),
       ],
     });
-    const result = await loadStablecoinsIntake({ db, syncStartSec: 1_777_000_000, fallbackToCoingecko: async () => fallbackResult });
-    if (result.kind !== "main") throw new Error("Expected main intake");
+    const result = await mainIntake(db, 1_777_000_000);
     expect(result.assets.find((asset) => asset.id === "u-united-stables")?.pegMechanism).toBe("fiat-backed");
     expect(result.assets.find((asset) => asset.id === "intake-fixture-untracked")?.pegMechanism).toBe("commodity-backed");
   });
@@ -212,13 +210,10 @@ describe("stablecoin intake admission", () => {
     const log = vi.spyOn(structuredLog, "logWorkerEvent");
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
       .run("stablecoins", JSON.stringify({ peggedAssets: [previous] }), nowSec - 60);
-    upstream({ peggedAssets: Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({
-      id: `intake-fixture-${index}`, circulating: { peggedUSD: 100 },
-    })) });
+    upstream({ peggedAssets: intakeRows() });
     // Exercise the intake omission boundary without cancelling the whole publication.
     vi.mocked(supplemental.fetchSupplementalTrackedTokens).mockResolvedValue({ goldTokens: [], silverTokens: [], fiatCgTokens: [] });
-    const result = await loadStablecoinsIntake({ db, syncStartSec: nowSec, fallbackToCoingecko: async () => fallbackResult });
-    if (result.kind !== "main") throw new Error("Expected main intake");
+    const result = await mainIntake(db, nowSec);
     const asset = result.assets.find((row) => row.id === meta.id);
     expect(asset).toBeDefined();
     const [published] = shared.normalizeStablecoinsPayload({ peggedAssets: [asset!] }, nowSec).peggedAssets;
@@ -269,11 +264,8 @@ describe("stablecoin intake admission", () => {
       events.push("fx");
       return { fxFallbackRates, validationReferences };
     });
-    const rows = Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({
-      id: `intake-fixture-${index}`, circulating: { peggedUSD: 100 },
-      circulatingPrevDay: { peggedUSD: 90 }, supplyObservedAt: 1_776_999_940,
-      chainCirculating: { Ethereum: { current: 100, circulatingPrevDay: 90 } }, chains: ["Ethereum"],
-    }));
+    const rows = intakeRows({ circulatingPrevDay: { peggedUSD: 90 }, supplyObservedAt: 1_776_999_940,
+      chainCirculating: { Ethereum: { current: 100, circulatingPrevDay: 90 } }, chains: ["Ethereum"] });
     upstream({ peggedAssets: rows, fxFallbackRates: { EUR: 1.1 } });
     const result = await loadStablecoinsIntake({
       db, syncStartSec: 1_777_000_000, fallbackToCoingecko: async () => fallbackResult,
@@ -305,8 +297,7 @@ describe("stablecoin intake admission", () => {
     upstream({ peggedAssets: intakeRows({
       supplySource: "defillama", supplyObservedAt: ageSec == null ? undefined : now - ageSec,
     }) });
-    const result = await loadStablecoinsIntake({ db, syncStartSec: now, fallbackToCoingecko: async () => fallbackResult });
-    if (result.kind !== "main") throw new Error("Expected main intake");
+    const result = await mainIntake(db, now);
     const asset = result.assets.find((row) => row.id === id)!;
     await fillMissingSupplyHistory(db, [asset]);
     const [published] = shared.normalizeStablecoinsPayload({ peggedAssets: [asset] }, now).peggedAssets;
@@ -499,6 +490,8 @@ describe("stablecoin intake admission", () => {
     { label: "BUIDL skipped native beats relisted supply", id: "buidl-blackrock", primary: 100, supplemental: null, expected: undefined, source: "onchain-supply-withheld", observedAt: undefined },
     { label: "EURCV preferred native beats DefiLlama list supply", id: "eurcv-societe-generale-forge", primary: 100, supplemental: 200, expected: 200, source: "onchain-total-supply", observedAt: 1_777_000_000 },
     { label: "EURC preferred circulating native beats DefiLlama list supply", id: "eurc-circle", primary: 100, supplemental: 200, expected: 200, source: "onchain-circulating-supply", observedAt: 1_777_000_000 },
+    { label: "CoinGecko-detail ZARm native beats its DefiLlama 368 row", id: "zarm-mento", llamaId: "368", primary: 100, supplemental: 200, expected: 200, source: "onchain-total-supply", observedAt: 1_777_000_000 },
+    { label: "USYC native beats a relisted DefiLlama 237 row", id: "usyc-hashnote", llamaId: "237", primary: 100, supplemental: 200, expected: 200, source: "onchain-total-supply", observedAt: 1_777_000_000 },
     { label: "positive primary beats positive supplemental", primary: 100, supplemental: 200, expected: 100, source: "defillama", observedAt: 1_776_999_940 },
     { label: "observed zero beats positive supplemental", primary: 0, supplemental: 200, expected: 0, source: "defillama", observedAt: 1_776_999_940 },
     { label: "observed zero beats zero supplemental", primary: 0, supplemental: 0, expected: 0, source: "defillama", observedAt: 1_776_999_940 },
@@ -508,20 +501,17 @@ describe("stablecoin intake admission", () => {
     { label: "absent primary leaves supplemental unavailable", primary: "absent", supplemental: undefined, expected: undefined },
     { label: "invalid primary leaves supplemental unavailable", primary: -1, supplemental: undefined, expected: undefined },
     { label: "omitted providers leave no asset", primary: "omitted", supplemental: null, expected: undefined, source: null, observedAt: null },
-  ])("$label with original supply provenance", async ({ id = "intake-supply-fixture", primary, supplemental: supplementalSupply, expected, source = "coingecko-fallback", observedAt = source === "onchain-supply-withheld" ? undefined : 1_777_000_000 }) => {
+  ])("$label with original supply provenance", async ({ id = "intake-supply-fixture", llamaId, primary, supplemental: supplementalSupply, expected, source = "coingecko-fallback", observedAt = source === "onchain-supply-withheld" ? undefined : 1_777_000_000 }) => {
     const { db } = fixtures.open();
-    const rows = Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({
-      id: `intake-fixture-${index}`, circulating: { peggedUSD: 100 },
-    }));
+    const rows = intakeRows();
     if (primary !== "omitted") rows.push(makePeggedAsset({
-      id, circulating: typeof primary === "number" ? { peggedUSD: primary } : {},
+      id: llamaId ?? id, circulating: typeof primary === "number" ? { peggedUSD: primary } : {},
       supplySource: "defillama", supplyObservedAt: 1_776_999_940,
     }));
     vi.mocked(supplemental.fetchSupplementalTrackedTokens).mockResolvedValue({
       goldTokens: [], silverTokens: [], fiatCgTokens: supplementalSupply === null ? [] : [makePeggedAsset({
         id, circulating: supplementalSupply === undefined ? {} : { peggedUSD: supplementalSupply },
-        supplySource: id === "eurc-circle" ? "onchain-circulating-supply"
-          : id === "buidl-blackrock" || id === "eurcv-societe-generale-forge" ? "onchain-total-supply" : "coingecko-fallback", supplyObservedAt: 1_777_000_000,
+        supplySource: (id === "intake-supply-fixture" ? null : source) ?? "coingecko-fallback", supplyObservedAt: 1_777_000_000,
       })],
     });
     upstream({ peggedAssets: rows });
@@ -530,6 +520,7 @@ describe("stablecoin intake admission", () => {
     const matches = result.assets.filter((asset) => asset.id === id);
     expect(result.droppedMalformedAssets).toBe(primary === "absent" || primary === -1 ? 1 : 0);
     expect(matches).toHaveLength(source === null ? 0 : 1);
+    expect(result.assets.filter((asset) => asset.id === llamaId)).toEqual([]);
     if (source === null) return;
     expect(matches.map(({ id: assetId, circulating, supplySource, supplyObservedAt }) => ({
       id: assetId, circulating, supplySource, supplyObservedAt,
@@ -569,7 +560,7 @@ describe("stablecoin intake admission", () => {
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
     insert.run("stablecoins", "{", 1_776_999_000);
     insert.run("sync-stablecoins:chain-dropout-state", "{", 1_776_999_000);
-    upstream({ peggedAssets: Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({ id: `intake-fixture-${index}`, circulating: { peggedUSD: 100 } })) });
+    upstream({ peggedAssets: intakeRows() });
     const result = await loadStablecoinsIntake({ db, syncStartSec: 1_777_000_000, fallbackToCoingecko: async () => fallbackResult });
     expect(result).toMatchObject({ kind: "withheld", result: { status: "degraded", itemCount: 0 } });
     if (result.kind !== "withheld") throw new Error("Expected a withheld generation");
@@ -585,16 +576,14 @@ describe("stablecoin intake admission", () => {
     const usdc = makePeggedAsset({ id: "2", symbol: "USDC", pegType: "peggedUSD", price: 1, priceSource: "defillama", circulating: { peggedUSD: 60_000_000_000 } });
     const eurc = makePeggedAsset({ id: "50", symbol: "EURC", pegType: "peggedEUR", price: 1.08, priceSource: "defillama", circulating: { peggedEUR: 500_000_000 } });
     upstream({ peggedAssets: [...baseRows, usdc, eurc] });
-    const intake = await loadStablecoinsIntake({ db, syncStartSec, fallbackToCoingecko: async () => fallbackResult });
-    if (intake.kind !== "main") throw new Error("Expected main intake");
+    const intake = await mainIntake(db, syncStartSec);
     expect(intake.exactParUsdListObservations.get("usdc-circle")).toBe(60_000_000_000);
     expect(intake.exactParUsdListObservations.has("eurc-circle")).toBe(false);
 
     // 5+ rows at 1.0 triggers response-level fill default and must NOT be deferred.
     const fillRows = baseRows.map((row, i) => (i < 5 ? { ...row, price: 1 } : row));
     upstream({ peggedAssets: [...fillRows, { ...usdc }] });
-    const fillIntake = await loadStablecoinsIntake({ db, syncStartSec, fallbackToCoingecko: async () => fallbackResult });
-    if (fillIntake.kind !== "main") throw new Error("Expected main intake");
+    const fillIntake = await mainIntake(db, syncStartSec);
     expect(fillIntake.exactParUsdListObservations.has("usdc-circle")).toBe(false);
 
     const target = intake.assets.find((a) => a.id === "usdc-circle")!;

@@ -32,19 +32,9 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
   return mockRegistry({
     stablecoins: [
     { ...coin(ftusd), detailProvider: "coingecko" },
-    {
-      id: "susds-sky",
-      name: "Savings USDS",
-      symbol: "sUSDS",
-      geckoId: "susds",
-      detailProvider: "coingecko",
-      contracts: [
-        { chain: "ethereum", address: "0x1111111111111111111111111111111111111111", decimals: 18 },
-      ],
-      flags: {
-        pegCurrency: "USD", backing: "rwa-backed", governance: "centralized", yieldBearing: true, navToken: true,
-      },
-    },
+    { id: "susds-sky", name: "Savings USDS", symbol: "sUSDS", geckoId: "susds", detailProvider: "coingecko",
+      contracts: [{ chain: "ethereum", address: "0x1111111111111111111111111111111111111111", decimals: 18 }],
+      flags: { pegCurrency: "USD", backing: "rwa-backed", governance: "centralized", yieldBearing: true, navToken: true } },
     ...[aa, zsd, zys].map(coin),
     { ...ustb, flags: { ...ustb.flags, pegCurrency: "USD" } },
     { ...hbd, flags: { ...hbd.flags, pegCurrency: "USD" } },
@@ -209,27 +199,12 @@ describe("fetchFiatCoinGeckoTokens", () => {
       [`coingecko:${ustb.geckoId}`]: { price: 1.16, timestamp: nowSec - 60 },
     } }));
 
-    const result = await fetchFiatCoinGeckoTokens({
-      [ustb.geckoId!]: {
-        usd: 1.15,
-        usd_market_cap: marketCap,
-        last_updated_at: nowSec,
-      },
-    });
+    const result = await fetchFiatCoinGeckoTokens({ [ustb.geckoId!]: { usd: 1.15, usd_market_cap: marketCap, last_updated_at: nowSec } });
 
     expect(result.find((asset) => asset.id === ustb.id)).toMatchObject({
-      id: ustb.id,
-      price: 1.16,
-      priceSource: "coingecko-mirror",
-      priceObservedAt: nowSec - 60,
-      priceObservedAtMode: "upstream",
-      supplySource: "coingecko-fallback",
-      supplyObservedAt: nowSec,
-      circulating: { peggedUSD: marketCap },
-      circulatingNative: marketCap / 1.15,
-      valuationPriceUsd: 1.15,
-      valuationObservedAtSec: nowSec,
-      chainCirculating: {},
+      id: ustb.id, price: 1.16, priceSource: "coingecko-mirror", priceObservedAt: nowSec - 60, priceObservedAtMode: "upstream",
+      supplySource: "coingecko-fallback", supplyObservedAt: nowSec, circulating: { peggedUSD: marketCap }, circulatingNative: marketCap / 1.15,
+      valuationPriceUsd: 1.15, valuationObservedAtSec: nowSec, chainCirculating: {},
     });
     // The shared fixture still probes unpriced plain-par ftUSD, never USTB.
     expect(probeTrackedTokenSupplyMock.mock.calls.map(([meta]) => meta.id)).toEqual(["ftusd-flying-tulip"]);
@@ -244,13 +219,8 @@ describe("fetchFiatCoinGeckoTokens", () => {
       [reusd.geckoId!]: { usd: price, usd_market_cap: marketCap, last_updated_at: nowSec },
     });
 
-    expect(result.find((asset) => asset.id === reusd.id)).toMatchObject({
-      id: reusd.id,
-      price,
-      priceSource: "coingecko",
-      priceObservedAt: nowSec,
-      circulating: { peggedUSD: expect.any(Number) },
-    });
+    expect(result.find((asset) => asset.id === reusd.id))
+      .toMatchObject({ id: reusd.id, price, priceSource: "coingecko", priceObservedAt: nowSec, circulating: { peggedUSD: expect.any(Number) } });
   });
 
   it.each([usyc, buidl])("values $id native stock instead of its CoinGecko cap", async (meta) => {
@@ -263,18 +233,9 @@ describe("fetchFiatCoinGeckoTokens", () => {
 
     const asset = result.find((row) => row.id === meta.id)!;
     expect(asset).toMatchObject({
-      id: meta.id,
-      price: 1.14,
-      priceSource: "coingecko",
-      priceObservedAt: nowSec,
-      supplySource: "onchain-total-supply",
-      supplyObservedAt: expect.any(Number),
-      chainCirculating: {
-        Ethereum: { chainId: "ethereum" },
-        BSC: { chainId: "bsc" },
-        Solana: { chainId: "solana" },
-        ...(meta === usyc ? { Arc: { chainId: "arc", current: 0 } } : {}),
-      },
+      id: meta.id, price: 1.14, priceSource: "coingecko", priceObservedAt: nowSec, supplySource: "onchain-total-supply", supplyObservedAt: expect.any(Number),
+      chainCirculating: { Ethereum: { chainId: "ethereum" }, BSC: { chainId: "bsc" }, Solana: { chainId: "solana" },
+        ...(meta === usyc ? { Arc: { chainId: "arc", current: 0 } } : {}) },
     });
     expect(asset).not.toHaveProperty("chainPartition");
     expect(asset).not.toHaveProperty("supplyUnavailableReason");
@@ -421,20 +382,8 @@ describe("fetchFiatCoinGeckoTokens", () => {
     expect(result.map((asset) => asset.id)).toEqual(["ftusd-flying-tulip", buidl.id, usyc.id]);
     const ftusd = result.find((asset) => asset.id === "ftusd-flying-tulip")!;
     expect(ftusd.chainCirculating?.Ethereum).not.toHaveProperty("circulatingPrevDay");
-    expect(ftusd).toMatchObject({
-      id: "ftusd-flying-tulip",
-      supplySource: "onchain-total-supply",
-      supplyObservedAt: expect.any(Number),
-      circulating: { peggedUSD: 1_922_317.826195 },
-      chainCirculating: {
-        Ethereum: {
-          current: 1_884_739.402999,
-        },
-        Sonic: {
-          current: 37_578.423196,
-        },
-      },
-    });
+    expect(ftusd).toMatchObject({ id: "ftusd-flying-tulip", supplySource: "onchain-total-supply", supplyObservedAt: expect.any(Number),
+      circulating: { peggedUSD: 1_922_317.826195 }, chainCirculating: { Ethereum: { current: 1_884_739.402999 }, Sonic: { current: 37_578.423196 } } });
     expect(probeTrackedTokenSupplyMock).toHaveBeenCalledTimes(2);
   });
 
@@ -451,11 +400,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
     });
     const row = result.find((asset) => asset.id === dusd.id);
 
-    expect(row).toMatchObject({
-      price: 1.12,
-      priceSource: "coingecko-low-volume",
-      supplySource: "onchain-total-supply",
-    });
+    expect(row).toMatchObject({ price: 1.12, priceSource: "coingecko-low-volume", supplySource: "onchain-total-supply" });
     // USD values: Ink is reallocated out of the Ethereum total, not summed.
     expect(row?.circulating?.peggedUSD).toBeCloseTo(1_557_829.462801 * 1.12, 4);
     expect(row?.chainCirculating?.Ethereum?.current).toBeCloseTo((1_557_829.462801 - 14_928.115493) * 1.12, 4);
@@ -465,9 +410,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
   it("skips NAV supply fallback when the price lane is missing instead of par-valuing", async () => {
     fetchWithRetryMock.mockImplementationOnce(emptyPrices);
 
-    const result = await fetchFiatCoinGeckoTokens({
-      susds: { usd_market_cap: 0 },
-    });
+    const result = await fetchFiatCoinGeckoTokens({ susds: { usd_market_cap: 0 } });
 
     expect(result).toEqual([
       ...withheld,
@@ -521,7 +464,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
         chainCirculating: { Ethereum: { current: 3_120_000, chainId: "ethereum" } },
       });
       expect(susds?.priceSource).toBeUndefined();
-      expect(susds?.supplyObservedAt).toBe(observedAt);
+      expect([susds?.supplyObservedAt, susds?.supplyObservedAtKind]).toEqual([observedAt, "pinned-state"]);
     } else {
       expect(result).toEqual([
         ...withheld,

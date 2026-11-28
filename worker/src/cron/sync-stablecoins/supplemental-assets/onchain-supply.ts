@@ -18,6 +18,7 @@ import {
   type PinnedNativeShareSolanaLeg,
 } from "@shared/types/reserve-nav-supply";
 import type { SfraxStockPerimeterObservation } from "@shared/types/sfrax-supply";
+import type { SupplyObservedAtKind } from "@shared/types/supply";
 import { fetchSfraxStockSupply } from "./sfrax-supply";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmUint256AtBlock, type EvmBlockHeader, type EvmRpcOptions } from "../../../lib/evm-rpc";
 import { CHAIN_META } from "@shared/types/chain-identity";
@@ -33,6 +34,7 @@ import {
   getOnchainSupplyHoldReason,
   isKinesisWrapperSupplyId,
   isOnchainSupplyPartitionExcluded,
+  requiresOnchainSupplyStateClock,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSupplementalOnchainSupplyProbeContract,
   type OnchainSupplyProbeFamily,
@@ -124,6 +126,8 @@ export interface OnChainMcapResult {
   nativeSupply?: number;
   supplySource: SupplementalOnChainSupplySource;
   observedAt?: number | null;
+  /** Set only when a reviewed `requireStateClock` plan dated every leg at its own pinned state. */
+  observedAtKind?: SupplyObservedAtKind;
   /** Display-label keys are retained for public compatibility. */
   chainCirculating?: Record<string, OnChainMcapChainRow>;
   supplyPerimeter?: SfraxStockPerimeterObservation;
@@ -482,6 +486,8 @@ interface ContractOnChainMcapResult {
   decimals?: number;
   supplySource: SupplementalOnChainSupplySource;
   observedAt: number;
+  /** `observedAt` is this leg's pinned ledger, slot or EIP-1898 block clock, not the run clock. */
+  stateClocked: boolean;
   chain: string;
   chainLabel: string;
   observedBlock?: EvmBlockHeader;
@@ -536,18 +542,13 @@ async function fetchOnChainSupplyForContract(input: {
       const supplySource: SupplementalOnChainSupplySource = input.curated?.hotwallet?.length
         ? "onchain-circulating-supply"
         : "onchain-total-supply";
-      return { mcap, nativeSupply: observation.supply, supplySource, observedAt: observation.observedAt,
+      return { mcap, nativeSupply: observation.supply, supplySource, observedAt: observation.observedAt, stateClocked: true,
         chain: supplyContract.chain, chainLabel: contractChainLabel(supplyContract) };
     }
     if (!isFixedDecimalDeployment(supplyContract)) return reject("amount-encoding-unavailable");
     const decimals = supplyContract.decimals;
     const rpcOptions = joinedSupplyRpcOptions({ ...input, signal: supplySignal });
-    const stateClockRequired = input.meta.id === "buidl-blackrock" || isKinesisWrapperSupplyId(input.meta.id)
-      || input.meta.id === "susds-sky" || input.meta.id === "paxg-paxos"
-      || input.meta.id === "eurc-circle" || input.meta.id === "eurcv-societe-generale-forge"
-      || input.meta.id === "brla-brla-digital" || input.meta.id === "wm-m0"
-      || input.meta.id === "wtgxx-wisdomtree" || input.meta.id === "tbill-openeden"
-      || input.meta.id === "cetes-etherfuse";
+    const stateClockRequired = requiresOnchainSupplyStateClock(input.meta.id);
     const needsJoinedBlock = family === "evm" && (
       stateClockRequired || !!CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[input.meta.id] ||
       (!!CURATED_AGGREGATE_ESCROW_RESIDUALS[input.meta.id] &&
@@ -592,6 +593,9 @@ async function fetchOnChainSupplyForContract(input: {
               ? await fetchAptosSupply(supplyContract.address, decimals, supplySignal, "BUIDL")
               : undefined;
     if (clockedSupply === null) return reject("state-clock-unavailable", undefined, "legs-unreadable");
+    const stateClocked = observedBlock != null || clockedSupply != null;
+    // A reviewed state-clocked leg never falls back to a run-clocked read.
+    if (stateClockRequired && !stateClocked) return reject("state-clock-unavailable", undefined, "legs-unreadable");
     if (clockedSupply) {
       observedAt = clockedSupply.observedAt;
       const stateAge = Math.floor(Date.now() / 1000) - observedAt;
@@ -667,7 +671,7 @@ async function fetchOnChainSupplyForContract(input: {
           `[fiat-cg] ${chainLabel} supply fallback for ${input.meta.symbol}: ${supply.toFixed(2)} units -> $${mcap.toFixed(2)} mcap`,
         );
       }
-      return { mcap, nativeSupply: supply, rawSupply: supplyRaw, decimals, supplySource, observedAt, observedBlock, chain: input.supplyContract.chain, chainLabel };
+      return { mcap, nativeSupply: supply, rawSupply: supplyRaw, decimals, supplySource, observedAt, stateClocked, observedBlock, chain: input.supplyContract.chain, chainLabel };
     }
   } catch (err) {
     throwIfAborted(supplySignal);
@@ -775,6 +779,7 @@ export async function fetchOnChainMcap(
         nativeSupply: result.nativeSupply,
         supplySource: result.supplySource,
         observedAt: result.observedAt,
+        ...(requiresOnchainSupplyStateClock(meta.id) && result.stateClocked ? { observedAtKind: "pinned-state" as const } : {}),
         chain: result.chain,
         chainLabel: result.chainLabel,
         chainCirculating: { [result.chainLabel]: { current: result.mcap, chainId: result.chain } },
@@ -811,6 +816,7 @@ export async function fetchCuratedAggregateOnChainMcap(
     return null;
   }
   let observedAt: number | null = null;
+  let stateClocked = true;
   let supplySource: SupplementalOnChainSupplySource = "onchain-total-supply";
   const observedBlocks = new Map<string, EvmBlockHeader>();
 
@@ -856,6 +862,7 @@ export async function fetchCuratedAggregateOnChainMcap(
       }
       if (result.supplySource === "onchain-circulating-supply") supplySource = "onchain-circulating-supply";
       observedAt = observedAt == null ? result.observedAt : Math.min(observedAt, result.observedAt);
+      stateClocked &&= result.stateClocked;
 
       if (canonicalSupplyChain) {
         if (result.chain === canonicalSupplyChain) {
@@ -973,6 +980,7 @@ export async function fetchCuratedAggregateOnChainMcap(
     nativeSupply: Number.isFinite(totalNativeSupply) ? totalNativeSupply : undefined,
     supplySource,
     observedAt,
+    ...(requiresOnchainSupplyStateClock(meta.id) && stateClocked ? { observedAtKind: "pinned-state" as const } : {}),
     chainCirculating,
   };
 }

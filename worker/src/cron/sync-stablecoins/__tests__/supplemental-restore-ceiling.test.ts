@@ -60,27 +60,13 @@ function xaut(input: Partial<PeggedAsset>) {
   return asset({ id: "xaut-tether", symbol: "XAUT", supplySource: "onchain-circulating-supply", ...input });
 }
 
-function chainRow(current: number): Record<string, unknown> {
-  return {
-    current,
-    circulatingPrevDay: 0,
-    circulatingPrevWeek: 0,
-    circulatingPrevMonth: 0,
-  };
-}
-
-function syrupChainCirculating(
-  overrides: Record<string, Record<string, unknown>> = {},
-): Record<string, Record<string, unknown>> {
-  return {
-    Ethereum: chainRow(70_000_000),
-    Plasma: chainRow(10_000_000),
-    BSC: chainRow(10_000_000),
-    Mantle: chainRow(10_000_000),
-    Ink: chainRow(0),
-    ...overrides,
-  };
-}
+const chainRow = (current: number): Record<string, unknown> => ({ current, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 });
+const syrupChainCirculating = (overrides: Record<string, Record<string, unknown>> = {}): Record<string, Record<string, unknown>> => ({
+  Ethereum: chainRow(70_000_000), Plasma: chainRow(10_000_000), BSC: chainRow(10_000_000), Mantle: chainRow(10_000_000), Ink: chainRow(0), ...overrides,
+});
+// syrupUSDT's fresh CoinGecko fallback row and its last curated on-chain packet.
+const syrup = (input: Partial<PeggedAsset> = {}) => asset({ id: "syrupusdt-maple", symbol: "syrupUSDT", supplySource: "coingecko-fallback", circulating: { peggedUSD: 100_000_000 }, ...input });
+const syrupPacket = (input: Partial<PeggedAsset> = {}) => syrup({ supplySource: "onchain-total-supply", chainCirculating: syrupChainCirculating(), supplyObservedAt: NOW_SEC - 900, ...input });
 
 describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
   it("bootstraps BUIDL before native carry", () => {
@@ -253,10 +239,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     expect(current.chainPartition).toBeDefined();
   });
   it("keeps restorable CG supply when its independently aged chain partition expires", () => {
-    const previous = asset({
-      id: "syrupusdt-maple", symbol: "syrupUSDT", supplySource: "coingecko-fallback",
-      circulating: { peggedUSD: 100_000_000 }, supplyObservedAt: NOW_SEC - 60,
-      chainCirculating: syrupChainCirculating(),
+    const previous = syrup({ supplyObservedAt: NOW_SEC - 60, chainCirculating: syrupChainCirculating(),
       chainPartition: { basis: "onchain-share", observedAt: NOW_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1,
         onchainUsd: 100_000_000, ratio: 1, admission: "carried" },
     });
@@ -334,33 +317,13 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
   );
 
   it("does not implicitly restore a CG-detail partition without a current unreadable read", () => {
-    const current = asset({
-      id: "syrupusdt-maple",
-      symbol: "syrupUSDT",
-      price: 1.12,
-      priceSource: "defillama",
-      priceUpdatedAt: NOW_SEC,
-      supplySource: "coingecko-fallback",
-      circulating: { peggedUSD: 100_000_000.05 },
-      circulatingPrevDay: { peggedUSD: 104_000_000 },
-      chainCirculating: {},
-    });
-    const previous = asset({
-      id: "syrupusdt-maple",
-      symbol: "syrupUSDT",
-      price: 1.1,
-      priceSource: "coingecko",
-      supplySource: "onchain-total-supply",
-      circulating: { peggedUSD: 100_000_000 },
-      circulatingPrevDay: { peggedUSD: 90_000_000 },
-      chainCirculating: syrupChainCirculating(),
-      supplyObservedAt: NOW_SEC - 900,
-    });
+    const current = syrup({ price: 1.12, priceSource: "defillama", priceUpdatedAt: NOW_SEC,
+      circulating: { peggedUSD: 100_000_000.05 }, circulatingPrevDay: { peggedUSD: 104_000_000 } });
+    const previous = syrupPacket({ price: 1.1, priceSource: "coingecko", circulatingPrevDay: { peggedUSD: 90_000_000 } });
 
     const result = merge(current, previous);
 
-    expect(result.restoredCount).toBe(0);
-    expect(result.expiredRestoreIds).toEqual([]);
+    expect([result.restoredCount, result.expiredRestoreIds]).toEqual([0, []]);
     expect(result.assets[0]).toBe(current);
     expect(result.assets[0].supplyRestored).toBeUndefined();
     expect(result.assets[0].supplyObservedAt).toBeUndefined();
@@ -404,19 +367,10 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       expiredIds: ["syrupusdt-maple"],
     },
   ])("retains the fresh fallback when the curated packet has $label", ({ patch, expiredIds }) => {
-    const current = asset({
-      id: "syrupusdt-maple", symbol: "syrupUSDT",
-      supplySource: "coingecko-fallback", circulating: { peggedUSD: 100_000_000 },
-    });
-    const previous = asset({
-      id: "syrupusdt-maple", symbol: "syrupUSDT",
-      supplySource: "onchain-total-supply", circulating: { peggedUSD: 100_000_000 },
-      chainCirculating: syrupChainCirculating(), supplyObservedAt: NOW_SEC - 900,
-      ...patch,
-    });
+    const current = syrup();
+    const previous = syrupPacket(patch);
     const result = merge(current, previous);
-    expect(result.restoredCount).toBe(0);
-    expect(result.expiredRestoreIds).toEqual([]);
+    expect([result.restoredCount, result.expiredRestoreIds]).toEqual([0, []]);
     expect(restoreCuratedAggregateChainPartition(current, previous, NOW_SEC)?.expired ? [current.id] : [])
       .toEqual(expiredIds);
     expect(result.assets).toEqual([current]);
@@ -424,24 +378,13 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
   });
 
   it("does not restore syrupUSDC's old partition after the Arc deployment expands its roster", () => {
-    const current = asset({
-      id: "syrupusdc-maple", symbol: "syrupUSDC",
-      supplySource: "coingecko-fallback", circulating: { peggedUSD: 100_000_000 },
-    });
-    const previous = asset({
-      id: current.id, symbol: current.symbol,
-      supplySource: "onchain-total-supply", circulating: { peggedUSD: 100_000_000 },
-      supplyObservedAt: NOW_SEC - 900,
-      chainCirculating: {
-        Ethereum: chainRow(70_000_000), Base: chainRow(10_000_000),
-        Arbitrum: chainRow(5_000_000), Solana: chainRow(10_000_000),
-        Ink: chainRow(0), Monad: chainRow(5_000_000),
-        "Robinhood Chain": chainRow(0), Tempo: chainRow(0),
-      },
-    });
+    const current = syrup({ id: "syrupusdc-maple", symbol: "syrupUSDC" });
+    const previous = syrupPacket({ id: current.id, symbol: current.symbol, chainCirculating: {
+      Ethereum: chainRow(70_000_000), Base: chainRow(10_000_000), Arbitrum: chainRow(5_000_000), Solana: chainRow(10_000_000),
+      Ink: chainRow(0), Monad: chainRow(5_000_000), "Robinhood Chain": chainRow(0), Tempo: chainRow(0),
+    } });
     const result = merge(current, previous);
-    expect(result.restoredCount).toBe(0);
-    expect(result.expiredRestoreIds).toEqual([]);
+    expect([result.restoredCount, result.expiredRestoreIds]).toEqual([0, []]);
     expect(result.assets).toEqual([current]);
     expect(result.assets[0]).toBe(current);
   });
@@ -466,8 +409,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
 
     const result = merge(current, previous);
 
-    expect(result.restoredCount).toBe(1);
-    expect(result.expiredRestoreIds).toEqual([]);
+    expect([result.restoredCount, result.expiredRestoreIds]).toEqual([1, []]);
     expect(result.assets[0]).toMatchObject({
       circulating: { peggedUSD: 500_000_000 },
       circulatingNative: 749_423.56,
@@ -537,8 +479,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
 
     const result = merge(current, previous);
 
-    expect(result.restoredCount).toBe(0);
-    expect(result.expiredRestoreIds).toEqual([]);
+    expect([result.restoredCount, result.expiredRestoreIds]).toEqual([0, []]);
     expect(result.assets[0]).toBe(current);
     expect(getCirculatingRawOrNull(result.assets[0])).toBe(0);
     expect(result.assets[0].supplyObservedAt).toBe(NOW_SEC - 30);
@@ -577,8 +518,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       NOW_SEC,
     );
     expect(result.skippedDuplicates).toBe(1);
-    expect(result.restoredCount).toBe(0);
-    expect(result.expiredRestoreIds).toEqual([]);
+    expect([result.restoredCount, result.expiredRestoreIds]).toEqual([0, []]);
     const byId = new Map(result.assets.map((row) => [row.id, row]));
     expect(byId.has("usdc-circle")).toBe(false);
     expect(byId.get("sfrax-frax")?.supplySource).toBe("onchain-supply-withheld");
@@ -612,8 +552,12 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       id: "usdt-tether", symbol: "USDT", supplySource: "defillama",
       circulating: { peggedUSD: 100 },
     });
+    // Pre-release rows of state-clocked preferred plans: an unclocked native packet and CADD's DefiLlama cap.
+    const preRelease = [asset({ id: "zarm-mento", symbol: "ZARm", supplySource: "onchain-total-supply",
+      circulating: { peggedZAR: 650 }, chainCirculating: { Celo: { chainId: "celo", current: 650 } }, chains: ["Celo"] }),
+    asset({ id: "cadd-cad-digital", symbol: "CADD", supplySource: "defillama", circulating: { peggedCAD: 9_000 } })];
     const db = mockD1([
-      { match: "FROM cache", rows: [{ updated_at: NOW_SEC, value: JSON.stringify({ peggedAssets: [carried, observed] }) }] },
+      { match: "FROM cache", rows: [{ updated_at: NOW_SEC, value: JSON.stringify({ peggedAssets: [carried, observed, ...preRelease] }) }] },
     ]);
 
     const { previousAssetsById } = await loadPreviousStablecoinsById(db);
@@ -622,6 +566,28 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     expect(previousAssetsById.get("usdc-circle")?.supplyObservedAt).toBeUndefined();
     const restored = restoreMissingTrackedAssets([], previousAssetsById, NOW_SEC);
     expect(restored.restoredIds).not.toContain("usdc-circle");
+    for (const { id, symbol } of preRelease) {
+      expect(previousAssetsById.get(id)?.supplyObservedAt).toBeUndefined();
+      expect(restorePreferredNativeSupply(asset({ id, symbol }), previousAssetsById.get(id), NOW_SEC + 60))
+        .toMatchObject({ circulating: {}, supplySource: "onchain-supply-withheld" });
+    }
+  });
+
+  it("restores a v7.2 state-clock enrollee only from a packet its pinned reader marked", async () => {
+    const packet = (id: string, rows: Record<string, string>, peg: string, supplyObservedAtKind?: "pinned-state") => asset({ id, symbol: id,
+      supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 60, supplyObservedAtKind, circulating: { [peg]: 100 * Object.keys(rows).length },
+      chainCirculating: Object.fromEntries(Object.entries(rows).map(([label, chainId]) => [label, { chainId, current: 100 }])) });
+    // BRLA was pinned before v7.2; EURI's complete pre-release packet names only a valid run second.
+    const brla = packet("brla-brla-digital", { Polygon: "polygon", Gnosis: "gnosis", Celo: "celo" }, "peggedREAL");
+    for (const kind of [undefined, "pinned-state"] as const) {
+      const euri = packet("euri-banking-circle", { Ethereum: "ethereum", BSC: "bsc" }, "peggedEUR", kind);
+      const value = JSON.stringify(StablecoinListResponseSchema.parse(normalizeStablecoinsPayload({ peggedAssets: [euri, brla] })));
+      const { previousAssetsById: prev } = await loadPreviousStablecoinsById(mockD1([{ match: "FROM cache", rows: [{ updated_at: NOW_SEC, value }] }]));
+      // The first pinned read fails, so each coin falls back to its cached packet.
+      expect([euri, brla].map(({ id }) => restorePreferredNativeSupply(asset({ id, symbol: id }), prev.get(id), NOW_SEC + 60))
+        .map((row) => [row.supplyObservedAtKind, getCirculatingRawOrNull(row)])).toEqual([[kind, kind ? 200 : null], [undefined, 300]]);
+      expect(restoreMissingTrackedAssets([], prev, NOW_SEC).restoredIds.sort()).toEqual(kind ? [brla.id, euri.id] : [brla.id]);
+    }
   });
 
   it("withholds a carried supply value that names no clock and leaves current rows alone", () => {

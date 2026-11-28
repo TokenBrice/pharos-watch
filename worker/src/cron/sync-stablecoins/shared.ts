@@ -1,5 +1,5 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
-import { ChainPartitionProvenanceSchema, decodePublishedPegType, StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema } from "@shared/types/supply";
+import { ChainPartitionProvenanceSchema, decodePublishedPegType, StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema, SupplyObservedAtKindSchema } from "@shared/types/supply";
 import { PriceDerivationSchema, PricePublicationReasonSchema } from "@shared/types/price";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -10,7 +10,7 @@ import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
-import { CURATED_AGGREGATE_ESCROW_RESIDUALS, getOnchainSupplyHoldReason, hasReconciledStrictNativeSupplyPacket, isAdmittedCanonicalNativeSupplySource, isKinesisWrapperSupplyId, isOnchainSupplyPartitionExcluded, isPinnedNativeSharesWorkflow, prefersOnChainSupplyMcap, requiresOriginalSupplyObservedAt, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract, SFRAX_STOCK_PERIMETER, isSfraxStockContractRoster } from "@shared/lib/onchain-supply-probe";
+import { CURATED_AGGREGATE_ESCROW_RESIDUALS, getOnchainSupplyHoldReason, getStrictCanonicalNativePegBucket, hasReconciledStrictNativeSupplyPacket, isAdmittedCanonicalNativeSupplySource, isKinesisWrapperSupplyId, isOnchainSupplyPartitionExcluded, isPinnedNativeSharesWorkflow, prefersOnChainSupplyMcap, requiresOriginalSupplyObservedAt, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract, SFRAX_STOCK_PERIMETER, isSfraxStockContractRoster } from "@shared/lib/onchain-supply-probe";
 import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { deriveSfraxStockPerimeter } from "@shared/lib/sfrax-supply";
 import { chainSupplyReconciles } from "@shared/lib/chains/circulating";
@@ -134,7 +134,7 @@ export function supplyObservationClock(asset: Pick<PeggedAsset, "supplyObservedA
 export function reviewedOnchainSupplyHoldFields(asset: Pick<PeggedAsset,
   "id" | "supplySource" | "supplyObservedAt" | "supplyRestored" | "supplyUnavailableReason" | "supplyPerimeter" | "circulating" | "chainCirculating" | "chainPartition"
 >, runStartedAt?: number): Pick<PeggedAsset,
-  "supplySource" | "supplyUnavailableReason" | "supplyObservedAt" | "supplyRestored" | "supplyRestoreMode" | "supplyGapFill" | "supplyChainGuard"
+  "supplySource" | "supplyUnavailableReason" | "supplyObservedAt" | "supplyObservedAtKind" | "supplyRestored" | "supplyRestoreMode" | "supplyGapFill" | "supplyChainGuard"
   | "circulating" | "circulatingPrevDay" | "circulatingPrevWeek" | "circulatingPrevMonth" | "chainCirculating" | "chains" | "supplyPerimeter" | "chainPartition"
   | "circulatingNative" | "valuationPriceUsd" | "valuationObservedAtSec" | "supplyChangeBaselines"
 > | null {
@@ -162,6 +162,7 @@ export function reviewedOnchainSupplyHoldFields(asset: Pick<PeggedAsset,
     supplySource: "onchain-supply-withheld",
     supplyUnavailableReason: reason ?? undefined,
     supplyObservedAt: undefined,
+    supplyObservedAtKind: undefined,
     supplyRestored: undefined,
     supplyRestoreMode: undefined,
     supplyGapFill: undefined,
@@ -216,6 +217,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
         gecko_id: _ignoredSnakeCase,
         listingClass: _ignoredListingClass,
         supplyObservedAt: _ignoredSupplyObservedAt,
+        supplyObservedAtKind: _ignoredSupplyObservedAtKind,
         supplyRestored: _ignoredSupplyRestored,
         supplyRestoreMode: _ignoredSupplyRestoreMode,
         supplyUnavailableReason: _ignoredSupplyUnavailableReason,
@@ -250,6 +252,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
           : null;
       const supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt);
       const supplyChainGuard = SupplyChainGuardProvenanceSchema.safeParse(asset.supplyChainGuard);
+      const supplyObservedAtKind = SupplyObservedAtKindSchema.safeParse(asset.supplyObservedAtKind);
       const priceDerivation = PriceDerivationSchema.safeParse(asset.priceDerivation);
       const pricePublicationReason = PricePublicationReasonSchema.safeParse(asset.pricePublicationReason);
       const hold = reviewedOnchainSupplyHoldFields(asset, runStartedAt);
@@ -280,6 +283,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
         priceSourceConfidenceProfile: hasUsablePrice ? (asset.priceSourceConfidenceProfile ?? null) : null,
         ...(hasUsablePrice && priceDerivation.success ? { priceDerivation: priceDerivation.data } : {}),
         ...(supplyObservedAt != null ? { supplyObservedAt } : {}),
+        ...(supplyObservedAt != null && supplyObservedAtKind.success ? { supplyObservedAtKind: supplyObservedAtKind.data } : {}),
         ...(asset.supplyUnavailableReason === "supply-chain-dropout" && getCirculatingRawOrNull(asset) == null
           ? { supplyUnavailableReason: "supply-chain-dropout" as const } : {}),
         ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
@@ -434,10 +438,12 @@ function stampPreviousSupplyObservedAt(asset: PeggedAsset, cacheUpdatedAt: numbe
     // A carried value or clocked/pinned native packet must carry its own
     // original observation clock, never inherit the cache-write timestamp.
     delete cloned.supplyObservedAt;
+    delete cloned.supplyObservedAtKind;
     return cloned;
   }
   // A row the producer observed now (its own lane read or the DefiLlama list
   // payload) names this publication as its observation clock.
+  if (observedAt == null) delete cloned.supplyObservedAtKind;
   cloned.supplyObservedAt = observedAt ?? cacheUpdatedAt;
   return cloned;
 }
@@ -547,8 +553,10 @@ function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean 
   if (previous.id === "xaut-tether" && previous.supplySource !== "onchain-circulating-supply") return false;
   if (requiresOriginalSupplyObservedAt(previous)) {
     const meta = ACTIVE_META_BY_ID.get(String(previous.id));
-    if (!hasReconciledStrictNativeSupplyPacket(previous, meta, nowSec)) return false;
-    return isSupplyObservationWithinRestoreCeiling(previous.supplyObservedAt!, nowSec);
+    if (!hasReconciledStrictNativeSupplyPacket(previous, meta, nowSec)
+      || !isSupplyObservationWithinRestoreCeiling(previous.supplyObservedAt!, nowSec)) return false;
+    // Strict and pinned packets reconciled their roster above; state-clocked aggregates still check it below.
+    if (getStrictCanonicalNativePegBucket(previous) !== null || isPinnedNativeSharesWorkflow(previous)) return true;
   }
   if (previous.supplySource === "coingecko-fallback" && prefersOnChainSupplyMcap(previous) && !kinesis) return false;
   // Cached on-chain packets must still satisfy today's deployment roster. A
@@ -615,6 +623,7 @@ export function restorePreferredNativeSupply(
       chains: restored.chains,
       supplySource: restored.supplySource,
       supplyObservedAt: restored.supplyObservedAt,
+      supplyObservedAtKind: restored.supplyObservedAtKind,
       circulatingNative: restored.circulatingNative,
       valuationPriceUsd: restored.valuationPriceUsd,
       valuationObservedAtSec: restored.valuationObservedAtSec,
@@ -1032,6 +1041,7 @@ export function withholdUnclockedCarriedSupply(assets: PeggedAsset[]): string[] 
     delete asset.supplyRestored;
     delete asset.supplyRestoreMode;
     delete asset.supplyObservedAt;
+    delete asset.supplyObservedAtKind;
     delete asset.supplyGapFill;
     delete asset.supplyPerimeter;
     delete asset.circulatingNative;

@@ -206,6 +206,13 @@ export type SupplyObservationProvenance = z.infer<typeof SupplyObservationProven
 export const SupplyRestoreModeSchema = z.enum(["outage-fallback"]);
 export type SupplyRestoreMode = z.infer<typeof SupplyRestoreModeSchema>;
 
+/**
+ * Clock kind of a packet's `supplyObservedAt`. `pinned-state` means every leg of a reviewed
+ * `requireStateClock` plan dated its supply at its own pinned chain state, never the run clock.
+ */
+export const SupplyObservedAtKindSchema = z.enum(["pinned-state"]);
+export type SupplyObservedAtKind = z.infer<typeof SupplyObservedAtKindSchema>;
+
 export type SupplyQuantityBasis = "native-quantity" | "usd-value";
 
 const supplyQuantityFields = {
@@ -254,6 +261,7 @@ const StablecoinDataRawSchema = z.object({
   priceSourceConfidenceProfile: PriceSourceConfidenceProfileSchema.nullable().optional(),
   supplySource: z.string().optional(),
   supplyObservedAt: z.number().nullable().optional(),
+  supplyObservedAtKind: SupplyObservedAtKindSchema.optional(),
   supplyRestored: z.boolean().optional(),
   supplyRestoreMode: SupplyRestoreModeSchema.optional(),
   supplyUnavailableReason: SupplyUnavailableReasonSchema.optional(),
@@ -323,6 +331,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
     : {}),
   supplySource: asset.supplySource,
   ...(asset.supplyObservedAt != null ? { supplyObservedAt: asset.supplyObservedAt } : {}),
+  ...(asset.supplyObservedAt != null && asset.supplyObservedAtKind != null ? { supplyObservedAtKind: asset.supplyObservedAtKind } : {}),
   ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
   ...(asset.supplyRestoreMode != null ? { supplyRestoreMode: asset.supplyRestoreMode } : {}),
   ...(asset.supplyUnavailableReason != null ? { supplyUnavailableReason: asset.supplyUnavailableReason } : {}),

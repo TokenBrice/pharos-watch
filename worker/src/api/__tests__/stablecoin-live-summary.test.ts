@@ -185,7 +185,7 @@ describe("site-only stablecoin live summary", () => {
   });
 
   const eurDetail = (): StablecoinDetailResponse => ({
-    currentCirculatingUSD: { peggedEUR: 110_000_000 }, currentSupplyObservedAt: NOW,
+    currentCirculatingUSD: { peggedEUR: 110_000_000 }, currentSupplyObservedAt: NOW, currentSupplySource: "onchain-circulating-supply",
     tokens: [
       { date: NOW - 7 * DAY, totalCirculatingUSD: { peggedEUR: 91_000_000 } },
       { date: NOW - 30 * DAY, totalCirculatingUSD: { peggedEUR: 85_000_000 } },
@@ -221,49 +221,24 @@ describe("site-only stablecoin live summary", () => {
   });
 
   it("uses supplyChangeBaselines native anchors for native-supply sources without altering provider-history coins", () => {
-    // Post-cutover date (2026-12-10) so EURC is outside its 2026-11-23 perimeter hold.
+    // EURS has no reviewed native plan, so every native source is admitted (state-clocked plans admit only onchain-*).
     const postCutover = Date.parse("2026-12-10T12:00:00Z") / 1000;
     const providerTokens = [
       { date: postCutover - 7 * DAY, totalCirculatingUSD: { peggedEUR: 498_000_000 }, totalCirculating: { peggedEUR: 455_654_193 } },
       { date: postCutover - 30 * DAY, totalCirculatingUSD: { peggedEUR: 490_000_000 }, totalCirculating: { peggedEUR: 450_000_000 } },
     ];
-    const baseDetail: StablecoinDetailResponse = {
-      currentCirculatingUSD: { peggedEUR: 502_000_000 },
-      currentCirculatingNative: 459_466_721,
-      currentSupplyObservedAt: postCutover,
-      tokens: providerTokens,
-    };
+    const native = (currentSupplySource: string, supplyChangeBaselines?: StablecoinDetailResponse["supplyChangeBaselines"]) => projectStablecoinLiveSummary({
+      currentCirculatingUSD: { peggedEUR: 502_000_000 }, currentCirculatingNative: 459_466_721, currentSupplyObservedAt: postCutover,
+      tokens: providerTokens, currentSupplySource, ...(supplyChangeBaselines && { supplyChangeBaselines }) }, "eurs-stasis").nativeSupply;
+    const week = (circulatingUsd: number, circulatingNative: number | null) => ({ observedAt: postCutover - 7 * DAY, circulatingUsd, circulatingNative });
     for (const source of ["onchain-circulating-supply", "onchain-total-supply", "zephyr-scanner"] as const) {
-      expect(projectStablecoinLiveSummary({
-        ...baseDetail,
-        currentSupplySource: source,
-        supplyChangeBaselines: {
-          week: { observedAt: postCutover - 7 * DAY, circulatingUsd: 502_000_000, circulatingNative: 459_000_000 },
-          month: null,
-        },
-      }, "eurc-circle").nativeSupply).toEqual({ current: 459_466_721, prevWeek: 459_000_000, prevMonth: null });
-      expect(projectStablecoinLiveSummary({
-        ...baseDetail,
-        currentSupplySource: source,
-        supplyChangeBaselines: {
-          week: { observedAt: postCutover - 7 * DAY, circulatingUsd: 0, circulatingNative: 0 },
-        },
-      }, "eurc-circle").nativeSupply).toEqual({ current: 459_466_721, prevWeek: 0, prevMonth: null });
-      expect(projectStablecoinLiveSummary({
-        ...baseDetail,
-        currentSupplySource: source,
-      }, "eurc-circle").nativeSupply).toEqual({ current: 459_466_721, prevWeek: null, prevMonth: null });
+      expect(native(source, { week: week(502_000_000, 459_000_000), month: null })).toEqual({ current: 459_466_721, prevWeek: 459_000_000, prevMonth: null });
+      expect(native(source, { week: week(0, 0) })).toEqual({ current: 459_466_721, prevWeek: 0, prevMonth: null });
+      expect(native(source)).toEqual({ current: 459_466_721, prevWeek: null, prevMonth: null });
     }
     // Non-native provider sources carrying partial/null baselines keep same-producer token history.
     for (const source of ["defillama", "coingecko-fallback"] as const) {
-      expect(projectStablecoinLiveSummary({
-        ...baseDetail,
-        currentSupplySource: source,
-        supplyChangeBaselines: {
-          week: { observedAt: postCutover - 7 * DAY, circulatingUsd: 498_000_000, circulatingNative: null },
-          month: null,
-        },
-      }, "eurs-stasis").nativeSupply).toEqual({ current: 459_466_721, prevWeek: 455_654_193, prevMonth: 450_000_000 });
+      expect(native(source, { week: week(498_000_000, null), month: null })).toEqual({ current: 459_466_721, prevWeek: 455_654_193, prevMonth: 450_000_000 });
     }
   });
 
