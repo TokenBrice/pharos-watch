@@ -634,22 +634,19 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
   });
 
   it("restores a v7.1 state-clock enrollee only from a packet its pinned reader marked", async () => {
-    const packet = (id: string, labels: Record<string, string>, peg: string, supplyObservedAtKind?: "pinned-state") => asset({
-      id, symbol: id, supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 60, supplyObservedAtKind,
-      circulating: { [peg]: 100 * Object.keys(labels).length },
-      chainCirculating: Object.fromEntries(Object.entries(labels).map(([label, chainId]) => [label, { chainId, current: 100 }])),
-    });
-    // BRLA's reader pinned every leg before v7.1; EURI's complete pre-release packet names only a valid run second.
+    const packet = (id: string, rows: Record<string, string>, peg: string, supplyObservedAtKind?: "pinned-state") => asset({ id, symbol: id,
+      supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 60, supplyObservedAtKind, circulating: { [peg]: 100 * Object.keys(rows).length },
+      chainCirculating: Object.fromEntries(Object.entries(rows).map(([label, chainId]) => [label, { chainId, current: 100 }])) });
+    // BRLA was pinned before v7.1; EURI's complete pre-release packet names only a valid run second.
     const brla = packet("brla-brla-digital", { Polygon: "polygon", Gnosis: "gnosis", Celo: "celo" }, "peggedREAL");
     for (const kind of [undefined, "pinned-state"] as const) {
       const euri = packet("euri-banking-circle", { Ethereum: "ethereum", BSC: "bsc" }, "peggedEUR", kind);
       const value = JSON.stringify(StablecoinListResponseSchema.parse(normalizeStablecoinsPayload({ peggedAssets: [euri, brla] })));
-      const { previousAssetsById } = await loadPreviousStablecoinsById(mockD1([{ match: "FROM cache", rows: [{ updated_at: NOW_SEC, value }] }]));
-      // The first pinned read fails, so both coins fall back to their cached packet.
-      expect([euri, brla].map(({ id }) => restorePreferredNativeSupply(asset({ id, symbol: id }), previousAssetsById.get(id), NOW_SEC + 60))
-        .map((row) => [row.supplyRestored, row.supplyObservedAtKind, getCirculatingRawOrNull(row)]))
-        .toEqual([kind ? [true, kind, 200] : [undefined, undefined, null], [true, undefined, 300]]);
-      expect(restoreMissingTrackedAssets([], previousAssetsById, NOW_SEC).restoredIds.sort()).toEqual(kind ? [brla.id, euri.id] : [brla.id]);
+      const { previousAssetsById: prev } = await loadPreviousStablecoinsById(mockD1([{ match: "FROM cache", rows: [{ updated_at: NOW_SEC, value }] }]));
+      // The first pinned read fails, so each coin falls back to its cached packet.
+      expect([euri, brla].map(({ id }) => restorePreferredNativeSupply(asset({ id, symbol: id }), prev.get(id), NOW_SEC + 60))
+        .map((row) => [row.supplyObservedAtKind, getCirculatingRawOrNull(row)])).toEqual([[kind, kind ? 200 : null], [undefined, 300]]);
+      expect(restoreMissingTrackedAssets([], prev, NOW_SEC).restoredIds.sort()).toEqual(kind ? [brla.id, euri.id] : [brla.id]);
     }
   });
 
