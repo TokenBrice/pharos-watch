@@ -173,10 +173,16 @@ export function requiresCanonicalNativeSupply(meta: Pick<StablecoinMeta, "id">):
   return prefersOnChainSupplyMcap(meta) && !isKinesisWrapperSupplyId(meta.id);
 }
 
+/** Preferred canonical plans whose reads are state-clocked admit only a clocked native packet downstream too. */
+function isStateClockedPreferredNativePlan(meta: Pick<StablecoinMeta, "id">): boolean {
+  return requiresOnchainSupplyStateClock(meta.id) && prefersOnChainSupplyMcap(meta) && !isKinesisWrapperSupplyId(meta.id);
+}
+
 /** Clocked and pinned native plans must carry an original observation clock, never cache write timestamps. */
 export function requiresOriginalSupplyObservedAt(meta: Pick<StablecoinMeta, "id">): boolean {
   return isPinnedNativeSharesWorkflow(meta)
-    || Object.prototype.hasOwnProperty.call(STRICT_CANONICAL_NATIVE_SPEC_BY_ID, meta.id);
+    || Object.prototype.hasOwnProperty.call(STRICT_CANONICAL_NATIVE_SPEC_BY_ID, meta.id)
+    || isStateClockedPreferredNativePlan(meta);
 }
 
 export function getStrictCanonicalNativePegBucket(meta: Pick<StablecoinMeta, "id">): string | null {
@@ -201,6 +207,10 @@ export function isAdmittedCanonicalNativeSupplySource(
   const strict = STRICT_CANONICAL_NATIVE_SPEC_BY_ID[meta.id];
   if (strict) return supplySource === strict.supplySource;
   if (isPinnedNativeSharesWorkflow(meta)) return supplySource === "onchain-total-supply";
+  // A provider row (an undated DefiLlama cap before cutover) is never a clocked native packet.
+  if (isStateClockedPreferredNativePlan(meta)) {
+    return supplySource === "onchain-total-supply" || supplySource === "onchain-circulating-supply";
+  }
   if (prefersOnChainSupplyMcap(meta) && !isKinesisWrapperSupplyId(meta.id)) {
     return supplySource !== "coingecko-fallback" && supplySource !== "onchain-supply-withheld";
   }
@@ -273,7 +283,11 @@ function hasReconciledPinnedNativeSharesPacket(
   return true;
 }
 
-/** Shared roster, chain-ID, allowed-zero, peg-bucket and clock check for strict native supply plans. */
+/**
+ * Shared roster, chain-ID, allowed-zero, peg-bucket and clock check for strict native supply plans.
+ * State-clocked preferred plans get the original-clock check only: their source is gated by
+ * isAdmittedCanonicalNativeSupplySource and their roster by the curated-aggregate restore check.
+ */
 export function hasReconciledStrictNativeSupplyPacket(
   asset: StrictNativeSupplyPacketLike,
   meta: Pick<StablecoinMeta, "id" | "contracts"> | undefined,
@@ -282,7 +296,7 @@ export function hasReconciledStrictNativeSupplyPacket(
   if (!meta) return false;
   if (isPinnedNativeSharesWorkflow(meta)) return hasReconciledPinnedNativeSharesPacket(asset, meta, nowSec);
   const spec = STRICT_CANONICAL_NATIVE_SPEC_BY_ID[meta.id];
-  if (!spec) return true;
+  if (!spec) return !isStateClockedPreferredNativePlan(meta) || hasValidOriginalSupplyObservedAt(asset.supplyObservedAt, nowSec);
   if (asset.supplySource !== spec.supplySource || asset.supplyUnavailableReason) return false;
   if (!hasValidOriginalSupplyObservedAt(asset.supplyObservedAt, nowSec)) return false;
   const buckets = Object.entries(asset.circulating ?? {});

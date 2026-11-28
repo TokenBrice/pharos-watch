@@ -10,7 +10,7 @@ import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
-import { CURATED_AGGREGATE_ESCROW_RESIDUALS, getOnchainSupplyHoldReason, hasReconciledStrictNativeSupplyPacket, isAdmittedCanonicalNativeSupplySource, isKinesisWrapperSupplyId, isOnchainSupplyPartitionExcluded, isPinnedNativeSharesWorkflow, prefersOnChainSupplyMcap, requiresOriginalSupplyObservedAt, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract, SFRAX_STOCK_PERIMETER, isSfraxStockContractRoster } from "@shared/lib/onchain-supply-probe";
+import { CURATED_AGGREGATE_ESCROW_RESIDUALS, getOnchainSupplyHoldReason, getStrictCanonicalNativePegBucket, hasReconciledStrictNativeSupplyPacket, isAdmittedCanonicalNativeSupplySource, isKinesisWrapperSupplyId, isOnchainSupplyPartitionExcluded, isPinnedNativeSharesWorkflow, prefersOnChainSupplyMcap, requiresOriginalSupplyObservedAt, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract, SFRAX_STOCK_PERIMETER, isSfraxStockContractRoster } from "@shared/lib/onchain-supply-probe";
 import { isKinesisWrapperSupplyCutoverActive } from "@shared/lib/supply-perimeter-changes";
 import { deriveSfraxStockPerimeter } from "@shared/lib/sfrax-supply";
 import { chainSupplyReconciles } from "@shared/lib/chains/circulating";
@@ -547,8 +547,10 @@ function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean 
   if (previous.id === "xaut-tether" && previous.supplySource !== "onchain-circulating-supply") return false;
   if (requiresOriginalSupplyObservedAt(previous)) {
     const meta = ACTIVE_META_BY_ID.get(String(previous.id));
-    if (!hasReconciledStrictNativeSupplyPacket(previous, meta, nowSec)) return false;
-    return isSupplyObservationWithinRestoreCeiling(previous.supplyObservedAt!, nowSec);
+    if (!hasReconciledStrictNativeSupplyPacket(previous, meta, nowSec)
+      || !isSupplyObservationWithinRestoreCeiling(previous.supplyObservedAt!, nowSec)) return false;
+    // Strict and pinned packets reconciled their roster above; state-clocked aggregates still check it below.
+    if (getStrictCanonicalNativePegBucket(previous) !== null || isPinnedNativeSharesWorkflow(previous)) return true;
   }
   if (previous.supplySource === "coingecko-fallback" && prefersOnChainSupplyMcap(previous) && !kinesis) return false;
   // Cached on-chain packets must still satisfy today's deployment roster. A

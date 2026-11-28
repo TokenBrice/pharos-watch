@@ -51,6 +51,7 @@ function makeResponse(body = detailBody) {
 const ov = (db: D1Database, id = "usdt-tether", res = makeResponse()) => overlayCanonicalDetail(db, id, res);
 const ovJson = async (db: D1Database, id = "usdt-tether", res = makeResponse()) => (await ov(db, id, res)).json() as Promise<Record<string, unknown>>;
 const resOf = (o: unknown) => makeResponse(JSON.stringify(o));
+const eurcNative = { supplySource: "onchain-circulating-supply", supplyObservedAt: NOW - 60 };
 const proj = (body: unknown, id = "", now = NOW) => projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(body), id, now);
 
 beforeEach(() => {
@@ -85,7 +86,7 @@ describe("missing detail price enrichment", () => {
 
   it("uses canonical non-USD week and month buckets when dated windows are omitted", async () => {
     const history = [7, 30].map((days) => ({ date: NOW - days * 86_400 - 60, totalCirculatingUSD: { peggedEUR: 110 } }));
-    const summary = proj(await ovJson(makeDb({ id: "eurc-circle", pegType: "peggedEUR", circulating: { peggedEUR: 110 }, circulatingPrevWeek: { peggedEUR: 100 }, supplyChangeBaselines: { day: null } }),
+    const summary = proj(await ovJson(makeDb({ id: "eurc-circle", pegType: "peggedEUR", circulating: { peggedEUR: 110 }, ...eurcNative, circulatingPrevWeek: { peggedEUR: 100 }, supplyChangeBaselines: { day: null } }),
       "eurc-circle", resOf({ tokens: history })), "eurc-circle");
     expect([summary.circulatingPrevWeek, summary.circulatingPrevMonth]).toEqual([{ peggedEUR: 100 }, {}]);
   });
@@ -412,6 +413,14 @@ describe("missing detail price enrichment", () => {
       ] as const) expectUnavailable(await ovJson(makeDb(row), id, makeResponse(hist)), id);
       const okTbill = proj(await ovJson(makeDb(validTbill), "tbill-openeden", makeResponse(hist)), "tbill-openeden");
       expect({ circ: okTbill.circulating, native: okTbill.nativeSupply.current }).toEqual({ circ: { peggedUSD: 285_000 }, native: 244_000 });
+      // Pre-cutover CADD list row (undated DefiLlama) and an unclocked native row never take the publication clock.
+      const cadd = { id: "cadd-cad-digital", circulating: { peggedCAD: 9_000 }, circulatingNative: 13_000, price: 0.7 };
+      for (const supplySource of ["defillama", "onchain-total-supply"]) {
+        expectUnavailable(await ovJson(makeDb({ ...cadd, supplySource }), cadd.id, makeResponse(hist)), cadd.id);
+        expect(proj({ ...dBase, currentCirculatingUSD: cadd.circulating, currentSupplySource: supplySource,
+          currentSupplyObservedAt: supplySource === "defillama" ? NOW - 60 : undefined }, cadd.id).circulating).toEqual({});
+      }
+      expect(proj(await ovJson(makeDb({ ...cadd, supplySource: "onchain-total-supply", supplyObservedAt: NOW - 90 }), cadd.id, makeResponse(hist)), cadd.id).supplyObservedAt).toBe(NOW - 90);
     });
 
     it("ignores a provider-supplied unavailability marker when canonical supply is observed", async () => {
@@ -430,7 +439,7 @@ describe("detail response paths", () => {
   ])("preserves $kind EURC prior-day supply in detail and live summary", async ({ priorDay }) => {
     const id = "eurc-circle";
     const db = makeDb({
-      id, pegType: "peggedEUR", circulating: { peggedUSD: 70_000_000, peggedEUR: 40_000_000 }, circulatingPrevDay: priorDay,
+      id, pegType: "peggedEUR", ...eurcNative, circulating: { peggedUSD: 70_000_000, peggedEUR: 40_000_000 }, circulatingPrevDay: priorDay,
       supplyChangeBaselines: { day: { observedAt: NOW - 86_400, circulatingUsd: 100_000_000, circulatingNative: null } },
     }, NOW - 60, 60);
     const { ctx } = makeCtx();

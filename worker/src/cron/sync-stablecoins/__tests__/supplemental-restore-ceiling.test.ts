@@ -612,8 +612,12 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       id: "usdt-tether", symbol: "USDT", supplySource: "defillama",
       circulating: { peggedUSD: 100 },
     });
+    // Pre-release rows of state-clocked preferred plans: an unclocked native packet and CADD's DefiLlama cap.
+    const preRelease = [asset({ id: "zarm-mento", symbol: "ZARm", supplySource: "onchain-total-supply",
+      circulating: { peggedZAR: 650 }, chainCirculating: { Celo: { chainId: "celo", current: 650 } }, chains: ["Celo"] }),
+    asset({ id: "cadd-cad-digital", symbol: "CADD", supplySource: "defillama", circulating: { peggedCAD: 9_000 } })];
     const db = mockD1([
-      { match: "FROM cache", rows: [{ updated_at: NOW_SEC, value: JSON.stringify({ peggedAssets: [carried, observed] }) }] },
+      { match: "FROM cache", rows: [{ updated_at: NOW_SEC, value: JSON.stringify({ peggedAssets: [carried, observed, ...preRelease] }) }] },
     ]);
 
     const { previousAssetsById } = await loadPreviousStablecoinsById(db);
@@ -622,6 +626,11 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     expect(previousAssetsById.get("usdc-circle")?.supplyObservedAt).toBeUndefined();
     const restored = restoreMissingTrackedAssets([], previousAssetsById, NOW_SEC);
     expect(restored.restoredIds).not.toContain("usdc-circle");
+    for (const { id, symbol } of preRelease) {
+      expect(previousAssetsById.get(id)?.supplyObservedAt).toBeUndefined();
+      expect(restorePreferredNativeSupply(asset({ id, symbol }), previousAssetsById.get(id), NOW_SEC + 60))
+        .toMatchObject({ circulating: {}, supplySource: "onchain-supply-withheld" });
+    }
   });
 
   it("withholds a carried supply value that names no clock and leaves current rows alone", () => {

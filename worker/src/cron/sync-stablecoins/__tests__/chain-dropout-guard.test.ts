@@ -416,7 +416,9 @@ describe("chain dropout guard", () => {
       const detail = await overlayCanonicalDetail({} as D1Database, id, new Response("{}"), {
         kind: "ok", updatedAt: now, payload: { peggedAssets: [released] },
       });
-      expect(await detail.json()).toMatchObject({ currentCirculatingUSD: released.circulating, currentSupplyExcludedChains: ["Tempo"] });
+      // A state-clocked preferred plan (BUIDL) never displays a provider row.
+      expect(await detail.json()).toMatchObject(id === "buidl-blackrock" ? { currentCirculatingUSD: {} }
+        : { currentCirculatingUSD: released.circulating, currentSupplyExcludedChains: ["Tempo"] });
       const recovered = structuredClone(incoming);
       const retry = await runGuard(recovered, { now: now + 900, previousAssetsById: new Map([[id, next]]) });
       expect(getCirculatingRawOrNull(recovered)).toBe(observedTotal);
