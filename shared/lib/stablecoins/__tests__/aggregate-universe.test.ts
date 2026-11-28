@@ -217,14 +217,14 @@ describe("core stablecoin aggregate universe", () => {
       ["cetes-etherfuse", "2026-11-27T10:45:23Z"], ["jltxx-jpmorgan", "2026-11-27T10:43:35Z"],
       ["mglo-midas-fasanara", "2026-11-27T16:16:22Z"],
       ...["cadd-cad-digital", "krwq-iq", "xofm-mento", "zarm-mento", "tgbp-tokenised", "cadc-cad-coin"]
-        .map((wave2) => [wave2, "2026-11-28T13:38:00Z"] as const),
+        .map((wave2) => [wave2, "2026-11-28T14:08:00Z"] as const),
     ] as const) {
       const at = Date.parse(firstObservedAt) / 1000;
       expect(isEarlierSupplyPerimeter(id, at), id).toBe(false);
       expect(isEarlierSupplyPerimeter(id, at - (at % 86_400)), id).toBe(true);
     }
     // The provisional Wave 2 / CADC fence must still classify a packet just before it as old.
-    expect(isEarlierSupplyPerimeter("cadd-cad-digital", Date.parse("2026-11-28T13:37:59Z") / 1000)).toBe(true);
+    expect(isEarlierSupplyPerimeter("cadd-cad-digital", Date.parse("2026-11-28T14:07:59Z") / 1000)).toBe(true);
   });
 
   it("registers the listing-policy v2 market-wide perimeter entry and chart marker from the cutover constant", () => {
