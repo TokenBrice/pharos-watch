@@ -296,15 +296,21 @@ export function hasOwnedDocsImpact(changedFiles: readonly string[]): boolean {
   });
 }
 
-// Typed lint builds its own TypeScript programs (8 GiB heap) and, beside both
-// typechecks and ESLint, can exhaust a 16 GB hosted runner; when it is selected
-// the pool admits at most two leaves so it never overlaps both typechecks.
+// Typed lint builds its own TypeScript programs (8 GiB heap). In the hosted
+// compile job, beside the typechecks (typecheck:worker alone peaks ~9.5 GiB) and
+// ESLint, it exhausted a 16 GB runner (#2440), and a two-leaf pool still peaked
+// ~14.6 GiB locally; so in the compile group a selected typed-lint leaf runs the
+// pool serially. Ungrouped local runs keep the configured parallelism.
 const TYPED_LINT_STATIC_CHECKS = new Set(["lint:typed", "lint:typed:changed"]);
-const TYPED_LINT_MAX_PARALLEL = 2;
+const TYPED_LINT_COMPILE_MAX_PARALLEL = 1;
 
-export function resolvePrStaticMaxParallel(parallel: readonly PrStaticCheckCommand[], configured: number): number {
-  return parallel.some((command) => TYPED_LINT_STATIC_CHECKS.has(command.name))
-    ? Math.min(configured, TYPED_LINT_MAX_PARALLEL)
+export function resolvePrStaticMaxParallel(
+  parallel: readonly PrStaticCheckCommand[],
+  configured: number,
+  group?: PrStaticCheckGroup,
+): number {
+  return group === "compile" && parallel.some((command) => TYPED_LINT_STATIC_CHECKS.has(command.name))
+    ? Math.min(configured, TYPED_LINT_COMPILE_MAX_PARALLEL)
     : configured;
 }
 
@@ -548,6 +554,7 @@ export async function runPrStaticChecks({
   const maxParallel = resolvePrStaticMaxParallel(
     parallel,
     Number.isFinite(configuredParallel) && configuredParallel > 0 ? configuredParallel : 3,
+    group,
   );
   const reporter = {
     start: (cmd: string) => log(`[check:pr:static] ${cmd}`),

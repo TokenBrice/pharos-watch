@@ -203,11 +203,14 @@ describe("adaptive PR checks", () => {
       "lint:changed", "lint:typed:changed", "typecheck", "typecheck:worker",
     ]);
     const partition = partitionPrStaticCheckPlan(compile.commands);
+    const fullTypedCompile = buildPrStaticCheckPlan(["package-lock.json", "worker/src/cron/x.ts"], { group: "compile" });
     expect(names(partition.parallel)).toEqual(["lint:typed:changed", "typecheck", "typecheck:worker"]);
     expect(names(partition.sequential)).toEqual(["lint:changed"]);
-    // Typed lint never shares the pool with both typechecks (16 GB runner).
-    expect(resolvePrStaticMaxParallel(partition.parallel, 3)).toBe(2);
-    expect(resolvePrStaticMaxParallel(partition.parallel.filter((c) => !c.name.startsWith("lint:typed")), 3)).toBe(3);
+    // In the compile job a typed-lint leaf runs the pool serially (16 GB runner, #2440).
+    expect([3, 2, 1].map((configured) => resolvePrStaticMaxParallel(partition.parallel, configured, "compile"))).toEqual([1, 1, 1]);
+    expect(resolvePrStaticMaxParallel(partitionPrStaticCheckPlan(fullTypedCompile.commands).parallel, 3, "compile")).toBe(1);
+    expect(resolvePrStaticMaxParallel(partition.parallel.filter((c) => !c.name.startsWith("lint:typed")), 3, "compile")).toBe(3);
+    expect(resolvePrStaticMaxParallel(partition.parallel, 3)).toBe(3);
     const fullLintCompile = buildPrStaticCheckPlan(["eslint.config.mjs", "worker/src/cron/x.ts"], { group: "compile" });
     expect(names(partitionPrStaticCheckPlan(fullLintCompile.commands).sequential)).toEqual(["lint"]);
 
