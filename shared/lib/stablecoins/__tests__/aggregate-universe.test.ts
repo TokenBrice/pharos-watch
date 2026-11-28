@@ -211,20 +211,20 @@ describe("core stablecoin aggregate universe", () => {
 
   it("keeps each native cutover's first new-perimeter supply observation on the new perimeter", () => {
     // First admitted observation clocks read from production (#2417, #2425); fences compare observedAt.
-    // #2169/#2393 sit at the planned deploy hour until re-dated to their first observation clocks.
     for (const [id, firstObservedAt] of [
       ["wtgxx-wisdomtree", "2026-11-27T10:45:23Z"], ["tbill-openeden", "2026-11-27T10:45:23Z"],
       ["cetes-etherfuse", "2026-11-27T10:45:23Z"], ["jltxx-jpmorgan", "2026-11-27T10:43:35Z"],
       ["mglo-midas-fasanara", "2026-11-27T16:16:22Z"],
-      ...["cadd-cad-digital", "krwq-iq", "xofm-mento", "zarm-mento", "tgbp-tokenised", "cadc-cad-coin"]
-        .map((wave2) => [wave2, "2026-11-28T14:08:00Z"] as const),
+      ["cadd-cad-digital", "2026-11-28T14:15:47Z"], ["krwq-iq", "2026-11-28T14:15:47Z"],
+      ["xofm-mento", "2026-11-28T14:15:55Z"], ["zarm-mento", "2026-11-28T14:15:50Z"],
+      ["tgbp-tokenised", "2026-11-28T14:15:35Z"], ["cadc-cad-coin", "2026-11-28T14:15:46Z"],
     ] as const) {
       const at = Date.parse(firstObservedAt) / 1000;
       expect(isEarlierSupplyPerimeter(id, at), id).toBe(false);
       expect(isEarlierSupplyPerimeter(id, at - (at % 86_400)), id).toBe(true);
     }
-    // The provisional Wave 2 / CADC fence must still classify a packet just before it as old.
-    expect(isEarlierSupplyPerimeter("cadd-cad-digital", Date.parse("2026-11-28T14:07:59Z") / 1000)).toBe(true);
+    // The old Worker's last run (14:00:30Z) stays on the earlier perimeter.
+    expect(isEarlierSupplyPerimeter("cadd-cad-digital", Date.parse("2026-11-28T14:00:30Z") / 1000)).toBe(true);
   });
 
   it("registers the listing-policy v2 market-wide perimeter entry and chart marker from the cutover constant", () => {
