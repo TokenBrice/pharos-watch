@@ -96,7 +96,7 @@
     "semantics": "single-asset",
     "breakerScope": "iusd-initia",
     "suspended": {
-      "reason": "After the 2026-11-20 Initia relaunch the iUSD vault holds USDC.inj, not AUSD0 (at height 23989077, 2026-11-27, vault USDC.inj equals iUSD supply 1,671,062.439681 and AUSD0 is 0), while this adapter reads only AUSD0; stays suspended until the usdc-circle wrapper identity and adapter migration (owner ruling D11, #2392) ship",
+      "reason": "After the 2026-11-20 Initia relaunch the iUSD vault holds USDC.inj, not AUSD0 (at height 23989077, 2026-11-27, vault USDC.inj equals iUSD supply 1,671,062.439681 and AUSD0 is 0), while this adapter reads only AUSD0; stays suspended until the usdc-circle wrapper identity and adapter migration (#2392) ship",
       "since": "2026-10-23",
       "reviewBy": "2026-12-03"
     },
