@@ -55,6 +55,13 @@ describe("buildDuplicateOpenEventRepair", () => {
     expect(mergeDepegSeconds([resumed], 0, 900)).toBe(350); expect(mergeUnknownDepegSeconds([resumed], 0, 900)).toBe(450);
   });
 
+  it("never re-imports a retained duplicate's superseded gap onto newer keeper coverage or resets its armed candidate", () => {
+    const keeper = { ...makeOpenRow({ id: 1, started_at: 100 }), price_coverage_json: '{"intervals":[[100,250],[500,900]],"lastObservationKind":"trusted-off-peg"}', last_trusted_price_at: 900, peak_escalation_candidate_at: 900, peak_escalation_candidate_seen_at: 900 };
+    const { commands, openEvents } = buildDuplicateOpenEventRepair([keeper, { ...makeOpenRow({ id: 2, started_at: 150 }), price_coverage_json: '{"intervals":[[150,250]]}', last_trusted_price_at: 250, price_coverage_gap_started_at: 300 }]);
+    expect(commands.map((c) => c.type)).toEqual(["delete-event", "update-peak"]);
+    expect(openEvents.get(keeper.stablecoin_id)).toMatchObject({ price_coverage_gap_started_at: null, peak_escalation_candidate_at: 900 });
+  });
+
   it("retains known at-par intervals and their continuity across duplicate repair", async () => {
     const repaired = await repairPersistedRows([
       { ...makeOpenRow({ id: 1, started_at: 100 }), price_coverage_json: JSON.stringify({ intervals: [[100, 200]], atParIntervals: [[300, 400]], lastObservationKind: "trusted-at-par" }), last_trusted_price_at: 400, price_coverage_gap_started_at: 300 },

@@ -32,8 +32,8 @@ export interface PegAnalyticsCachePayload {
   openIncidents?: Record<string, PegAnalyticsOpenIncident>;
   /**
    * Optional open-incident candidates per coin retained whenever a coin has multiple
-   * scored open rows so cached `/api/peg-summary` reads can re-apply the Section 2.3
-   * tie-break across all candidates at request time.
+   * scored open rows so cached `/api/peg-summary` reads can re-apply the representative
+   * tie-break (`reconcileOpenIncidents`) across all candidates at request time.
    */
   openIncidentCandidates?: Record<string, PegAnalyticsOpenIncident[]>;
 }

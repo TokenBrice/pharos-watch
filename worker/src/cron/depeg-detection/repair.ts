@@ -140,22 +140,28 @@ export function buildDuplicateOpenEventRepair<T extends DepegRow>(
       const initialCoverageComparable = normalizeCoverageForCompare(initialCoverage);
       let coverageChanged = false;
       if (cleanDupes.length > 0) {
-        const coverages = [keeper, ...cleanDupes].map(rowPriceCoverage).filter((coverage) => coverage != null);
+        const coverages = [initialCoverage, ...cleanDupes.map(rowPriceCoverage)].filter((coverage) => coverage != null);
         if (coverages.length > 0) {
           const latest = coverages.reduce((a, b) =>
             (b.lastTrustedObservationAt ?? -1) > (a.lastTrustedObservationAt ?? -1) ? b : a);
           const intervals = mergeDepegIntervals(coverages.flatMap((coverage) => coverage.intervals));
           const atParIntervals = mergeDepegIntervals(coverages.flatMap((coverage) => coverage.atParIntervals ?? []));
           const nextLastTrusted = latest.lastTrustedObservationAt;
-          // Preserve unresolved blind gaps, but do not discard known at-par intervals.
-          const nextGapStarted = coverages.reduce<number | null>((gap, coverage) =>
-            coverage.gapStartedAt == null ? gap : Math.min(gap ?? Infinity, coverage.gapStartedAt), null);
+          // Preserve unresolved blind gaps, but do not discard known at-par intervals. A trusted
+          // off-peg observation at or after a gap's onset ends it (`advanceDepegPriceCoverage`), so a
+          // retained duplicate's older gap never reopens the keeper's newer trusted coverage; the
+          // keeper's own gap always stands and the duplicate's intervals are still merged.
+          const keeperOffPegEnd = initialCoverage?.intervals.reduce((end, [, to]) => Math.max(end, to), -Infinity) ?? -Infinity;
+          const openGaps = coverages.filter((coverage) => coverage.gapStartedAt != null &&
+            (coverage === initialCoverage || coverage.gapStartedAt > keeperOffPegEnd));
+          const nextGapStarted = openGaps.reduce<number | null>((gap, coverage) =>
+            Math.min(gap ?? Infinity, coverage.gapStartedAt!), null);
           const coverage = {
             intervals,
             atParIntervals,
             lastTrustedObservationAt: nextLastTrusted,
             gapStartedAt: nextGapStarted,
-            lastObservationKind: coverages.some((value) => value.gapStartedAt != null && value.lastObservationKind !== "trusted-at-par")
+            lastObservationKind: openGaps.some((value) => value.lastObservationKind !== "trusted-at-par")
               ? "blind" as const : latest.lastObservationKind,
           };
           const serializedCoverage = serializeDepegPriceCoverage(coverage);
@@ -250,8 +256,9 @@ export function buildDuplicateOpenEventRepair<T extends DepegRow>(
       }
       // Clear an armed candidate only when repair mutates persisted columns (coverage,
       // peak, anchor, or confirmed escalation). In-memory-only hydrated fields
-      // (`incident_started_at`, carry-forward) are enforced directly by `escalation.ts`
-      // so a retained DDR-referenced duplicate cannot wipe an armed candidate every tick.
+      // (`incident_started_at`, carry-forward) are enforced directly by `escalation.ts`, and a
+      // superseded duplicate gap is not re-imported, so a retained DDR-referenced duplicate
+      // cannot wipe an armed candidate every tick.
       const evidenceChanged =
         coverageChanged ||
         peakChanged ||
