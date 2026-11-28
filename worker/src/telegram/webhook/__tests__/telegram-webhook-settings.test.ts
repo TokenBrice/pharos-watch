@@ -76,6 +76,10 @@ function subscriptionRow(stablecoinId: string): SubscriptionRow & Record<string,
   };
 }
 
+/** The private-chat settings message every callback edits. */
+const PRIVATE_MESSAGE = { chat: { id: 42, type: "private" }, message_id: 999 };
+const openUsdcSettings = (db: Parameters<typeof handleSettingsCommand>[0]) => handleSettingsCommand(db, "fake-token", "42", null, "USDC");
+
 beforeEach(() => {
   resetTelegramFetchSpy();
 });
@@ -127,7 +131,7 @@ describe("handleSettingsCommand", () => {
 
   it("renders the coin view for /settings USDC", async () => {
     const db = mockD1();
-    await handleSettingsCommand(db, "fake-token", "42", null, "USDC");
+    await openUsdcSettings(db);
 
     expect(sendCalls().length).toBe(1);
     const body = jsonBody(sendCalls()[0]) as {
@@ -184,7 +188,7 @@ describe("per-coin local override descriptions", () => {
       INSERT INTO telegram_subscriptions (chat_id, stablecoin_id) VALUES ('42', 'usdc-circle')`);
     for (const marker of [0, 1]) {
       sqlite.exec(`UPDATE telegram_subscriptions SET alert_${family}_override = ${marker}`);
-      await handleSettingsCommand(db, "fake-token", "42", null, "USDC");
+      await openUsdcSettings(db);
       const body = jsonBody(sendCalls()[marker]) as {
         text: string; reply_markup: { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> };
       };
@@ -208,7 +212,7 @@ describe("per-coin local override descriptions", () => {
           .run(JSON.stringify({ peggedAssets: [{ id: "usdc-circle", circulating: { peggedUSD: 1_000_000 } }] }));
       }
     }
-    await handleSettingsCommand(db, "fake-token", "42", null, "USDC");
+    await openUsdcSettings(db);
     expect(jsonBody(sendCalls()[0]).text).toContain("DEWS: inherits chat/preset policy");
     expect(jsonBody(sendCalls()[0]).text).not.toContain("DEWS: off");
   });
@@ -219,7 +223,7 @@ describe("per-coin local override descriptions", () => {
       INSERT INTO telegram_subscriptions
         (chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, dews_min_band, safety_mode, depeg_worsening_bps_step)
       VALUES ('42', 'usdc-circle', 1, 1, 1, 'WARNING', 'downgrade-only', 250)`);
-    await handleSettingsCommand(db, "fake-token", "42", null, "USDC");
+    await openUsdcSettings(db);
     const text = jsonBody(sendCalls()[0]).text;
     expect(text).toContain("DEWS: Warning+");
     expect(text).toContain("Safety: on");
@@ -244,7 +248,7 @@ describe("handleSettingsCallback — chat-level, presets, and pause", () => {
     for (let delivery = 0; delivery < 2; delivery += 1) {
       await handleSettingsCallback(db, "fake-token", {
         id: "cb", data: "settings:gt:dews:1:2", from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 999 },
+        message: PRIVATE_MESSAGE,
       }, "gt", "dews:1:2");
     }
     expect(sqlite.prepare("SELECT global_alert_dews FROM telegram_subscribers WHERE chat_id = '42'").get())
@@ -304,7 +308,7 @@ describe("handleSettingsCallback — chat-level, presets, and pause", () => {
     const { db, sqlite } = fixtures.open();
     sqlite.exec("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, global_alert_dews) VALUES ('42', 1, 1, 1)");
     await handleSettingsCallback(db, "fake-token", {
-      id: "cb", data: "settings:gt:dews", from: { id: 1 }, message: { chat: { id: 42, type: "private" }, message_id: 999 },
+      id: "cb", data: "settings:gt:dews", from: { id: 1 }, message: PRIVATE_MESSAGE,
     }, "gt", "dews");
     expect(sqlite.prepare("SELECT global_alert_dews FROM telegram_subscribers WHERE chat_id = '42'").get())
       .toEqual({ global_alert_dews: 1 });
@@ -321,7 +325,7 @@ describe("handleSettingsCallback — chat-level, presets, and pause", () => {
         id: "cb",
         data: "settings:q:1",
         from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 999 },
+        message: PRIVATE_MESSAGE,
       },
       "q",
       "1",
@@ -346,7 +350,7 @@ describe("handleSettingsCallback — chat-level, presets, and pause", () => {
         id: "cb",
         data: "settings:q:0",
         from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 999 },
+        message: PRIVATE_MESSAGE,
       },
       "q",
       "0",
@@ -392,7 +396,7 @@ describe("handleSettingsCallback — chat-level, presets, and pause", () => {
         id: "cb",
         data: "settings:sc",
         from: { id: 1, username: "alice" },
-        message: { chat: { id: 42, type: "private" }, message_id: 999 },
+        message: PRIVATE_MESSAGE,
       },
       "sc",
       "",
@@ -445,7 +449,7 @@ describe("handleSettingsCallback — per-coin", () => {
     ]);
     await handleSettingsCallback(db, "fake-token", {
       id: "cb", data: `settings:c:usdc-circle:${setting}`, from: { id: 1, username: "alice" },
-      message: { chat: { id: 42, type: "private" }, message_id: 999 },
+      message: PRIVATE_MESSAGE,
     }, "c", `usdc-circle:${setting}`);
     expect(editCalls()).toHaveLength(1);
     expect(jsonBody(editCalls()[0]).text).toContain("USDC settings");
@@ -470,7 +474,7 @@ describe("handleSettingsCallback — per-coin", () => {
     const db = mockD1();
     await handleSettingsCallback(db, "fake-token", {
       id: "cb", data: `settings:${subAction}:${subArg}`, from: { id: 1 },
-      message: { chat: { id: 42, type: "private" }, message_id: 999 },
+      message: PRIVATE_MESSAGE,
     }, subAction, subArg);
     expect(jsonBody(ackCalls()[0]).text).toBe(TELEGRAM_LAUNCH_RETIRED_MESSAGE);
     expect(editCalls()).toHaveLength(0);

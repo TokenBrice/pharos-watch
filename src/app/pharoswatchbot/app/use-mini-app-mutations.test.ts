@@ -65,6 +65,22 @@ function makeArgs(overrides: Partial<UseMiniAppMutationsArgs> = {}): UseMiniAppM
   };
 }
 
+function renderMutations(overrides: Partial<UseMiniAppMutationsArgs> = {}) {
+  return renderHook(() => useMiniAppMutations(makeArgs(overrides))).result;
+}
+
+function renderMutationsWithProps(args: UseMiniAppMutationsArgs) {
+  return renderHook((props) => useMiniAppMutations(props), { initialProps: args });
+}
+
+const confirmWith = (confirmed: boolean) => vi.fn((_message: string, callback: (confirmed: boolean) => void) => callback(confirmed));
+/** Operations sent through the mocked snapshot POST, in call order. */
+const sentOperations = (): TelegramMiniAppOperation[] => apiMocks.postMiniAppSnapshot.mock.calls.map((call) => call[1].operation);
+const bulkUndo = (generation: number, removeStablecoinIds: string[]) => ({
+  expectedPreferenceGeneration: generation, expectedFingerprint: `preview-v1-${generation}-abcdef12`, restoreDirectRows: [], removeStablecoinIds,
+});
+const USDC_PRESET_IMPACT = [{ stablecoinId: "usdc-circle", action: "remove", inheritedSourcesAfter: ["preset"] }];
+
 const databases: DatabaseSync[] = [];
 
 async function persistedMutations() {
@@ -121,7 +137,7 @@ describe("useMiniAppMutations", () => {
   it("revokes captured mutation and signed-read callbacks after persisted forget-me", async () => {
     const { sqlite } = await persistedMutations();
     const onForgotten = vi.fn();
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ onForgotten })));
+    const result = renderMutations({ onForgotten });
     const capturedMutation = result.current.performMutation;
     const capturedRead = result.current.performBulkWatchlistPreview;
     await act(async () => { await result.current.performMutation({ kind: "forget-me" }); });
@@ -153,7 +169,7 @@ describe("useMiniAppMutations", () => {
     const previewed = { contractVersion: "8", catalogVersion: "catalog-v1" } as TelegramMiniAppBulkWatchlistResponse;
     apiMocks.postMiniAppBulkWatchlistPreview.mockResolvedValue(previewed);
     const args = makeArgs({ mutationsAllowed: false, state: { ...baseState, viewer: { ...baseState.viewer, canMutate: false } } });
-    const { result, rerender } = renderHook((props) => useMiniAppMutations(props), { initialProps: args });
+    const { result, rerender } = renderMutationsWithProps(args);
     await act(async () => {
       expect(await result.current.performBulkWatchlistPreview(BULK_PREVIEW)).toEqual(previewed);
     });
@@ -183,15 +199,15 @@ describe("useMiniAppMutations", () => {
   });
 
   it("invalidates a remove undo when unsubscribing all", async () => {
-    const showConfirm = vi.fn((_message: string, callback: (confirmed: boolean) => void) => callback(true));
+    const showConfirm = confirmWith(true);
     await persistedMutations();
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ webApp: makeWebApp({ showConfirm }) })));
+    const result = renderMutations({ webApp: makeWebApp({ showConfirm }) });
     await act(async () => { await result.current.remove(baseState.subscriptions[0]!); });
     expect(result.current.notice).toMatchObject({ text: "USDC removed.", undoLabel: "Undo" });
     await act(async () => { result.current.unsubscribeAll(); });
     expect(result.current.notice?.undoLabel).toBeUndefined();
     await act(async () => { result.current.undo(); });
-    expect(apiMocks.postMiniAppSnapshot.mock.calls.map((call) => call[1].operation.kind)).toEqual(["remove-coin", "unsubscribe-all"]);
+    expect(sentOperations().map((operation) => operation.kind)).toEqual(["remove-coin", "unsubscribe-all"]);
   });
   it("locks mutation state until the returned server snapshot replaces the owner state", async () => {
     const nextState: TelegramMiniAppState = {
@@ -223,7 +239,7 @@ describe("useMiniAppMutations", () => {
     vi.useFakeTimers();
     const operation: TelegramMiniAppOperation = { kind: "pause" };
     apiMocks.postMiniAppSnapshot.mockRejectedValueOnce(new MiniAppRequestError(429, "rate-limited", 3));
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
+    const result = renderMutations();
 
     await act(async () => { await result.current.performMutation(operation); });
     expect(result.current.mutationRetryAfterSec).toBe(3);
@@ -252,7 +268,7 @@ describe("useMiniAppMutations", () => {
     const webApp = makeWebApp();
     apiMocks.refreshMiniAppBundleOnce.mockReturnValueOnce(true);
     apiMocks.postMiniAppSnapshot.mockRejectedValueOnce(error);
-    const { result: reloading } = renderHook(() => useMiniAppMutations(makeArgs({ webApp })));
+    const reloading = renderMutations({ webApp });
     await act(async () => { await reloading.current.performMutation({ kind: "pause" }); });
     expect(apiMocks.refreshMiniAppBundleOnce).toHaveBeenCalledWith({ contractVersion: "3", catalogVersion: "catalog-v3-next" });
     expect(reloading.current.notice).toBeNull();
@@ -262,7 +278,7 @@ describe("useMiniAppMutations", () => {
     const onUpdateRequired = vi.fn();
     apiMocks.refreshMiniAppBundleOnce.mockReturnValueOnce(false);
     apiMocks.postMiniAppSnapshot.mockRejectedValueOnce(error);
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ onUpdateRequired })));
+    const result = renderMutations({ onUpdateRequired });
     await act(async () => { await result.current.performMutation({ kind: "pause" }); });
     expect(onUpdateRequired).toHaveBeenCalledOnce();
     expect(result.current.updateRequired).toBe(true);
@@ -274,7 +290,7 @@ describe("useMiniAppMutations", () => {
   it("keeps a stale-auth rejection as visible intent with monotonic IDs and stops sending edits", async () => {
     apiMocks.postMiniAppSnapshot.mockRejectedValueOnce(new MiniAppRequestError(401, "stale-auth"));
     const onSnapshotReplaced = vi.fn();
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ onSnapshotReplaced })));
+    const result = renderMutations({ onSnapshotReplaced });
 
     await act(async () => { await result.current.performMutation({ kind: "pause" }); });
     expect(onSnapshotReplaced).not.toHaveBeenCalled();
@@ -289,7 +305,7 @@ describe("useMiniAppMutations", () => {
   it("ends the session when a signed read hits stale-auth", async () => {
     apiMocks.postMiniAppBulkWatchlistPreview.mockRejectedValueOnce(new MiniAppRequestError(401, "stale-auth"));
     const onSessionAuthExpired = vi.fn();
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ onSessionAuthExpired })));
+    const result = renderMutations({ onSessionAuthExpired });
 
     await act(async () => { await result.current.performBulkWatchlistPreview(BULK_PREVIEW); });
     expect(onSessionAuthExpired).toHaveBeenCalledOnce();
@@ -298,7 +314,7 @@ describe("useMiniAppMutations", () => {
   });
 
   it("never sends an edit while launch auth is already known to be expired", async () => {
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ authExpired: true, mutationsAllowed: false })));
+    const result = renderMutations({ authExpired: true, mutationsAllowed: false });
 
     await act(async () => { await result.current.performMutation({ kind: "forget-me" }); });
     expect(apiMocks.postMiniAppSnapshot).not.toHaveBeenCalled();
@@ -309,7 +325,7 @@ describe("useMiniAppMutations", () => {
     const { row } = await persistedMutations();
     const before = row();
     const coin = baseState.subscriptions[0]!;
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
+    const result = renderMutations();
 
     await act(async () => { await result.current.remove(coin); });
     expect(row()).toBeUndefined();
@@ -322,7 +338,7 @@ describe("useMiniAppMutations", () => {
 
   it("refuses stale undo after another preference edit without retrying or overwriting it", async () => {
     const { db, auth, row, applyTelegramMiniAppMutation } = await persistedMutations();
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
+    const result = renderMutations();
     await act(async () => { await result.current.remove(baseState.subscriptions[0]!); });
     expect(result.current.notice?.undoLabel).toBe("Undo");
     await applyTelegramMiniAppMutation(db, auth, {
@@ -339,9 +355,9 @@ describe("useMiniAppMutations", () => {
   });
 
   it("does not dispatch a canceled remove confirmation and warns when resetting a preset-covered coin", async () => {
-    const showConfirm = vi.fn((_message: string, callback: (confirmed: boolean) => void) => callback(false));
+    const showConfirm = confirmWith(false);
     const coin = baseState.subscriptions[0]!;
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ webApp: makeWebApp({ showConfirm }) })));
+    const result = renderMutations({ webApp: makeWebApp({ showConfirm }) });
 
     let removed!: Promise<boolean>;
     act(() => { removed = result.current.remove(coin); });
@@ -360,9 +376,9 @@ describe("useMiniAppMutations", () => {
   it("expires the remove undo affordance after eight seconds and emits one deduplicated notice", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const coin = baseState.subscriptions[0]!;
-    const showConfirm = vi.fn((_message: string, callback: (confirmed: boolean) => void) => callback(true));
+    const showConfirm = confirmWith(true);
     const { row } = await persistedMutations();
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ webApp: makeWebApp({ showConfirm }) })));
+    const result = renderMutations({ webApp: makeWebApp({ showConfirm }) });
 
     act(() => { void result.current.remove(coin); });
     await waitFor(() => expect(result.current.notice?.undoLabel).toBe("Undo"));
@@ -383,7 +399,7 @@ describe("useMiniAppMutations", () => {
     });
     const webApp = makeWebApp({ showConfirm });
     apiMocks.postMiniAppSnapshot.mockResolvedValue(makeSnapshot());
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ webApp })));
+    const result = renderMutations({ webApp });
     const preset = { id: "usd-top25" as const, label: "USD Top 25", alertTypes: { dews: true, depeg: true, safety: false }, depegStepBps: 250 as const };
 
     act(() => { result.current.unsubscribeAll(); });
@@ -416,28 +432,26 @@ describe("useMiniAppMutations", () => {
   it("uses a single native destructive showPopup for forget-me when available", async () => {
     const showPopup = vi.fn((_params, cb?: (id: string) => void) => cb?.("delete"));
     apiMocks.postMiniAppSnapshot.mockResolvedValue(makeSnapshot());
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ webApp: makeWebApp({ showPopup, isVersionAtLeast: () => true }) })));
+    const result = renderMutations({ webApp: makeWebApp({ showPopup, isVersionAtLeast: () => true }) });
     act(() => { result.current.forgetMe(); });
     await waitFor(() => expect(result.current.forgottenView).toBe(true));
     expect(showPopup).toHaveBeenCalledWith(expect.objectContaining({ title: "Delete all my data?", buttons: expect.arrayContaining([expect.objectContaining({ id: "delete", type: "destructive" })]) }), expect.any(Function));
     expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledWith(expect.any(String), { initData: "signed-init-data", operation: { kind: "forget-me" } });
   });
 
-  it("previews then confirms a bulk edit, surfaces sourceImpact, and arms the server-derived undo", async () => {
-    const undo = { expectedPreferenceGeneration: 3, expectedFingerprint: "preview-v1-3-abcdef12", restoreDirectRows: [], removeStablecoinIds: ["usdt-tether"] };
+  function mockBulkPreview(result: { adds: string[]; removes: string[]; unchanged: string[]; sourceImpact: unknown[] }) {
     apiMocks.postMiniAppBulkWatchlistPreview.mockResolvedValue({
       contractVersion: "9", catalogVersion: "c",
-      result: {
-        kind: "bulk-watchlist-preview", expectedPreferenceGeneration: 2, previewFingerprint: "preview-v1-2-abcdef12",
-        adds: ["usdt-tether"], removes: ["usdc-circle"], unchanged: [],
-        sourceImpact: [{ stablecoinId: "usdc-circle", action: "remove", inheritedSourcesAfter: ["preset"] }],
-        undo,
-      },
+      result: { kind: "bulk-watchlist-preview", expectedPreferenceGeneration: 2, previewFingerprint: "preview-v1-2-abcdef12", ...result, undo: bulkUndo(3, ["usdt-tether"]) },
     });
     apiMocks.postMiniAppSnapshot.mockResolvedValue(makeSnapshot());
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
+  }
+
+  it("previews then confirms a bulk edit, surfaces sourceImpact, and arms the server-derived undo", async () => {
+    mockBulkPreview({ adds: ["usdt-tether"], removes: ["usdc-circle"], unchanged: [], sourceImpact: USDC_PRESET_IMPACT });
+    const result = renderMutations();
     await act(async () => { expect(await result.current.applyBulkWatchlist(["usdt-tether"], ["usdc-circle"])).toBe(true); });
-    expect(apiMocks.postMiniAppSnapshot.mock.calls[0]?.[1].operation).toEqual({
+    expect(sentOperations()[0]).toEqual({
       kind: "confirm-bulk-watchlist", addStablecoinIds: ["usdt-tether"], removeStablecoinIds: ["usdc-circle"],
       expectedPreferenceGeneration: 2, previewFingerprint: "preview-v1-2-abcdef12",
     });
@@ -447,60 +461,47 @@ describe("useMiniAppMutations", () => {
       undoLabel: "Undo",
     });
     await act(async () => { result.current.undo(); });
-    expect(apiMocks.postMiniAppSnapshot.mock.calls[1]?.[1].operation).toEqual({ kind: "undo-bulk-watchlist", ...undo });
+    expect(sentOperations()[1]).toEqual({ kind: "undo-bulk-watchlist", ...bulkUndo(3, ["usdt-tether"]) });
   });
 
   it("reports the preview's applied adds and removes, not the requested selection", async () => {
-    apiMocks.postMiniAppBulkWatchlistPreview.mockResolvedValue({
-      contractVersion: "9", catalogVersion: "c",
-      result: {
-        kind: "bulk-watchlist-preview", expectedPreferenceGeneration: 2, previewFingerprint: "preview-v1-2-abcdef12",
-        adds: ["usdt-tether"], removes: [], unchanged: ["usdc-circle"], sourceImpact: [],
-        undo: { expectedPreferenceGeneration: 3, expectedFingerprint: "preview-v1-3-abcdef12", restoreDirectRows: [], removeStablecoinIds: ["usdt-tether"] },
-      },
-    });
-    apiMocks.postMiniAppSnapshot.mockResolvedValue(makeSnapshot());
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
+    mockBulkPreview({ adds: ["usdt-tether"], removes: [], unchanged: ["usdc-circle"], sourceImpact: [] });
+    const result = renderMutations();
     await act(async () => { expect(await result.current.applyBulkWatchlist(["usdc-circle", "usdt-tether"], [])).toBe(true); });
     expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
-    expect(apiMocks.postMiniAppSnapshot.mock.calls[0]?.[1].operation).toMatchObject({
+    expect(sentOperations()[0]).toMatchObject({
       kind: "confirm-bulk-watchlist", addStablecoinIds: ["usdc-circle", "usdt-tether"], removeStablecoinIds: [],
     });
     expect(result.current.notice).toMatchObject({ text: "Added 1 coin.", undoLabel: "Undo" });
   });
 
   it("applies a bulk edit in a single RTT with directStateProof and arms the server-derived undo", async () => {
-    const undo = { expectedPreferenceGeneration: 5, expectedFingerprint: "preview-v1-5-abcdef12", restoreDirectRows: [], removeStablecoinIds: ["usdt-tether"] };
+    const undo = bulkUndo(5, ["usdt-tether"]);
     apiMocks.postMiniAppSnapshot.mockResolvedValueOnce({
       ...makeSnapshot(),
-      bulkResult: {
-        adds: ["usdt-tether"], removes: ["usdc-circle"], unchanged: [],
-        sourceImpact: [{ stablecoinId: "usdc-circle", action: "remove", inheritedSourcesAfter: ["preset"] }],
-      },
+      bulkResult: { adds: ["usdt-tether"], removes: ["usdc-circle"], unchanged: [], sourceImpact: USDC_PRESET_IMPACT },
       undo,
     }).mockResolvedValueOnce(makeSnapshot());
-    const proofState = { ...baseState, directStateProof: { preferenceGeneration: 4, directFingerprint: "direct-v1-10-deadbeef" } };
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ state: proofState })));
+    const result = renderMutations({ state: { ...baseState, directStateProof: { preferenceGeneration: 4, directFingerprint: "direct-v1-10-deadbeef" } } });
     await act(async () => { expect(await result.current.applyBulkWatchlist(["usdt-tether"], ["usdc-circle"])).toBe(true); });
     expect(apiMocks.postMiniAppBulkWatchlistPreview).not.toHaveBeenCalled();
-    expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
-    expect(apiMocks.postMiniAppSnapshot.mock.calls[0]?.[1].operation).toEqual({
+    expect(sentOperations()).toEqual([{
       kind: "apply-bulk-watchlist",
       addStablecoinIds: ["usdt-tether"],
       removeStablecoinIds: ["usdc-circle"],
       expectedPreferenceGeneration: 4,
       expectedDirectFingerprint: "direct-v1-10-deadbeef",
-    });
+    }]);
     expect(result.current.notice).toMatchObject({
       text: "Added 1 coin, removed 1. USDC is still covered by a preset.",
       undoLabel: "Undo",
     });
     await act(async () => { result.current.undo(); });
-    expect(apiMocks.postMiniAppSnapshot.mock.calls[1]?.[1].operation).toEqual({ kind: "undo-bulk-watchlist", ...undo });
+    expect(sentOperations()[1]).toEqual({ kind: "undo-bulk-watchlist", ...undo });
   });
 
   it("keeps a bulk edit as unsaved intent once launch auth expired, without a preview read", async () => {
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs({ authExpired: true })));
+    const result = renderMutations({ authExpired: true });
     await act(async () => { expect(await result.current.applyBulkWatchlist(["usdt-tether", "usdc-circle"], [])).toBe(false); });
     expect(apiMocks.postMiniAppBulkWatchlistPreview).not.toHaveBeenCalled();
     expect(apiMocks.postMiniAppSnapshot).not.toHaveBeenCalled();
@@ -509,7 +510,7 @@ describe("useMiniAppMutations", () => {
   it("tells the user a second edit was not sent while one is still saving", async () => {
     const { promise, resolve } = Promise.withResolvers<TelegramMiniAppClientSnapshot>();
     apiMocks.postMiniAppSnapshot.mockReturnValueOnce(promise);
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
+    const result = renderMutations();
     let first!: Promise<TelegramMiniAppClientSnapshot | null>;
     act(() => { first = result.current.performMutation({ kind: "pause" }); });
     await act(async () => { expect(await result.current.performMutation({ kind: "clear-snooze" })).toBeNull(); });
@@ -521,7 +522,7 @@ describe("useMiniAppMutations", () => {
   it("keeps the undo armed while another request is in flight and clears it on revision drift", async () => {
     await persistedMutations();
     const args = makeArgs({ stateRevision: "state-v1-test" });
-    const { result, rerender } = renderHook((props) => useMiniAppMutations(props), { initialProps: args });
+    const { result, rerender } = renderMutationsWithProps(args);
     await act(async () => { await result.current.remove(baseState.subscriptions[0]!); });
     expect(result.current.notice?.undoLabel).toBe("Undo");
     const pending = Promise.withResolvers<TelegramMiniAppClientSnapshot>();
@@ -535,11 +536,11 @@ describe("useMiniAppMutations", () => {
     expect(result.current.notice?.undoLabel).toBe("Undo");
     await act(async () => { pending.resolve(makeSnapshot()); await busy; });
     apiMocks.postMiniAppSnapshot.mockImplementation(realImpl);
-    expect(apiMocks.postMiniAppSnapshot.mock.calls.map((call) => call[1].operation.kind)).toEqual(["remove-coin", "pause"]);
+    expect(sentOperations().map((operation) => operation.kind)).toEqual(["remove-coin", "pause"]);
     // Re-arm undo via a fresh remove response, then advance stateRevision externally while idle: stale undo clears.
     apiMocks.postMiniAppSnapshot.mockResolvedValueOnce({
       ...makeSnapshot(),
-      undo: { expectedPreferenceGeneration: 3, expectedFingerprint: "preview-v1-3-abcdef12", restoreDirectRows: [], removeStablecoinIds: ["usdc-circle"] },
+      undo: bulkUndo(3, ["usdc-circle"]),
     });
     await act(async () => { await result.current.remove(baseState.subscriptions[0]!); });
     expect(result.current.notice?.undoLabel).toBe("Undo");
@@ -589,7 +590,7 @@ describe("useMiniAppMutations", () => {
     const first = Promise.withResolvers<TelegramMiniAppClientSnapshot>();
     const second = Promise.withResolvers<TelegramMiniAppClientSnapshot>();
     apiMocks.postMiniAppSnapshot.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
-    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
+    const result = renderMutations();
     act(() => {
       result.current.mutate(firstOp);
       for (const op of queuedOps) result.current.mutate(op);
@@ -602,7 +603,7 @@ describe("useMiniAppMutations", () => {
       expect(result.current.isMutating).toBe(false);
     } else {
       await waitFor(() => expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledTimes(2));
-      expect(apiMocks.postMiniAppSnapshot.mock.calls[1]?.[1].operation).toEqual(expectedResidual);
+      expect(sentOperations()[1]).toEqual(expectedResidual);
       await act(async () => { second.resolve(makeSnapshot(firstResponseState)); await Promise.resolve(); });
       expect(result.current.isMutating).toBe(false);
     }
@@ -614,7 +615,7 @@ describe("useMiniAppMutations", () => {
     const first = Promise.withResolvers<TelegramMiniAppClientSnapshot>();
     apiMocks.postMiniAppSnapshot.mockReturnValueOnce(first.promise);
     const args = makeArgs({ onRefreshSession, onSnapshotReplaced });
-    const { result, rerender } = renderHook((props) => useMiniAppMutations(props), { initialProps: args });
+    const { result, rerender } = renderMutationsWithProps(args);
     act(() => {
       result.current.mutate({ kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { safety: true } } });
       result.current.mutate({ kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { reserve: true } } });
@@ -651,10 +652,7 @@ describe("useMiniAppMutations", () => {
     const expiring = Promise.withResolvers<TelegramMiniAppClientSnapshot>();
     apiMocks.postMiniAppSnapshot.mockReturnValueOnce(expiring.promise);
     const expiryArgs = makeArgs();
-    const { result: expiryResult, rerender: rerenderExpiry } = renderHook(
-      (props) => useMiniAppMutations(props),
-      { initialProps: expiryArgs },
-    );
+    const { result: expiryResult, rerender: rerenderExpiry } = renderMutationsWithProps(expiryArgs);
     act(() => {
       expiryResult.current.mutate({ kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { safety: true } } });
       expiryResult.current.mutate({ kind: "set-coin", stablecoinId: "usdc-circle", patch: { alertTypes: { reserve: true } } });

@@ -73,6 +73,12 @@ function editBodies(): Array<{ text: string; message_id?: number; reply_markup?:
     .map(([, init]) => JSON.parse(String(init!.body)));
 }
 
+const expectLastEditClearedKeyboard = () => expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
+
+const seedUsdcDewsFollow = (sqlite: { exec(sql: string): void }) =>
+  sqlite.exec(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('42', 'usdc-circle', 1)`);
+const presetFollows = (sqlite: { prepare(sql: string): { all(): unknown[] } }) => sqlite.prepare("SELECT * FROM telegram_preset_subscriptions").all();
+
 describe("pick buttons", () => {
   it("round-trips alert types and depeg steps through the callback code", () => {
     expect(decodeSubscribeTypes(encodeSubscribeTypes(new Set(["dews", "depeg"]), 250)))
@@ -103,7 +109,7 @@ describe("pick buttons", () => {
     expect(sqlite.prepare("SELECT stablecoin_id, alert_depeg FROM telegram_subscriptions").all())
       .toEqual([{ stablecoin_id: candidates.matches[1]!.id, alert_depeg: 1 }]);
     expect(ctx.answerCallback).toHaveBeenCalledWith({ text: "Followed." });
-    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
+    expectLastEditClearedKeyboard();
     expect(last(sentBodies())?.reply_markup?.inline_keyboard?.flat()[0]?.web_app?.url)
       .toContain(`startapp=coin_${candidates.matches[1]!.id}`);
   });
@@ -116,7 +122,7 @@ describe("pick buttons", () => {
     const noopCtx = await tap(db, unKb!.inline_keyboard[0]![0]!.callback_data);
     expect(noopCtx.answerCallback).toHaveBeenCalledWith({ text: "Not followed directly." });
     expect(last(sentBodies())?.text).toContain("Not followed directly");
-    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
+    expectLastEditClearedKeyboard();
 
     sqlite.exec(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('42', '${coin.id}', 1)`);
     const rmCtx = await tap(db, unKb!.inline_keyboard[0]![0]!.callback_data);
@@ -158,7 +164,7 @@ describe("bulk and forget confirmations", () => {
     await tap(db, `bulk:sa:6:${expiry}`);
     expect(sqlite.prepare("SELECT global_alert_depeg, global_alert_safety, global_alert_dews FROM telegram_subscribers").get())
       .toEqual({ global_alert_depeg: 1, global_alert_safety: 1, global_alert_dews: 0 });
-    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
+    expectLastEditClearedKeyboard();
     expect(last(sentBodies())?.reply_markup?.inline_keyboard?.flat()[0]?.text).toBe("Manage Alerts");
   });
 
@@ -184,16 +190,16 @@ describe("bulk and forget confirmations", () => {
     expect(expired.answerCallback).toHaveBeenCalledWith({ text: "This confirmation expired. Send the command again." });
     const cancelled = await tap(db, "bulk:no");
     expect(cancelled.answerCallback).toHaveBeenCalledWith({ text: "Cancelled." });
-    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
+    expectLastEditClearedKeyboard();
     expect(sqlite.prepare("SELECT * FROM telegram_subscribers").all()).toEqual([]);
   });
 
   it("removes every follow on bulk:ua and strips confirm buttons", async () => {
     const { sqlite, db } = fixtures.open();
-    sqlite.exec(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('42', 'usdc-circle', 1)`);
+    seedUsdcDewsFollow(sqlite);
     await tap(db, `bulk:ua:${expiry}`);
     expect(sqlite.prepare("SELECT * FROM telegram_subscriptions").all()).toEqual([]);
-    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
+    expectLastEditClearedKeyboard();
   });
 
   it("deletes the chat's data on forget:yes (private chats only) and strips buttons on yes/no", async () => {
@@ -205,10 +211,10 @@ describe("bulk and forget confirmations", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_subscriptions").get()).toEqual({ n: 1 });
 
     await tap(db, "forget:no");
-    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
+    expectLastEditClearedKeyboard();
 
     await tap(db, `forget:yes:${expiry}`);
-    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
+    expectLastEditClearedKeyboard();
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_subscriptions").get()).toEqual({ n: 0 });
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_subscribers").get()).toEqual({ n: 0 });
   });
@@ -219,7 +225,7 @@ describe("retired buttons in old messages", () => {
     "%s answers a hint and writes nothing",
     async (data) => {
       const { sqlite, db } = fixtures.open();
-      sqlite.exec(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('42', 'usdc-circle', 1)`);
+      seedUsdcDewsFollow(sqlite);
       const ctx = await tap(db, data);
       expect(ctx.answerCallback).toHaveBeenCalledOnce();
       expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_subscriptions").get()).toEqual({ n: 1 });
@@ -269,7 +275,7 @@ describe("setup buttons", () => {
     expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers").get()).toEqual({ preference_generation: 1 });
 
     await Promise.all([tapSetup(db, undo), tapSetup(db, undo)]);
-    expect(sqlite.prepare("SELECT * FROM telegram_preset_subscriptions").all()).toEqual([]);
+    expect(presetFollows(sqlite)).toEqual([]);
     expect(fetchSpy.mock.calls.filter(([url, init]) => String(url).endsWith("/answerCallbackQuery") && String(init!.body).includes("expired")))
       .toHaveLength(1);
   });
@@ -295,14 +301,14 @@ describe("setup buttons", () => {
 
   it.each([[false, "edit"], [true, "edit"], [false, "safety"], [true, "safety"], [false, "setup"], [true, "setup"]] as const)("rejects historical Undo (used: %s, re-follow: %s)", async (used, follow) => {
     const { sqlite, db } = fixtures.open();
-    sqlite.exec(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('42', 'usdc-circle', 1)`);
+    seedUsdcDewsFollow(sqlite);
     await tapSetup(db, "setup:top25");
     const undo = lastUndoData()!;
     if (used) await tapSetup(db, undo);
     if (follow !== "edit") {
       await forgetSubscriber(db, "42");
       expect(sqlite.prepare("SELECT * FROM cache").all()).toEqual([]);
-      sqlite.exec(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('42', 'usdc-circle', 1)`);
+      seedUsdcDewsFollow(sqlite);
     }
     if (follow === "setup") await tapSetup(db, "setup:top25");
     else await db.batch(prepareSubscriberAndPresetPatchStatements(db, "42", null, "usd-top25",
@@ -318,7 +324,7 @@ describe("setup buttons", () => {
       .toEqual([{ stablecoin_id: "usdc-circle", alert_dews: 1 }]);
     if (follow === "setup") {
       await tapSetup(db, currentUndo!);
-      expect(sqlite.prepare("SELECT * FROM telegram_preset_subscriptions").all()).toEqual([]);
+      expect(presetFollows(sqlite)).toEqual([]);
     }
   });
 
@@ -336,7 +342,7 @@ describe("setup buttons", () => {
     expect(lastUndoData()).toBeUndefined();
     expect(last(sentTexts())).toContain("You already follow");
     await tapSetup(db, undo!);
-    expect(sqlite.prepare("SELECT * FROM telegram_preset_subscriptions").all()).toEqual([]);
+    expect(presetFollows(sqlite)).toEqual([]);
   });
 
   it("refuses an expired, tampered or bare Undo without writing", async () => {
@@ -374,7 +380,7 @@ describe("setup buttons", () => {
     // Undo strips the button and an expired group Undo points to /settings@PharosWatchBot.
     mockTelegramMembership(fetchSpy, "administrator");
     await tapSetup(db, groupUndo, "supergroup");
-    expect(last(editBodies())?.reply_markup).toEqual({ inline_keyboard: [] });
+    expectLastEditClearedKeyboard();
     mockTelegramMembership(fetchSpy, "administrator");
     await tapSetup(db, `setup:undo:0:${(NOW - 1).toString(36)}`, "supergroup");
     expect(lastAnswer()).toBe("This Undo expired. Use /settings@PharosWatchBot.");
@@ -385,6 +391,6 @@ describe("setup buttons", () => {
     await handleSetupCallback(db, "bot-token", { id: "cb", data: "setup:branch:recommended:0123456789abcdef", message: { chat: { id: 42, type: "private" } } }, "42", parseCallbackData("setup:branch:recommended:0123456789abcdef"));
     const answer = fetchSpy.mock.calls.find(([url]) => String(url).endsWith("/answerCallbackQuery"));
     expect(String(answer![1]!.body)).toContain("Send /start");
-    expect(sqlite.prepare("SELECT * FROM telegram_preset_subscriptions").all()).toEqual([]);
+    expect(presetFollows(sqlite)).toEqual([]);
   });
 });

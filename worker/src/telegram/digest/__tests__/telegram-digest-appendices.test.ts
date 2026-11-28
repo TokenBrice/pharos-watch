@@ -106,6 +106,8 @@ function mockCachedValues(values: Record<string, string>): void {
   );
 }
 
+const prepareAppendices = () => prepareTelegramDigestAppendices({} as D1Database);
+
 describe("prepareTelegramDigestAppendices", () => {
   beforeEach(() => {
     mockGetCache.mockReset();
@@ -116,7 +118,7 @@ describe("prepareTelegramDigestAppendices", () => {
   it("silently seeds cemetery and tracked snapshots on first run", async () => {
     mockGetCache.mockResolvedValue(null);
 
-    const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+    const prepared = await prepareAppendices();
 
     expect(prepared.appendixHtml).toBeNull();
     expect(prepared.metadata).toMatchObject({
@@ -182,7 +184,7 @@ describe("prepareTelegramDigestAppendices", () => {
     coin.status = status;
     try {
       mockCachedValues({ "telegram:tracked-stablecoins-pending": '["usdx-example"]' });
-      const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+      const prepared = await prepareAppendices();
       expect(prepared.appendixHtml).toBeNull();
       expect(prepared.metadata).toMatchObject({ hasAppendix: false, trackedDetected: 0 });
       expect(prepared.successActions).toEqual([
@@ -204,7 +206,7 @@ describe("prepareTelegramDigestAppendices", () => {
       "telegram:prelaunch-stablecoins-snapshot": JSON.stringify(["eurx-example"]),
     });
 
-    const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+    const prepared = await prepareAppendices();
 
     expect(prepared.metadata).toMatchObject({
       hasAppendix: true,
@@ -246,7 +248,7 @@ describe("prepareTelegramDigestAppendices", () => {
       "telegram:prelaunch-stablecoins-snapshot": JSON.stringify(["eurx-example"]),
     });
 
-    const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+    const prepared = await prepareAppendices();
 
     expect(prepared.metadata).toMatchObject({
       trackedDetected: 1,
@@ -272,7 +274,7 @@ describe("prepareTelegramDigestAppendices", () => {
       "telegram:prelaunch-stablecoins-snapshot": JSON.stringify(["eurx-example"]),
     });
 
-    const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+    const prepared = await prepareAppendices();
 
     expect(prepared.metadata).toMatchObject({
       hasAppendix: true,
@@ -341,7 +343,7 @@ describe("prepareTelegramDigestAppendices", () => {
       "telegram:prelaunch-stablecoins-snapshot": JSON.stringify(["eurx-example"]),
     });
 
-    const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+    const prepared = await prepareAppendices();
 
     expect(prepared.appendixHtml).toBeNull();
     expect(prepared.metadata).toMatchObject({
@@ -377,7 +379,7 @@ describe("prepareTelegramDigestAppendices", () => {
       "telegram:prelaunch-stablecoins-snapshot": JSON.stringify(["eurx-example"]),
     });
 
-    const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+    const prepared = await prepareAppendices();
 
     expect(prepared.metadata).toMatchObject({ hasAppendix: true, frozenDetected: 1, frozenSymbols: ["DUSD"] });
     expect(prepared.appendixHtml).toContain("<code>DUSD</code> Fluid Dollar: <i>Bankruptcy closed the rail, redemptions halted; holders stranded</i>");
@@ -408,7 +410,7 @@ describe("prepareTelegramDigestAppendices", () => {
       "telegram:prelaunch-stablecoins-snapshot": JSON.stringify(["eurx-example"]),
     });
 
-    const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+    const prepared = await prepareAppendices();
 
     expect(prepared.metadata).toMatchObject({ hasAppendix: false, launchedDetected: 0 });
     expect(prepared.appendixHtml).toBeNull();
@@ -429,7 +431,7 @@ describe("prepareTelegramDigestAppendices", () => {
       "telegram:prelaunch-stablecoins-snapshot": JSON.stringify(["usdx-example", "eurx-example"]),
     });
 
-    const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+    const prepared = await prepareAppendices();
 
     expect(prepared.metadata).toMatchObject({
       hasAppendix: true,

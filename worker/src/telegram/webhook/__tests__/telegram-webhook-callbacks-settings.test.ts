@@ -42,6 +42,11 @@ beforeEach(resetCallbackTest);
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
+const mockAdminMember = () => mockTelegramMembership(fetchSpy, "administrator", { id: 7, is_bot: false, first_name: "admin" });
+const mockPlainMember = () => mockTelegramMembership(fetchSpy, "member", { id: 7, is_bot: false, first_name: "member" });
+/** A Telegram D1 whose cache reads all miss. */
+const emptyCacheD1 = () => mockTelegramD1([], { fallbackTables: [{ match: "FROM cache WHERE key = ?", rows: [], first: null }] });
+
 describe("handleCallbackQuery", () => {
   describe("settings dispatch", () => {
     it.each(["xx:1", "db:bad", "sm:bad", "ds:123", "ds:+100", "ds:100.0", "ds:0x64", "rs:yes", "fz:"])(
@@ -140,10 +145,8 @@ describe("handleCallbackQuery", () => {
     it.each(["settings:gt:dews:1", "settings:pf:usd-top25:d:0:0", "settings:pc:usd-top25:0", "settings:sn:4h"])(
       "settings mutating callback %s in groups refuses non-admins before D1 writes",
       async (data) => {
-        const db = mockTelegramD1([], {
-          fallbackTables: [{ match: "FROM cache WHERE key = ?", rows: [], first: null }],
-        });
-        mockTelegramMembership(fetchSpy, "member", { id: 7, is_bot: false, first_name: "member" });
+        const db = emptyCacheD1();
+        mockPlainMember();
 
         await handleCallbackQuery(db, "fake-token", makeCallbackQuery(data, {
           id: "cb-settings-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 999 },
@@ -247,10 +250,8 @@ describe("handleCallbackQuery", () => {
     });
 
     it("does not overwrite group subscriber username with the callback actor username", async () => {
-      const db = mockTelegramD1([], {
-        fallbackTables: [{ match: "FROM cache WHERE key = ?", rows: [], first: null }],
-      });
-      mockTelegramMembership(fetchSpy, "administrator", { id: 7, is_bot: false, first_name: "admin" });
+      const db = emptyCacheD1();
+      mockAdminMember();
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("snooze:1h", { id: "cb1-group", from: { id: 7, username: "tapping_user" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 999 } }));
 
       const upsert = db.getHistory().find((h) => /INSERT INTO telegram_subscribers/.test(h.sql));
@@ -285,10 +286,8 @@ describe("handleCallbackQuery", () => {
     });
 
     it("depegstep in a group refuses non-admins without writing", async () => {
-      const db = mockTelegramD1([], {
-        fallbackTables: [{ match: "FROM cache WHERE key = ?", rows: [], first: null }],
-      });
-      mockTelegramMembership(fetchSpy, "member", { id: 7, is_bot: false, first_name: "member" });
+      const db = emptyCacheD1();
+      mockPlainMember();
 
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("depegstep:usdc-circle:250", { id: "cb-depegstep-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
 
@@ -299,10 +298,8 @@ describe("handleCallbackQuery", () => {
     });
 
     it("setup:top25 in a group refuses non-admins without writing", async () => {
-      const db = mockTelegramD1([], {
-        fallbackTables: [{ match: "FROM cache WHERE key = ?", rows: [], first: null }],
-      });
-      mockTelegramMembership(fetchSpy, "member", { id: 7, is_bot: false, first_name: "member" });
+      const db = emptyCacheD1();
+      mockPlainMember();
 
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("setup:top25", { id: "cb-setup-group", from: { id: 7, username: "member" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
 
@@ -391,13 +388,13 @@ describe("handleCallbackQuery", () => {
     it("snooze:off and snooze:pause clear/set pause and group toasts name addressed commands", async () => {
       const { db, sqlite } = fixtures.open();
       sqlite.exec("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, alert_snooze_until_ts) VALUES ('-42', 1, 1, NULL)");
-      mockTelegramMembership(fetchSpy, "administrator", { id: 7, is_bot: false, first_name: "admin" });
+      mockAdminMember();
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("snooze:pause", {
         id: "cb-sn-pause", from: { id: 7 }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
       }));
       expect(lastAckBody().text).toBe("All alerts paused until you resume. Resume with /pause@PharosWatchBot off.");
 
-      mockTelegramMembership(fetchSpy, "administrator", { id: 7, is_bot: false, first_name: "admin" });
+      mockAdminMember();
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("snooze:off", {
         id: "cb-sn-off", from: { id: 7 }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
       }));
@@ -405,7 +402,7 @@ describe("handleCallbackQuery", () => {
       expect(sqlite.prepare("SELECT alert_snooze_until_ts FROM telegram_subscribers WHERE chat_id = '-42'").get())
         .toEqual({ alert_snooze_until_ts: null });
 
-      mockTelegramMembership(fetchSpy, "administrator", { id: 7, is_bot: false, first_name: "admin" });
+      mockAdminMember();
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("fewer:usdc-circle:fz", {
         id: "cb-fewer-grp", from: { id: 7 }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 },
       }));
@@ -423,9 +420,7 @@ describe("handleCallbackQuery", () => {
     });
 
     it("quicksub:<id> in a group refuses non-admin without writing to D1", async () => {
-      const db = mockTelegramD1([], {
-        fallbackTables: [{ match: "FROM cache WHERE key = ?", rows: [], first: null }],
-      });
+      const db = emptyCacheD1();
       mockTelegramMembership(fetchSpy, "member", { id: 7, is_bot: false, first_name: "m" });
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("quicksub:usdc-circle", { id: "cb-qs-group", from: { id: 7, username: "tapping_user" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
 
@@ -442,7 +437,7 @@ describe("handleCallbackQuery", () => {
       ], {
         fallbackTables: [{ match: "FROM cache WHERE key = ?", rows: [], first: null }],
       });
-      mockTelegramMembership(fetchSpy, "administrator", { id: 7, is_bot: false, first_name: "admin" });
+      mockAdminMember();
       await handleCallbackQuery(db, "fake-token", makeCallbackQuery("quicksub:usdc-circle", { id: "cb-qs-admin", from: { id: 7, username: "admin_user" }, message: { chat: { id: -42, type: "supergroup" }, message_id: 1 } }));
 
       const history = db.getHistory();

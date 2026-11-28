@@ -61,6 +61,10 @@ function queueBroadcastRow(harness: ReturnType<typeof createDispatchHarness>, no
   ).run(now, now + 3600, now);
 }
 
+async function dispatchMetadata(harness: { db: D1Database }) {
+  return JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+}
+
 describe("dispatchTelegramAlerts", () => {
   beforeEach(resetDispatchTelegramAlertsTest);
   afterEach(cleanupDispatchTelegramAlertsTest);
@@ -139,7 +143,7 @@ describe("dispatchTelegramAlerts", () => {
       ],
       ...direct("12345", { dews: true, safety: true }),
     });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const metadata = await dispatchMetadata(harness);
 
     expect(metadata).toMatchObject({
       eventsDetected: { dews: 1, safety: 0 },
@@ -164,8 +168,8 @@ describe("dispatchTelegramAlerts", () => {
     harness.seed({ ...global("12345", { safety: true }) });
     const heldSafetySnapshot = readCacheValue(harness.sqlite, "alert:safety-snapshot");
 
-    const first = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
-    const second = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const first = await dispatchMetadata(harness);
+    const second = await dispatchMetadata(harness);
 
     expect(first).toMatchObject({
       eventlessFastPath: true,
@@ -199,7 +203,7 @@ describe("dispatchTelegramAlerts", () => {
       dews: [{ stablecoinId: "usdc-circle", signals: { supply: { value: 45, available: true } } }],
       ...global("777", { dews: true }),
     });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const metadata = await dispatchMetadata(harness);
 
     expect(metadata).toMatchObject({ eventsDetected: { dews: 1 }, subscribersNotified: 0, messagesSent: 0 });
     expect(telegramDeliveryTranscript).toEqual([]);
@@ -216,7 +220,7 @@ describe("dispatchTelegramAlerts", () => {
       safety: [{ stablecoinId: "usdc-circle", grade: "C+", score: 66 }],
       ...global("777", { safety: true }),
     });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const metadata = await dispatchMetadata(harness);
 
     expect(metadata).toMatchObject({ eventsDetected: { safety: 1 }, subscribersNotified: 0, messagesSent: 0 });
     expect(telegramDeliveryTranscript).toEqual([]);
@@ -280,7 +284,7 @@ describe("dispatchTelegramAlerts", () => {
       safety: [{ stablecoinId: "usdc-circle", grade: "C+", score: 66 }],
       ...direct("12345", { safety: true }),
     });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const metadata = await dispatchMetadata(harness);
 
     expect(mockRunTelegramRollupStep).toHaveBeenCalledOnce();
     expect(metadata).toMatchObject({ messagesSent: 1, deliveryV2: { rollupState: "failed" } });
@@ -376,7 +380,7 @@ describe("dispatchTelegramAlerts", () => {
       freezeBatch: { state: "failed", changes: 0 },
       rollup: { state: "preset-resolution-failed", dueChats: 1, sentChats: 0, emptyChats: 0, deferredChats: 1 },
     });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const metadata = await dispatchMetadata(harness);
 
     expect(metadata.reason).toBe("telegram-planning-failed");
     expect(metadata.reasons).toEqual([
@@ -457,7 +461,7 @@ describe("dispatchTelegramAlerts", () => {
       safety: [{ stablecoinId: "usdc-circle", grade: "D", score: 44 }],
       ...direct("12345", { safety: true }),
     });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const metadata = await dispatchMetadata(harness);
 
     expect(metadata).toMatchObject({ eventsDetected: { safety: 0 }, messagesSent: 0 });
     expect(telegramDeliveryTranscript).toEqual([]);
@@ -480,7 +484,7 @@ describe("dispatchTelegramAlerts", () => {
       safety: [{ stablecoinId: "usdc-circle", grade: "D", score: 44 }],
       ...direct("12345", { safety: true }),
     });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const metadata = await dispatchMetadata(harness);
 
     expect(metadata).toMatchObject({ eventsDetected: { safety: 0 }, messagesSent: 0 });
     expect(telegramDeliveryTranscript).toEqual([]);
@@ -499,7 +503,7 @@ describe("dispatchTelegramAlerts", () => {
       dews: [{ stablecoinId: "usdc-circle", firstComputation: true }],
       ...direct("12345", { dews: true }),
     });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const metadata = await dispatchMetadata(harness);
 
     expect(metadata).toMatchObject({ eventsDetected: { dews: 0 }, messagesSent: 0 });
     expect(telegramDeliveryTranscript).toEqual([]);
@@ -529,7 +533,7 @@ describe("dispatchTelegramAlerts", () => {
         recoveryPrice: 1,
       })),
     });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const metadata = await dispatchMetadata(harness);
 
     expect(metadata.eventsDetected.depegResolved).toBe(101);
     expect(
@@ -551,7 +555,7 @@ describe("dispatchTelegramAlerts", () => {
       subscribers: [{ chatId: "777", global: { dews: true } }],
       subscriptions: [{ chatId: "777", stablecoinId: "usdc-circle", alerts: { dews: true }, dewsMinBand: "WARNING" }],
     });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const metadata = await dispatchMetadata(harness);
 
     expect(metadata).toMatchObject({ subscribersNotified: 0, messagesSent: 0 });
     expect(telegramDeliveryTranscript).toEqual([]);
@@ -569,7 +573,7 @@ describe("dispatchTelegramAlerts", () => {
       subscribers: [{ chatId: "777", global: { safety: true } }],
       subscriptions: [{ chatId: "777", stablecoinId: "usdc-circle", alerts: { safety: true } }],
     });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const metadata = await dispatchMetadata(harness);
 
     expect(metadata).toMatchObject({ subscribersNotified: 1, messagesSent: 1 });
     expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "777" })]);
@@ -589,7 +593,7 @@ describe("dispatchTelegramAlerts", () => {
         { chatId: "777", stablecoinId: "usdc-circle", alerts: { safety: true }, safetyMode: "upgrade-only" },
       ],
     });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const metadata = await dispatchMetadata(harness);
 
     expect(metadata).toMatchObject({ subscribersNotified: 0, messagesSent: 0 });
     expect(telegramDeliveryTranscript).toEqual([]);
@@ -621,7 +625,7 @@ describe("dispatchTelegramAlerts", () => {
       ],
       ...direct("12345", { safety: true }, { stablecoinId: "bold-liquity" }),
     });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const metadata = await dispatchMetadata(harness);
 
     expect(metadata).toMatchObject({ eventsDetected: { safety: 0 }, subscribersNotified: 0 });
     expect(metadata).toMatchObject({ eventlessFastPath: true });
@@ -635,7 +639,7 @@ describe("dispatchTelegramAlerts", () => {
     const harness = createDispatchHarness();
     seedDispatchSnapshots(harness, { dews: { "usdc-circle": "ALERT" } });
     harness.seed({ dews: [{ stablecoinId: "usdc-circle", score: 20, band: "WATCH" }] });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const metadata = await dispatchMetadata(harness);
 
     expect(metadata.eventsDetected.dews).toBe(0);
     expect(telegramDeliveryTranscript).toEqual([]);
@@ -645,7 +649,7 @@ describe("dispatchTelegramAlerts", () => {
     const harness = createDispatchHarness();
     seedDispatchSnapshots(harness, { dews: { "uusd-youves": "WATCH" }, dewsAlertable: { "uusd-youves": "ALERT" } });
     harness.seed({ dews: [{ stablecoinId: "uusd-youves", score: 39, band: "ALERT" }] });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+    const metadata = await dispatchMetadata(harness);
 
     expect(metadata).toMatchObject({ eventsDetected: { dews: 0 }, messagesSent: 0 });
     expect(telegramDeliveryTranscript).toEqual([]);
