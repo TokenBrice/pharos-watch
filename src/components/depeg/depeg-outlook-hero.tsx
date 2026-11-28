@@ -175,7 +175,8 @@ function OpenIncidentList({
             const verdict = row.ddr ? describeDdrVerdict(row.ddr, true) : { label: "—", accent: "text-muted-foreground" };
             const cap = row.marketCapUsd == null ? "—" : formatCompactUsdShort(row.marketCapUsd);
             const age = row.ageSec != null ? formatElapsedSeconds(row.ageSec) : null;
-            // Without the sidecar or the legacy active-events read, "unconfirmed" is only a default.
+            // Without the sidecar or the legacy active-events read, "unconfirmed" is only a default:
+            // the qualifier, title and accessible name all omit it.
             const qualifier = !row.evidenceRead
               ? null
               : isNearParUnconfirmedOpenIncident(row.evidence, row.bps, row.pegCurrency)
@@ -183,14 +184,14 @@ function OpenIncidentList({
                 : row.evidence === "unconfirmed" && row.bps != null
                   ? "Unconfirmed"
                   : null;
-            const evidenceLabel = OPEN_INCIDENT_EVIDENCE_LABELS[row.evidence];
+            const evidenceLabel = row.evidenceRead ? OPEN_INCIDENT_EVIDENCE_LABELS[row.evidence] : null;
             return (
               <li key={row.id}>
                 <Link
                   prefetch={false}
                   href={buildStablecoinUrl(row.id, "#depeg-resolver")}
-                  title={evidenceLabel}
-                  aria-label={`${row.symbol}: ${row.referenceNote ?? (row.deviationBps == null ? "deviation unavailable" : deviation)}, ${evidenceLabel}${row.tier === "escalating" ? ", escalating" : ""}${age ? `, open ${age}` : ""}, DDR ${row.ddr ? verdict.label : "no forecast read"}, market cap ${row.marketCapUsd == null ? "unavailable" : cap}`}
+                  title={evidenceLabel ?? undefined}
+                  aria-label={`${row.symbol}: ${row.referenceNote ?? (row.deviationBps == null ? "deviation unavailable" : deviation)}${evidenceLabel ? `, ${evidenceLabel}` : ""}${row.tier === "escalating" ? ", escalating" : ""}${age ? `, open ${age}` : ""}, DDR ${row.ddr ? verdict.label : "no forecast read"}, market cap ${row.marketCapUsd == null ? "unavailable" : cap}`}
                   className="pharos-focus-ring -mx-1 flex min-h-11 flex-col justify-center gap-0.5 rounded-sm px-1 py-1 text-xs hover:bg-muted/50 sm:min-h-8"
                 >
                   <span className="flex items-center justify-between gap-x-2">

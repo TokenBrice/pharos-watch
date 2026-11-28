@@ -112,6 +112,7 @@ describe("DepegOutlookHero open incidents", () => {
     expect([screen.getByRole("link", { name: /^ESC:/ }).textContent, screen.getByRole("link", { name: /^NEAR:/ }).textContent, screen.getByRole("link", { name: /^EDGE:/ }).textContent]).toEqual([expect.stringContaining("Escalating"), expect.stringContaining("Near par"), expect.stringContaining("Unconfirmed")]);
     expect(screen.getByRole("link", { name: /^EDGE:/ }).textContent).not.toContain("Near par");
     expect(screen.getByRole("link", { name: /^UNP:/ }).textContent).not.toMatch(/Near par|Unconfirmed/);
+    expect(screen.getByRole("link", { name: /^NEAR: .+, Recovery unconfirmed,/ }).getAttribute("title")).toBe("Recovery unconfirmed");
     fireEvent.click(screen.getByRole("button", { name: ">30d (1)" }));
     expect(screen.getByRole("link", { name: /^OLD:/ }).textContent).toContain("90d");
     v.rerender(<DepegOutlookHero {...baseProps} stats={{ ...observedZero, activeDepegCount: 1 }} openIncidents={[rows[4]!]} openIncidentMap={{ old: snap(3, 90) }} clockSec={now} />);
@@ -119,7 +120,8 @@ describe("DepegOutlookHero open incidents", () => {
     fireEvent.click(screen.getByRole("button", { name: "Recent (0)" }));
     expect(v.container.textContent).toContain("No open incidents started in the last 30d or re-escalated in the last 7d");
     v.rerender(<DepegOutlookHero {...baseProps} stats={{ ...observedZero, activeDepegCount: 1 }} openIncidents={[{ ...rows[3]!, evidenceRead: false }]} openIncidentMap={{ near: snap(2, 2) }} clockSec={now} />);
-    expect(screen.getByRole("link", { name: /^NEAR:/ }).textContent).not.toMatch(/Near par|Unconfirmed/);
+    const unread = screen.getByRole("link", { name: /^NEAR:/ });
+    expect([unread.textContent, unread.getAttribute("title"), unread.getAttribute("aria-label")]).toEqual([expect.not.stringMatching(/Near par|Unconfirmed/), null, expect.not.stringContaining("Recovery")]);
     v.unmount();
     // Age reads the live clock while the horizon clock fails closed (0).
     expect(rankOpenIncidents([makePegSummaryCoin({ id: "near", activeDepeg: true })], [], null, { near: snap(2, 2) }, now, undefined, 0)[0]).toMatchObject({ ageSec: 2 * D, tier: null, evidenceRead: true });
