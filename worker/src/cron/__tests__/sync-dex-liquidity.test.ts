@@ -109,7 +109,6 @@ import { processPoolMetrics as procMetrics } from "../dex-liquidity/process-pool
 import { mergeStagedPools as mergeStaged } from "../dex-liquidity/staging-merge";
 import * as regPersist from "../dex-discovery/persistence";
 import { readDexSourcePaginationState as readPag } from "../dex-liquidity/source-pagination-state";
-import { runPruneCronHistory as pruneHistory } from "../prune-cron-history";
 
 const vm = vi.mocked, js = JSON.stringify, jp = JSON.parse, nowS = () => Math.floor(Date.now() / 1e3);
 const USDT = "usdt-tether", USDC = "usdc-circle", GK = "graph-key", STG_JOB = "sync-dex-liquidity-stage";
@@ -261,49 +260,25 @@ describe("dex liquidity scoring stage cycle", () => {
     ["SELECT total_tvl_usd, updated_at", "global-tvl-read-failed"],
     ["ORDER BY total_tvl_usd DESC", "top-ten-read-failed"],
     ["FROM cron_runs", "cron-history-read-failed"],
-    ["SELECT value, updated_at FROM cache WHERE key = ?", "anchor-review-decision-read-failed"],
-    ["FROM dex_liquidity_run_rows r", "coin-tvl-read-failed"],
-    ["ORDER BY g.started_at DESC, g.generation_id DESC", "coin-tvl-read-failed"],
   ])("retains accepted rows and generation when %s is unreadable", async (match, reason) => {
-    const h = mkSqlite(), pend = reason === "coin-tvl-read-failed", unobs = match.startsWith("ORDER BY g.started_at");
-    const revClk = pend ? vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-11-20T11:16:00Z")) : undefined;
+    const h = mkSqlite();
     try {
       h.sqlite.prepare("INSERT INTO dex_liquidity_publication_generations (generation_id, started_at, state, expected_row_count, created_at) VALUES ('accepted', 1700000000, 'published', 2, 1700000000)").run();
       const ins = h.sqlite.prepare("INSERT INTO dex_liquidity (stablecoin_id, symbol, total_tvl_usd, liquidity_score, coverage_class, updated_at, publication_generation_id, publication_state) VALUES (?, 'USD', ?, 80, 'primary', 1700000000, 'accepted', 'published')");
       ins.run(USDT, 100); ins.run("__global__", 100);
-      if (pend) {
-        ins.run("susdat-saturn", 3e6);
-        h.sqlite.exec(`INSERT INTO dex_liquidity_run_rows (generation_id, stablecoin_id, symbol, total_tvl_usd, updated_at, coverage_class) VALUES ('accepted', 'susdat-saturn', 'sUSDat', ${unobs ? 0 : 3000000}, 1700000000, '${unobs ? "unobserved" : "primary"}')`);
-        fx.current.scores.scores.set("susdat-saturn", { coverageClass: "primary", tvl: 2_579_000 });
-      }
-      if (pend || reason === "anchor-review-decision-read-failed") {
-        const insP = h.sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-dex-liquidity', ?, 1000, 'degraded', ?)");
-        const anchor = js({ sourceCoverage: { poolRejectionCoverage: { reason: "material-pool-rejections", material: true, baselineBeforeSec: 1_794_741_390, baselineTvlUsdByCoin: { "susdat-saturn": 4_811_562.319125249 }, coins: [], coinsOmitted: 0 } } });
-        insP.run(1699999999, anchor); insP.run(1700000000, anchor);
-        const insS = h.sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-dex-liquidity', ?, 1000, 'degraded', '{\"persistence\":{\"skipped\":true}}')");
-        for (let i = 1; i <= 12; i++) { insP.run(1700000001, '{"sourceCoverage":{"dlYieldsAvailable":"unavailable"}}'); insS.run(1700000000 + i * 3600); }
-      }
       const failDb = mockD1([{ match, rows: [], throwError: new Error("baseline read failed") }]);
-      const database = { ...h.db, prepare: (sql: string) => { if (!sql.includes(match)) return h.db.prepare(sql); if (reason !== "anchor-review-decision-read-failed") return failDb.prepare(sql); const st = h.db.prepare(sql); return { ...st, bind: (...b: unknown[]) => (b[0] === "dex-liquidity:anchor-review:2142" ? failDb.prepare(sql) : st).bind(...b) }; } };
-      let res = await runCycle(database, GK);
-      if (reason === "anchor-review-decision-read-failed") {
-        expect(readMeta(res).sourceCoverage.baselineReadFailures).toEqual([reason]);
-        const clk = vi.spyOn(Date, "now").mockReturnValue((1700000001 + 7 * 86_400) * 1e3);
-        const prune = await pruneHistory(h.db); clk.mockRestore();
-        expect(prune.status).toBe("ok"); expect(readMeta(prune).cronRunsDeleted).toBe(1);
-        res = await runCycle(database, GK);
-      }
+      const database = { ...h.db, prepare: (sql: string) => (sql.includes(match) ? failDb : h.db).prepare(sql) };
+      const res = await runCycle(database, GK);
       const m = readMeta(res);
       expect(res.status).toBe("degraded");
       expect(m).toMatchObject({ reason: "required-baseline-read-failed", rowsWritten: 0, sourceCoverage: { baselineReadFailures: [reason] }, persistence: { skipped: true, skippedReason: "required-baseline-read-failed" } });
       expect(MetaSchema.safeParse(m).success).toBe(true);
       expect(h.sqlite.prepare("SELECT stablecoin_id, total_tvl_usd, updated_at, publication_generation_id FROM dex_liquidity ORDER BY stablecoin_id").all()).toEqual([
         { stablecoin_id: "__global__", total_tvl_usd: 100, updated_at: 1.7e9, publication_generation_id: "accepted" },
-        ...(pend ? [{ stablecoin_id: "susdat-saturn", total_tvl_usd: 3e6, updated_at: 1.7e9, publication_generation_id: "accepted" }] : []),
         { stablecoin_id: USDT, total_tvl_usd: 100, updated_at: 1.7e9, publication_generation_id: "accepted" },
       ]);
       for (const fn of [persistScores, pubTargets, compPrices, writeHist, markConsumed]) expect(fn).not.toHaveBeenCalled();
-    } finally { revClk?.mockRestore(); h.sqlite.close(); }
+    } finally { h.sqlite.close(); }
   });
 
   it.each([["GROUP BY coverage_class", "coverage-classes-read-failed"], ["SELECT stablecoin_id, pool_count", "watchlist-read-failed"], ["FROM dex_liquidity_run_rows r", "coin-tvl-read-failed"]])(
@@ -354,7 +329,7 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(res.status).toBe("ok");
     expect(m).toMatchObject({ failedSources: [], stagedPoolsSkippedByExactIdentity: 0, stagedPoolsSkippedByUniqueDerivedIdentity: 0, sourceCoverage: { nearCoverageGuard: false, weakCoverageCoins: 0, qualityDriftSeverity: "none", qualityDriftFlags: [], coinsWithoutMeasuredBalances: 0, protocolTvlQuarantine: { tvlUsd: 0 } } });
     expect(m.sourceCoverage).not.toHaveProperty("directCexOrderbookDepth"); expect(fetchSpy).not.toHaveBeenCalled();
-    expect(persistScores).toHaveBeenCalledWith(expect.objectContaining({ prepare: expect.any(Function), batch: expect.any(Function) }), expect.any(Map), fx.current.scores.scores, fx.current.scores.globalAgg, expect.any(Number), fx.current.scores.tvlStabilityMap, undefined, fx.current.scores.diagnostics.routeRemovalEvidence, fx.current.scores.retainedPoolsByStablecoin, undefined, undefined, undefined);
+    expect(persistScores).toHaveBeenCalledWith(expect.objectContaining({ prepare: expect.any(Function), batch: expect.any(Function) }), expect.any(Map), fx.current.scores.scores, fx.current.scores.globalAgg, expect.any(Number), fx.current.scores.tvlStabilityMap, undefined, fx.current.scores.diagnostics.routeRemovalEvidence, fx.current.scores.retainedPoolsByStablecoin, undefined, undefined);
   });
 
   it("carries partial-source telemetry through the stage into consumer metadata", async () => {

@@ -173,7 +173,6 @@ describe("weekly curation coverage", () => {
       "YIELD_RISK_CONFIG",
       "YIELD_DEPENDENCY_CONCENTRATION",
       "REVIEWED_CHAIN_TVL_DISPOSITIONS",
-      "REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION",
       "YIELD_OPPORTUNITY_EXCLUSIONS",
     ]) {
       const reg = wiredRegistries.find((r) => r.registry.includes(marker));

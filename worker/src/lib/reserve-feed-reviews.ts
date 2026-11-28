@@ -8,7 +8,27 @@ import { loadLatestNonSkippedReserveAttempt, type ReserveSyncAttemptTimelineEntr
 import { hasScoringEligibleLiveReserveFreshness } from "./live-reserves/store-snapshot-state";
 
 /** Dated operational acknowledgements: no snapshot, scoring, or freshness authority. */
-export const RESERVE_FEED_REVIEWS: readonly ReserveFeedReview[] = [];
+export const RESERVE_FEED_REVIEWS: readonly ReserveFeedReview[] = [
+  ...(["xsgd", "xusd"] as const).map((product): ReserveFeedReview => ({
+    stablecoinId: `${product}-straitsx`, adapterKey: "straitsx-independent-assurance", failureCategory: "upstream-http",
+    warningCodes: [], errorPrefix: null, errorClass: "http-403",
+    owner: "ops", reason: `Every 4-hourly Worker attempt since 2026-11-24 has stored "primary:http-html: HTTP 403 for https://www.straitsx.com/${product}" (upstream-http, no warnings; last success 2026-11-24). The same configured page returned HTTP 200 from a non-Cloudflare vantage at 2026-11-27T23:34:55Z and the HEAD adapter parsed it without warnings at 21:19Z, so the 403 is specific to Worker egress (#2353). Acknowledge only this primary-endpoint 403 class; stored snapshots, clocks, quarantine and scoring are unchanged. Another status, endpoint, fallback cause or any warning needs a new review.`,
+    sources: [{ url: `https://www.straitsx.com/${product}`, evidenceDate: "2026-11-27" }],
+    reviewedAt: Date.UTC(2026, 10, 27, 23, 36) / 1000,
+    expiresAt: Date.UTC(2026, 11, 6, 12, 38) / 1000,
+  })),
+  {
+    stablecoinId: "apxusd-apyx", adapterKey: "accountable", failureCategory: null,
+    warningCodes: ["reserve-undercollateralized"], errorPrefix: null,
+    owner: "ops", reason: "Owner ruling D15 (2026-11-27, #2353): keep the 0.995 par threshold and acknowledge the issuer-reported shortfall for a dated window. The public Accountable dashboard at 2026-11-27T23:31:05Z reports collateralization 0.991123 net of protocol-owned reserves and redemption value 0.9812, below par. Acknowledge only a degraded finding whose single warning is reserve-undercollateralized, with no failure category and no error. Alert classification only: the warning, composition and scoring treatment are unchanged. A returning accounting-incomplete error, added warnings or recovery above par require reassessment.",
+    sources: [
+      { url: "https://api.accountable.apyx.fi/dashboard", evidenceDate: "2026-11-27" },
+      { url: "https://accountable.apyx.fi/", evidenceDate: "2026-11-27" },
+    ],
+    reviewedAt: Date.UTC(2026, 10, 27, 23, 36) / 1000,
+    expiresAt: Date.UTC(2026, 11, 6, 12, 38) / 1000,
+  },
+];
 
 export function resolveReserveFeedReviews(
   now: number,

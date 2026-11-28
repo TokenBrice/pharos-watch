@@ -164,10 +164,7 @@ export async function runRetentionPolicies<Key extends string>(
   policies: Record<Key, WindowedRetentionPolicy>,
   nowSec: number,
   signal?: AbortSignal,
-  options: {
-    deadlineMs?: number;
-    preparePolicy?: Partial<Record<Key, (policy: WindowedRetentionPolicy) => Promise<WindowedRetentionPolicy>>>;
-  } = {},
+  options: { deadlineMs?: number } = {},
 ): Promise<Record<Key, CappedDeleteResult>> {
   const results = {} as Record<Key, CappedDeleteResult>;
   const used = new Map<string, number>();
@@ -188,14 +185,12 @@ export async function runRetentionPolicies<Key extends string>(
       continue;
     }
     try {
-      const prepare = options.preparePolicy?.[key];
-      const prepared = prepare ? await prepare(policy) : policy;
-      const statement = retentionDeleteStatement(prepared, nowSec);
-      if (budget) statement.runLimit = Math.max(0, prepared.runLimit - (used.get(budget) ?? 0));
+      const statement = retentionDeleteStatement(policy, nowSec);
+      if (budget) statement.runLimit = Math.max(0, policy.runLimit - (used.get(budget) ?? 0));
       const [pass] = await deleteCappedGroup(db, [{
         ...statement, key,
-        windows: prepared.windows?.map((window) => ({
-          ...retentionDeleteStatement(prepared, nowSec, window), window: window.predicate,
+        windows: policy.windows?.map((window) => ({
+          ...retentionDeleteStatement(policy, nowSec, window), window: window.predicate,
         })),
       }], signal);
       results[key] = pass;

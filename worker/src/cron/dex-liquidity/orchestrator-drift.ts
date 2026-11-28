@@ -124,47 +124,29 @@ export const REVIEWED_SOURCE_FAMILY_DISPOSITIONS = [
   },
 ] as const satisfies NonNullable<DexLiquidityCronMetadata["sourceCoverage"]["qualityDriftAccepted"]>;
 
-export const REVIEWED_CHAIN_TVL_DISPOSITIONS = [{
+export interface ReviewedChainTvlDisposition {
+  flag: string;
+  baselineValue: number;
+  observedValue: number;
+  acceptsLevel?: true;
+  retiredStablecoinId: string | null;
+  reviewedAt: string;
+  expiresAt: string;
+  evidenceUrls: readonly string[];
+  reason: string;
+}
+
+export const REVIEWED_CHAIN_TVL_DISPOSITIONS: readonly ReviewedChainTvlDisposition[] = [{
   flag: "chain-tvl-drop:blast", baselineValue: 9_232_068.94230654, observedValue: 26_138.05097650291,
   retiredStablecoinId: "usdb-blast", reviewedAt: "2026-11-07T20:31:00Z", expiresAt: "2026-11-21T20:31:00Z",
   evidenceUrls: ["https://x.com/blast/status/2106032805280891073"],
   reason: "USDB was frozen on 2026-11-02 after Blast's L2 wind-down; its archived $9.232M is excluded from live aggregation.",
 }, {
-  flag: "chain-tvl-drop:mezo", baselineValue: 5_292_320.059906746, observedValue: 301_421.8559905,
-  acceptsLevel: true,
-  retiredStablecoinId: null, reviewedAt: "2026-11-08T11:32:23Z", expiresAt: "2026-11-22T11:32:23Z",
-  evidenceUrls: ["https://api.llama.fi/protocol/mezo-tigris", "https://api.geckoterminal.com/api/v2/networks/mezo/tokens/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186/pools?page=1", "https://pro-api.coingecko.com/api/v3/onchain/networks/mezo/tokens/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186/pools?page=2", "https://yields.llama.fi/pools"],
-  reason: "Owner O9 accepts the current level after the Nov 8 coverage check: neither current MUSD token-pool page has a pool >=$250k, and yields has no material tracked-stablecoin DEX pool. This follows the earlier Tigris MUSD withdrawal ($11.806M to $1.408M on Nov 5-6).",
-}, {
   flag: "chain-tvl-drop:plasma", baselineValue: 24_510_038.23121091, observedValue: 19_633_877.97846795,
   retiredStablecoinId: null, reviewedAt: "2026-11-07T21:04:19Z", expiresAt: "2026-11-21T21:04:19Z",
   evidenceUrls: ["https://api.fluid.instadapp.io/v2/9745/dexes/0x080574d224e960c272e005aa03efbe793f317640/historical-stats", "https://api.llama.fi/protocol/fluid-dex"],
   reason: "Fluid GHO/USDT0 supply and borrow shares burned about 43% in the Nov 3 04h window; reconstructed gross notional fell $8.33M -> $4.77M -> $3.68M, explaining the dominant chain loss. About $325k of the later chain loss remains unattributed.",
-}, {
-  flag: "chain-tvl-drop:klaytn", baselineValue: 1_699_411.1784671757, observedValue: 1_199_935.2276710786,
-  acceptsLevel: true,
-  retiredStablecoinId: null, reviewedAt: "2026-11-08T08:39:00Z", expiresAt: "2026-11-22T08:39:00Z",
-  evidenceUrls: ["https://api.geckoterminal.com/api/v2/networks/kaia/tokens/0xd077a400968890eacc75cdc901f0356c943e4fdb/pools?page=1", "https://yields.llama.fi/pools"],
-  reason: "Owner O9 accepts the current level after the Nov 8 coverage check: both material DragonSwap stablecoin pools in the independent current list are present in the consumed source generation. Historical loss attribution remains unavailable.",
-}, {
-  flag: "chain-tvl-drop:near", baselineValue: 17_095_846.766649283, observedValue: 9_759_494.531214733,
-  acceptsLevel: true,
-  retiredStablecoinId: null, reviewedAt: "2026-11-08T08:39:00Z", expiresAt: "2026-11-22T08:39:00Z",
-  evidenceUrls: ["https://api.rhea.finance/list-pools", "https://yields.llama.fi/pools"],
-  reason: "Owner O9 accepts the current level after the Nov 8 coverage check: all five material tracked-stablecoin Rhea V1 pools are represented in the consumed source generation, including pool 1910's pair projections. Historical loss attribution remains unavailable.",
-}, {
-  flag: "chain-tvl-drop:ink", baselineValue: 9_417_160.702347133, observedValue: 7_357_082.845894352,
-  acceptsLevel: true,
-  retiredStablecoinId: null, reviewedAt: "2026-11-08T08:39:00Z", expiresAt: "2026-11-22T08:39:00Z",
-  evidenceUrls: ["https://api.geckoterminal.com/api/v2/networks/ink/pools?page=1", "https://pro-api.coingecko.com/api/v3/onchain/networks/ink/tokens/0x0200c29006150606b650577bbe7b6248f58470c1/pools?page=1", "https://yields.llama.fi/pools"],
-  reason: "Owner O9 accepts the current level after the Nov 8 coverage check: all eight material stablecoin pools in the independent USDC, USDT0 and USDG lists are present in the consumed source generation. Historical loss attribution remains unavailable.",
-}, {
-  flag: "chain-tvl-drop:rootstock", baselineValue: 2_462_993.2569000004, observedValue: 1_404_440.1986,
-  acceptsLevel: true,
-  retiredStablecoinId: null, reviewedAt: "2026-11-08T11:32:23Z", expiresAt: "2026-11-22T11:32:23Z",
-  evidenceUrls: ["https://pro-api.coingecko.com/api/v3/onchain/networks/rootstock/tokens/0x779ded0c9e1022225f8e0630b35a9b54be713736/pools?page=1", "https://yields.llama.fi/pools", "https://graph-wrapper.sovryn.app/cmc/tvl"],
-  reason: "Owner O9 accepts the current level after the Nov 8 coverage check: all three material pools containing registered stablecoin deployments in the independent current lists are present in the consumed source generation. Sovryn's rUSDT address is outside the tracked registry; historical loss attribution remains unavailable.",
-}] as const;
+}];
 
 const MAJOR_TVL_CLIFF_FLAG_PREFIX = "major-tvl-cliff:";
 
@@ -233,6 +215,8 @@ export function computeDexLiquidityDriftSummary(params: {
   /** Previous published generation's per-chain TVL; omitted/unknown skips the comparison. */
   previousChainTvl?: Record<string, number> | null;
   currentChainTvl?: Record<string, number>;
+  /** Reviewed chain-TVL dispositions; defaults to the registry. */
+  chainTvlDispositions?: readonly ReviewedChainTvlDisposition[];
   /** Previous retained pool count per source family; omitted/unknown skips the comparison. */
   previousSourceFamilyPools?: Record<string, number> | null;
   currentSourceFamilyPools?: Record<string, number>;
@@ -449,7 +433,7 @@ export function computeDexLiquidityDriftSummary(params: {
         (baselineValue) => currentTvl < baselineValue * (1 - COHORT_DROP_RATIO),
       );
       const candidate = candidates.find((entry) => entry.flag === flag);
-      const review = REVIEWED_CHAIN_TVL_DISPOSITIONS.find((entry) => entry.flag === flag
+      const review = (params.chainTvlDispositions ?? REVIEWED_CHAIN_TVL_DISPOSITIONS).find((entry) => entry.flag === flag
         && entry.baselineValue === candidate?.baselineValue
         && (entry.retiredStablecoinId == null || FROZEN_IDS.has(entry.retiredStablecoinId))
         && nowSec >= Date.parse(entry.reviewedAt) / 1000 && nowSec < Date.parse(entry.expiresAt) / 1000

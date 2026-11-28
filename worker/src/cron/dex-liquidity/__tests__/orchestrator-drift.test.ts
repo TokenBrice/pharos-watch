@@ -250,23 +250,28 @@ describe("computeDexLiquidityDriftSummary global counters", () => {
 });
 
 describe("computeDexLiquidityDriftSummary cohort drops", () => {
+  const accepts = (chain: string, baselineValue: number, observedValue: number) => ({
+    flag: `chain-tvl-drop:${chain}`, baselineValue, observedValue, acceptsLevel: true as const, retiredStablecoinId: null,
+    reviewedAt: "2026-11-08T11:32:23Z", expiresAt: "2026-11-22T11:32:23Z", evidenceUrls: ["https://yields.llama.fi/pools"], reason: "fixture",
+  });
+  const dispositions = [...REVIEWED_CHAIN_TVL_DISPOSITIONS, accepts("mezo", 5_292_320, 301_421), accepts("near", 17_095_846, 9_759_494)];
   it.each([
     [0, "2026-11-08", 1, 1, true], [0, "2026-11-07", 1, 1, false],
-    [0, "2026-11-21T20:31:00Z", 1, 1, false], [0, "2026-11-08", 1.01, 1, false], [0, "2026-11-08", 1, 0.9, true], [1, "2026-11-08", 1, 0.9, false],
+    [0, "2026-11-21T20:31:00Z", 1, 1, false], [0, "2026-11-08", 1.01, 1, false], [0, "2026-11-08", 1, 0.9, true],
     [0, "2026-11-08", 1, 1.019, true], [0, "2026-11-08", 1, 1.021, false],
-    [1, "2026-11-08", 1, 1, false], [1, "2026-11-09", 1, 1, true], [6, "2026-11-09", 1, 1, true],
-    [2, "2026-11-08", 1, 1, true], [2, "2026-11-08", 1, 0.979, false], [2, "2026-11-08", 1.01, 1, false],
-    [2, "2026-11-21T21:04:19Z", 1, 1, false],
-    [3, "2026-11-09", 1, 1, true], [3, "2026-11-09", 1, 1.019, true], [4, "2026-11-09", 1, 1, true], [5, "2026-11-09", 1, 1, true],
+    [1, "2026-11-08", 1, 1, true], [1, "2026-11-08", 1, 0.979, false], [1, "2026-11-08", 1.01, 1, false],
+    [1, "2026-11-21T21:04:19Z", 1, 1, false],
+    [2, "2026-11-08", 1, 0.9, false], [2, "2026-11-08", 1, 1, false], [2, "2026-11-09", 1, 1, true],
+    [3, "2026-11-09", 1, 1, true], [3, "2026-11-09", 1, 1.019, true],
   ] as const)("bounds chain review %s at %s (%s, %s)", (index, date, baselineScale, observedScale, accepted) => {
-    const review = REVIEWED_CHAIN_TVL_DISPOSITIONS[index];
+    const review = dispositions[index];
     const { flag, baselineValue, observedValue, reviewedAt, expiresAt, evidenceUrls, reason } = review;
     const level = observedValue * observedScale;
     const chain = flag.split(":")[1];
     const rebase = accepted && "acceptsLevel" in review;
     const reopens = !rebase || level >= 1e6;
     const summary = drift({
-      nowSec: Date.parse(date) / 1000,
+      nowSec: Date.parse(date) / 1000, chainTvlDispositions: dispositions,
       previousCandidates: [{ flag, baselineValue: baselineValue * baselineScale, observedValue, consecutiveRuns: 122 }],
       currentChainTvl: { [chain]: level },
     });
@@ -279,7 +284,8 @@ describe("computeDexLiquidityDriftSummary cohort drops", () => {
     })] : []);
     if (!accepted) return;
     const run = (value: number, previous: number, previousCandidates: DexLiquidityDriftCandidate[], date = rebase ? reviewedAt : expiresAt) => drift({
-      nowSec: Date.parse(date) / 1000, previousCandidates, previousChainTvl: { [chain]: previous }, currentChainTvl: { [chain]: value },
+      nowSec: Date.parse(date) / 1000, chainTvlDispositions: dispositions,
+      previousCandidates, previousChainTvl: { [chain]: previous }, currentChainTvl: { [chain]: value },
     });
     expect(persisted.qualityDriftRebaselined).toEqual(rebase ? [{
       flag, baselineValue, acceptedValue: level, runs: 123, reviewedAt, expiresAt, evidenceUrls, reason,

@@ -4,15 +4,12 @@ import { makeCompleteVolumeAvailability } from "../../__tests__/dex-liquidity-pe
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { analyzeDexLiquidityPostScoring } from "../orchestrator-analysis";
 import type { DexLiquidityDriftCandidate } from "../orchestrator-drift";
-import { buildDexLiquidityPublicationGenerationId, persistScores } from "../persistence";
-import type { DexLiquidityAnchorReviewDecision } from "../../../lib/schemas";
+import { buildDexLiquidityPublicationGenerationId } from "../persistence";
 import type { FullScoreResult, GlobalAgg } from "../types";
 import { assessPoolRejectionCoverage, buildPoolRejectionMetadata, processPoolMetrics, scopePoolRejections } from "../process-pools";
 import { rebuildMetricsFromPools } from "../scoring-helpers";
-import { initMetrics, makePool } from "./scoring-test-builders";
+import { makePool } from "./scoring-test-builders";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-
-const reviewTime = Date.parse("2026-11-20");
 
 const BASE_SCORE_RESULT: FullScoreResult = {
   tvl: 100,
@@ -828,187 +825,6 @@ describe("analyzeDexLiquidityPostScoring", () => {
     });
   });
 
-  const coin = "susdat-saturn";
-  const other = "usdc-circle";
-  const initialEpisode = {
-    reason: "material-pool-rejections", material: true, baselineBeforeSec: 1_794_741_390,
-    baselineTvlUsdByCoin: { [coin]: 4_811_562.319125249, [other]: 100_000 }, coins: [], coinsOmitted: 0,
-  } satisfies ReturnType<typeof assessPoolRejectionCoverage>;
-
-  function reviewedEpisodeFixture({
-    coverage = initialEpisode, latest = 2_600_000, priorCoverage = "mixed",
-    unobservedPlaceholder = false,
-  }: { coverage?: ReturnType<typeof assessPoolRejectionCoverage>; latest?: number; priorCoverage?: string;
-    unobservedPlaceholder?: boolean } = {}) {
-    const fixtures = createLatestSchemaFixtureTracker();
-    const { sqlite, db } = fixtures.open();
-    function publishFixture(at: number, tvlUsd = latest, coverageClass = priorCoverage) {
-      const generationId = buildDexLiquidityPublicationGenerationId(at);
-      sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
-        (generation_id, started_at, state, expected_row_count, created_at, published_at)
-        VALUES (?, ?, 'published', 1, ?, ?)`).run(generationId, at, at, at);
-      sqlite.prepare(`INSERT INTO dex_liquidity_run_rows
-        (generation_id, stablecoin_id, symbol, total_tvl_usd, updated_at, coverage_class)
-        VALUES (?, ?, 'sUSDat', ?, ?, ?)`).run(generationId, coin, tvlUsd, at, coverageClass);
-      sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata)
-        VALUES ('sync-dex-liquidity', ?, 1000, 'degraded', ?)`).run(at, JSON.stringify({
-          sourceCoverage: { poolRejectionCoverage: { ...coverage, coinsOmitted: 1, coins: [] } },
-          persistence: { generationId, skipped: false },
-        }));
-    }
-    publishFixture(reviewTime / 1000 - 3600);
-    if (unobservedPlaceholder) publishFixture(reviewTime / 1000 - 1800, 0, "unobserved");
-    const pools = (tvl: number, decayed = false, tvlMeasured: true | null = true) => new Map([[coin, [makePool({
-      tvlUsd: tvl, extra: { measurement: { decayed, tvlMeasured: tvlMeasured ?? undefined } },
-    })]]]);
-    const publish = (tvl: number, decision?: DexLiquidityAnchorReviewDecision) =>
-      persistScores(db, new Map([[coin, { ...initMetrics(coin, "sUSDat"), totalTvlUsd: tvl }]]),
-        new Map([[coin, { ...BASE_SCORE_RESULT, tvl, coverageClass: "mixed" }]]), BASE_GLOBAL_AGG, Date.now() / 1000,
-        new Map(), undefined, undefined, pools(tvl), decision);
-    return { sqlite, db, publish, close: fixtures.closeAll, async assess(current: number | null, unobserved = false,
-      decayed = false, tvlMeasured: true | null = true) {
-      const scoreResults = new Map([[other, { ...BASE_SCORE_RESULT, tvl: 99_000 }]]);
-      if (current !== null) scoreResults.set(coin, { ...BASE_SCORE_RESULT, tvl: current,
-        coverageClass: unobserved ? "unobserved" : "primary" });
-      const { sourceCoverage, requiredBaselineUnavailable } =
-        await analyze({
-          db, currentGenerationId: buildDexLiquidityPublicationGenerationId(Date.now() / 1000), scoreResults,
-          retainedPoolsByStablecoin: current == null ? new Map() : pools(current, decayed, tvlMeasured),
-        });
-      return { ...sourceCoverage.poolRejectionCoverage, requiredBaselineUnavailable };
-    } };
-  }
-
-  it("rebases the exact episode once using measured TVL and the latest accepted publication", async () => {
-    const clock = vi.spyOn(Date, "now").mockReturnValue(reviewTime - 1_800_000);
-    const { sqlite, assess, publish, close } = reviewedEpisodeFixture({ latest: 3_000_000 });
-    try {
-      const comparedGenerationId = buildDexLiquidityPublicationGenerationId(Date.now() / 1000);
-      await publish(2_600_000);
-      clock.mockReturnValue(reviewTime);
-      const tvl = 2_578_900;
-      const publicationGenerationId = buildDexLiquidityPublicationGenerationId(Date.now() / 1000);
-      const result = await assess(tvl);
-      expect(result).toMatchObject({
-        reason: null, baselineTvlUsdByCoin: { [coin]: tvl, [other]: 100_000 },
-        anchorReviewDecision: { outcome: "applied", stablecoinId: coin, baselineBeforeSec: initialEpisode.baselineBeforeSec,
-          anchorTvlUsd: initialEpisode.baselineTvlUsdByCoin[coin], evidenceRef: "TokenBrice/pharos-watch#2142",
-          comparedGenerationId, comparedTvlUsd: 2_600_000, publicationGenerationId, acceptedTvlUsd: tvl },
-      });
-      await publish(tvl, result.anchorReviewDecision);
-      expect(sqlite.prepare("SELECT total_tvl_usd FROM dex_liquidity WHERE stablecoin_id = ?").get(coin)?.total_tvl_usd).toBe(tvl);
-      const saved = sqlite.prepare("SELECT value FROM cache WHERE key = 'dex-liquidity:anchor-review:2142'").get();
-      expect(JSON.parse(String(saved?.value))).toEqual(result.anchorReviewDecision);
-
-      clock.mockReturnValue(reviewTime + 3_600_000);
-      const repeat = await assess(tvl);
-      expect(repeat).toMatchObject({ reason: null, baselineTvlUsdByCoin: { [coin]: tvl } });
-      expect(repeat.anchorReviewDecision).toBeUndefined();
-      expect(await assess(2_200_000)).toMatchObject({
-        reason: "material-pool-rejections", baselineTvlUsdByCoin: { [coin]: tvl },
-      });
-      await expect(publish(tvl, { ...result.anchorReviewDecision!, comparedGenerationId: publicationGenerationId,
-        publicationGenerationId: buildDexLiquidityPublicationGenerationId(Date.now() / 1000),
-      })).rejects.toThrow("UNIQUE constraint failed: cache.key");
-      expect(sqlite.prepare("SELECT publication_generation_id FROM dex_liquidity WHERE stablecoin_id = ?")
-        .get(coin)?.publication_generation_id).toBe(publicationGenerationId);
-    } finally {
-      close();
-      vi.restoreAllMocks();
-    }
-  });
-
-  it.each([
-    { label: "different cutoff", cutoffOffset: 1 },
-    { label: "different anchor", anchor: 4_811_562.319125248 },
-    { label: "different asset", differentAsset: true },
-    { label: "before review", clock: Date.parse("2026-11-19") },
-    { label: "at expiry", clock: Date.parse("2026-11-26T22:26:28Z") },
-    { label: "missing current score", current: null },
-    { label: "zero current TVL", current: 0 },
-    { label: "unobserved current row", unobserved: true },
-    { label: "decayed current TVL", decayed: true },
-    { label: "missing current measurement flag", tvlMeasured: null },
-    { label: "zero prior TVL", latest: 0 },
-    { label: "unobserved prior TVL", priorCoverage: "unobserved" },
-  ])("defers the rebase for $label", async ({ cutoffOffset = 0, anchor = initialEpisode.baselineTvlUsdByCoin[coin],
-    clock = reviewTime, current = 2_578_900, unobserved, decayed, tvlMeasured, differentAsset, latest, priorCoverage }) => {
-    vi.spyOn(Date, "now").mockReturnValue(clock);
-    const coverage = { ...initialEpisode, baselineBeforeSec: initialEpisode.baselineBeforeSec + cutoffOffset,
-      baselineTvlUsdByCoin: differentAsset ? { [other]: anchor } : { ...initialEpisode.baselineTvlUsdByCoin, [coin]: anchor } };
-    const { assess, close } = reviewedEpisodeFixture({ coverage, latest, priorCoverage });
-    try {
-      const result = await assess(current, unobserved, decayed, tvlMeasured);
-      expect(result).toMatchObject({ reason: "material-pool-rejections", baselineTvlUsdByCoin: coverage.baselineTvlUsdByCoin });
-      expect(result.anchorReviewDecision).toBeUndefined();
-    } finally {
-      close();
-      vi.restoreAllMocks();
-    }
-  });
-
-  it.each([
-    { latest: 3_000_000, current: 2_579_000, anchor: initialEpisode.baselineTvlUsdByCoin[coin] },
-    { latest: 5_200_000, current: 4_400_000, anchor: 5_200_000 },
-  ])("rolls back the receipt and defers after an intervening publication of $latest", async ({ latest, current, anchor }) => {
-    const clock = vi.spyOn(Date, "now").mockReturnValue(reviewTime);
-    const { assess, publish, close, sqlite } = reviewedEpisodeFixture();
-    try {
-      const candidate = await assess(2_579_000);
-      expect(candidate.anchorReviewDecision).toBeDefined();
-      clock.mockReturnValue(reviewTime - 600_000);
-      await publish(latest);
-      clock.mockReturnValue(reviewTime);
-      await expect(publish(2_579_000, candidate.anchorReviewDecision)).rejects.toThrow("NOT NULL constraint failed: cache.value");
-      expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'dex-liquidity:anchor-review:2142'").get()).toBeUndefined();
-      const deferred = await assess(current);
-      expect(deferred).toMatchObject({
-        reason: "material-pool-rejections", baselineTvlUsdByCoin: { [coin]: anchor },
-        anchorReviewDecision: { outcome: "deferred-material-loss", comparedTvlUsd: latest, acceptedTvlUsd: current },
-      });
-      await publish(current, deferred.anchorReviewDecision);
-      clock.mockReturnValue(reviewTime + 3_600_000);
-      const flat = await assess(current);
-      expect(flat).toMatchObject({
-        reason: "material-pool-rejections", baselineTvlUsdByCoin: { [coin]: anchor },
-      });
-      expect(flat.anchorReviewDecision).toBeUndefined();
-    } finally {
-      close();
-      vi.restoreAllMocks();
-    }
-  });
-
-  it("keeps the pre-placeholder comparator so an unobserved publication cannot hide a new loss", async () => {
-    const clock = vi.spyOn(Date, "now").mockReturnValue(reviewTime);
-    const { assess, publish, close, sqlite } = reviewedEpisodeFixture({
-      latest: 3_000_000, unobservedPlaceholder: true,
-    });
-    try {
-      const tvl = 2_579_000;
-      const deferred = await assess(tvl);
-      expect(deferred).toMatchObject({
-        reason: "material-pool-rejections",
-        baselineTvlUsdByCoin: { [coin]: initialEpisode.baselineTvlUsdByCoin[coin] },
-        anchorReviewDecision: { outcome: "deferred-material-loss", comparedTvlUsd: 3_000_000, acceptedTvlUsd: tvl },
-      });
-      await publish(tvl, deferred.anchorReviewDecision);
-      expect(JSON.parse(String(sqlite.prepare(
-        "SELECT value FROM cache WHERE key = 'dex-liquidity:anchor-review:2142'").get()?.value)))
-        .toMatchObject({ outcome: "deferred-material-loss", comparedTvlUsd: 3_000_000 });
-      clock.mockReturnValue(reviewTime + 3_600_000);
-      const flat = await assess(tvl);
-      expect(flat).toMatchObject({
-        reason: "material-pool-rejections",
-        baselineTvlUsdByCoin: { [coin]: initialEpisode.baselineTvlUsdByCoin[coin] },
-      });
-      expect(flat.anchorReviewDecision).toBeUndefined();
-    } finally {
-      close();
-      vi.restoreAllMocks();
-    }
-  });
-
   it.each([true, false])("counts retained DL pools with decayed=%s", async (decayed) => {
     const pool = makePool({ source: "dl", extra: { measurement: { decayed } } });
     const analysis = await analyze({
@@ -1016,42 +832,6 @@ describe("analyzeDexLiquidityPostScoring", () => {
     });
     expect(analysis.sourceCoverage.coinsCrawlerOnly).toBe(decayed ? 1 : 0);
     expect(analysis.sourceCoverage.retainedPoolCountBySourceFamily.dl).toBe(1);
-  });
-
-  it("rebases the reviewed sUSDat anchor with a <=5% decayed tail and live primary pool, deferring beyond bounds", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(reviewTime);
-    const { db, close } = reviewedEpisodeFixture({ latest: 2_600_000 });
-    const run = (pools: ReturnType<typeof makePool>[]) =>
-      analyze({
-        db, currentGenerationId: buildDexLiquidityPublicationGenerationId(reviewTime / 1000),
-        scoreResults: new Map([
-          [other, { ...BASE_SCORE_RESULT, tvl: 99_000 }],
-          [coin, { ...BASE_SCORE_RESULT, tvl: 2_540_000, coverageClass: "mixed" }],
-        ]),
-        retainedPoolsByStablecoin: new Map([[coin, pools]]),
-      });
-    try {
-      const ok = await run([
-        makePool({ source: "dl", tvlUsd: 2_486_000, extra: { measurement: { tvlMeasured: true, decayed: false } } }),
-        makePool({ poolId: "ethereum:0xdecay", source: "cg_onchain", tvlUsd: 54_000, extra: { measurement: { tvlMeasured: true, decayed: true } } }),
-      ]);
-      expect(ok.sourceCoverage.poolRejectionCoverage).toMatchObject({
-        reason: null, anchorReviewDecision: { outcome: "applied", acceptedTvlUsd: 2_540_000 },
-      });
-      const overCap = await run([
-        makePool({ source: "dl", tvlUsd: 2_336_800, extra: { measurement: { tvlMeasured: true, decayed: false } } }),
-        makePool({ poolId: "ethereum:0xdecay", source: "cg_onchain", tvlUsd: 203_200, extra: { measurement: { tvlMeasured: true, decayed: true } } }),
-      ]);
-      expect(overCap.sourceCoverage.poolRejectionCoverage.anchorReviewDecision).toBeUndefined();
-      const noLivePrimary = await run([
-        makePool({ source: "cg_onchain", tvlUsd: 2_500_000, extra: { measurement: { tvlMeasured: true, decayed: false } } }),
-        makePool({ poolId: "ethereum:0xdecay", source: "dl", tvlUsd: 40_000, extra: { measurement: { tvlMeasured: true, decayed: true } } }),
-      ]);
-      expect(noLivePrimary.sourceCoverage.poolRejectionCoverage.anchorReviewDecision).toBeUndefined();
-    } finally {
-      close();
-      vi.restoreAllMocks();
-    }
   });
 
   it("walks back past unobserved placeholders for pool-rejection baselines and fails closed when unavailable", async () => {

@@ -161,19 +161,6 @@ const DexSubgraphFailuresSchema = z.array(z.object({
   isolatedPoolIds: z.array(z.string()).max(5).optional(),
 })).max(32);
 
-export const DexLiquidityAnchorReviewDecisionSchema = z.object({
-  outcome: z.enum(["applied", "deferred-material-loss"]),
-  stablecoinId: z.string(),
-  baselineBeforeSec: z.number().int().nonnegative(),
-  anchorTvlUsd: z.number().finite().positive(),
-  evidenceRef: z.string(),
-  comparedGenerationId: z.string().min(1),
-  comparedTvlUsd: z.number().finite().positive(),
-  publicationGenerationId: z.string().min(1),
-  acceptedTvlUsd: z.number().finite().positive(),
-});
-export type DexLiquidityAnchorReviewDecision = z.infer<typeof DexLiquidityAnchorReviewDecisionSchema>;
-
 export const DexLiquidityCronMetadataSchema = z.object({
   rowsDropped: z.number().optional(),
   poolRejectionMateriality: z.object({
@@ -230,7 +217,6 @@ export const DexLiquidityCronMetadataSchema = z.object({
         material: z.boolean().nullable(),
         baselineBeforeSec: z.number().int().nonnegative().optional(),
         baselineTvlUsdByCoin: z.record(z.string(), z.number().finite().nonnegative().nullable()),
-        anchorReviewDecision: DexLiquidityAnchorReviewDecisionSchema.optional(),
         coinsOmitted: z.number().int().nonnegative(),
         coins: z.array(z.object({
           stablecoinId: z.string(), baselineTvlUsd: z.number().finite().nonnegative(),
