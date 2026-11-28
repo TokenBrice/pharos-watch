@@ -9,6 +9,7 @@ import {
   buildPrStaticCheckPlan,
   partitionPrStaticCheckPlan,
   prStaticLeafArgs,
+  resolvePrStaticMaxParallel,
   runPrStaticChecks,
   STRUCTURAL_CHECKS,
 } from "../maintenance/run-pr-static-checks.ts";
@@ -204,6 +205,9 @@ describe("adaptive PR checks", () => {
     const partition = partitionPrStaticCheckPlan(compile.commands);
     expect(names(partition.parallel)).toEqual(["lint:typed:changed", "typecheck", "typecheck:worker"]);
     expect(names(partition.sequential)).toEqual(["lint:changed"]);
+    // Typed lint never shares the pool with both typechecks (16 GB runner).
+    expect(resolvePrStaticMaxParallel(partition.parallel, 3)).toBe(2);
+    expect(resolvePrStaticMaxParallel(partition.parallel.filter((c) => !c.name.startsWith("lint:typed")), 3)).toBe(3);
     const fullLintCompile = buildPrStaticCheckPlan(["eslint.config.mjs", "worker/src/cron/x.ts"], { group: "compile" });
     expect(names(partitionPrStaticCheckPlan(fullLintCompile.commands).sequential)).toEqual(["lint"]);
 

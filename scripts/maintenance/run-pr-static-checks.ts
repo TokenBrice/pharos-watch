@@ -296,6 +296,18 @@ export function hasOwnedDocsImpact(changedFiles: readonly string[]): boolean {
   });
 }
 
+// Typed lint builds its own TypeScript programs (8 GiB heap) and, beside both
+// typechecks and ESLint, can exhaust a 16 GB hosted runner; when it is selected
+// the pool admits at most two leaves so it never overlaps both typechecks.
+const TYPED_LINT_STATIC_CHECKS = new Set(["lint:typed", "lint:typed:changed"]);
+const TYPED_LINT_MAX_PARALLEL = 2;
+
+export function resolvePrStaticMaxParallel(parallel: readonly PrStaticCheckCommand[], configured: number): number {
+  return parallel.some((command) => TYPED_LINT_STATIC_CHECKS.has(command.name))
+    ? Math.min(configured, TYPED_LINT_MAX_PARALLEL)
+    : configured;
+}
+
 export function partitionPrStaticCheckPlan(commands: readonly PrStaticCheckCommand[]) {
   const sequential: PrStaticCheckCommand[] = [];
   const parallel: Array<{ command: PrStaticCheckCommand; index: number; weight: number }> = [];
@@ -533,7 +545,10 @@ export async function runPrStaticChecks({
   }));
   const { sequential, parallel } = partitionPrStaticCheckPlan(runnableCommands);
   const configuredParallel = Number.parseInt(env.PR_STATIC_MAX_PARALLEL ?? "3", 10);
-  const maxParallel = Number.isFinite(configuredParallel) && configuredParallel > 0 ? configuredParallel : 3;
+  const maxParallel = resolvePrStaticMaxParallel(
+    parallel,
+    Number.isFinite(configuredParallel) && configuredParallel > 0 ? configuredParallel : 3,
+  );
   const reporter = {
     start: (cmd: string) => log(`[check:pr:static] ${cmd}`),
   };
