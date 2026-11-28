@@ -159,14 +159,16 @@ export function buildDuplicateOpenEventRepair<T extends DepegRow>(
           const nextGapStarted = openGaps.reduce<number | null>((gap, coverage) =>
             Math.min(gap ?? Infinity, coverage.gapStartedAt!), null);
           // A trusted off-peg observation always ends a gap, so an open gap reads at-par only when
-          // the latest observation and every open gap are at-par; anything else fails closed to blind.
+          // every row observed at the latest trusted clock (a tie cannot be ordered) and every open
+          // gap are at-par; anything else fails closed to blind.
           const coverage = {
             intervals,
             atParIntervals,
             lastTrustedObservationAt: nextLastTrusted,
             gapStartedAt: nextGapStarted,
-            lastObservationKind: nextGapStarted != null && (latest.lastObservationKind !== "trusted-at-par" ||
-              openGaps.some((value) => value.lastObservationKind !== "trusted-at-par"))
+            lastObservationKind: nextGapStarted != null && [...coverages.filter((value) =>
+              (value.lastTrustedObservationAt ?? null) === nextLastTrusted), ...openGaps].some((value) =>
+              value.lastObservationKind !== "trusted-at-par")
               ? "blind" as const : latest.lastObservationKind,
           };
           const serializedCoverage = serializeDepegPriceCoverage(coverage);
