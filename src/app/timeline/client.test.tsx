@@ -308,12 +308,12 @@ describe("TimelineClient", () => {
     expect(reg(L_OPEN_LAST)).toBeTruthy();
   });
 
-  it.each<[string, ApiMeta | null, Partial<ActiveRes>]>([
-    ["degraded", metaOf("degraded"), {}], ["error", null, actErr()], ["stale", metaOf("stale"), {}],
-  ])("retains a complete %s cohort as a dated observation", (label, meta, ov) => {
+  it.each<[string, ApiMeta["status"] | null, Partial<ActiveRes>]>([
+    ["degraded", "degraded", {}], ["error", null, actErr()], ["stale", "stale", {}],
+  ])("retains a complete %s cohort as a dated observation", (label, status, ov) => {
     const obs = Date.UTC(2026, 9, 26), startedAt = obs / 1000 - 3600;
     freeze(obs);
-    setActive([activeEvt({ id: 123, symbol: "USDC", startedAt })], { ...ov, dataUpdatedAt: obs, meta: meta ? { ...meta, updatedAt: obs / 1000 } : null });
+    setActive([activeEvt({ id: 123, symbol: "USDC", startedAt })], { ...ov, dataUpdatedAt: obs, meta: status ? metaOf(status, { updatedAt: obs / 1000 }) : null });
     mount([peak()]);
     const r = reg(L_OPEN_LAST);
     for (const s of ["Incidents open at last observation, newest first · independent of feed filters", "Observed open for 1h as of 2026-10-26 00:00 UTC"]) expect(r.textContent).toContain(s);

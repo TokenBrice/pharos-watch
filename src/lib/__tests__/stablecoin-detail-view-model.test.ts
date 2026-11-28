@@ -418,7 +418,7 @@ describe("detail published mint evidence integration", () => {
   it("passes publication availability through without confusing a missing component with a missing request result", () => {
     const coin = buildStablecoinDetailClientCoin(coinOf(USDC)), p = readyParams({ id: coin.id, coin });
     const u = asReady(buildVM(p));
-    expect([u.mintAuthority.score?.compactLabel, u.mintAuthority.verdict.includes("Not rated")]).toEqual(["Mint score unavailable", false]);
+    expect([u.mintAuthority.score?.compactLabel, u.mintAuthority.verdict?.includes("Not rated")]).toEqual(["Mint score unavailable", false]);
     p.queries.reportCards.data = { cards: [] } as never;
     const s = asReady(buildVM(p));
     expect(s.mintAuthority.score?.compactLabel).toBe("NR");
@@ -440,7 +440,7 @@ describe("detail feature-status ladders & resolveDetailGradeRead", () => {
   const fStates = (ov: Parameters<typeof vmParams>[0]) => { const p = vmParams({ ...ov, core: { coin, ...ov.core } }); return featSnap(coin.id, coin, p.queries, p.supplemental).states; };
 
   it("keeps deferred, failed, and stale-with-data reserve reads distinct", () => {
-    const resSt = (reserves: Parameters<typeof vmParams>[0]["supplemental"] extends { reserves?: infer R } ? R : never) => fStates({ supplemental: { reserves } }).reserves.status;
+    const resSt = (reserves: NonNullable<NonNullable<Parameters<typeof vmParams>[0]>["supplemental"]>["reserves"]) => fStates({ supplemental: { reserves } }).reserves.status;
     expect([resSt({ enabled: false, isLoading: true }), resSt({ enabled: true, error: offline() }), resSt({ live: { mode: "live", reserves: [], estimated: false }, isLoading: true, error: offline() })])
       .toEqual(["deferred", "unavailable", "stale-with-data"]);
   });

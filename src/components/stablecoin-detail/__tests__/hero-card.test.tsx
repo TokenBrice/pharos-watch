@@ -115,7 +115,7 @@ describe("HeroCard", () => {
   });
 
   it("labels restored and partial-coverage market cap neutrally and withholds false zeroes when unavailable", () => {
-    const sup = (cd: Partial<StablecoinData>) => renderHero({ coinData: cd });
+    const sup = (cd: HeroOv["coinData"]) => renderHero({ coinData: cd });
     const restored = sup({ supplyRestored: true, supplyObservedAt: T0 });
     has(restored, "Supply as of Nov 14");
     lacks(restored, "Stale supply");
@@ -310,7 +310,7 @@ describe("HeroIdentityHeader", () => {
 
 describe("HeroSupplyMetric, fourth figure, verdict, notices, and muted readings", () => {
   const ratioMetric = { key: "backing-ratio", label: "Collateralization", value: "209.5%", subValue: "vs debt", colorClass: "text-foreground" };
-  const cardWith = (ov: HeroOv = {}, km = ratioMetric) => toHtml(<HeroCard model={buildHero(ov)} keyMetric={km} />);
+  const cardWith = (ov: HeroOv = {}, km: React.ComponentProps<typeof HeroCard>["keyMetric"] = ratioMetric) => toHtml(<HeroCard model={buildHero(ov)} keyMetric={km} />);
 
   it("renders em dashes for unavailable supply deltas and selects the fourth figure by precedence", () => {
     const supplyHtml = toHtml(<HeroSupplyMetric supply={1_000} coinSymbol="USDT" supplyTrend={{ current: 1_000, safePrevWeek: null, safePrevMonth: null, hasPrevMonth: true, prevWeekTrendClass: "text-muted-foreground", prevMonthTrendClass: "text-muted-foreground" }} />);

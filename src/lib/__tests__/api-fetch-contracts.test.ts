@@ -316,7 +316,7 @@ describe("browser session gate", () => {
     const api = await import("../api");
     expect((await import("../site-session-gate")).getSiteSessionGate()).toBeNull();
     const s = await import("../site-session-client");
-    const fetchCoins = (opts?: Parameters<typeof api.apiFetch>[4]) => api.apiFetch(STABLECOINS, undefined, undefined, undefined, opts);
+    const fetchCoins = (opts?: Parameters<typeof api.apiFetch>[4]) => opts ? api.apiFetch(STABLECOINS, undefined, undefined, undefined, opts) : api.apiFetch(STABLECOINS);
     return {
       api, storage, fetchCoins, reg: s.registerSiteSessionChallenge, recover: s.registerSiteSessionRecovery,
       ensure: s.ensureSession, renew: s.renewSiteSessionIfNeeded,
