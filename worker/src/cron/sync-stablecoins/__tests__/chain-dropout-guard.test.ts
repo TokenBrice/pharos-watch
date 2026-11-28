@@ -49,6 +49,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { fillMissingSupplyHistory } from "../phase-helpers";
 
 const NOW = Date.parse("2026-10-09T06:00:00Z") / 1000;
+const NO_DB = {} as D1Database;
 const DAY = 86400;
 const LATE_NOW = Date.parse("2026-11-10T00:00:00Z") / 1000;
 const xlayerContract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
@@ -293,10 +294,10 @@ describe("chain dropout guard", () => {
     expect(day1).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "quarantined", quarantinedSince: NOW } });
     expect(day1.chainCirculating!["X Layer"].current).toBeNull();
     expect(getCirculatingRawOrNull(day1)).toBe(1_645_300_000 + 1_427_900_000 + 63_600_000 + 1_200_000);
-    await persistChainDropoutState({} as D1Database, first, NOW);
+    await persistChainDropoutState(NO_DB, first, NOW);
     const saved = ChainDropoutStateSchema.parse(JSON.parse(mocks.setCache.mock.calls[0][2]));
     mocks.getCache.mockResolvedValue({ value: JSON.stringify(saved), updatedAt: NOW });
-    const loaded = await loadChainDropoutState({} as D1Database);
+    const loaded = await loadChainDropoutState(NO_DB);
     const day2 = usdg();
     for (const label of ["X Layer", "Ink", "Hyperliquid L1"]) day2.chainCirculating![label].circulatingPrevDay = 0;
     const second = await runGuard(day2, { now: NOW + DAY, ...loaded });
@@ -413,7 +414,7 @@ describe("chain dropout guard", () => {
       expect(released.supplyChainGuard).toMatchObject({ status: "chains-unavailable", partialCoverage: true, quarantinedSince: incident,
         chains: [{ resolution: "unavailable", reviewedExclusion: { reason: "reviewed-excluded", reviewedAt, expiresAt, quarantinedSince: incident } }] });
       vi.mocked(Date.now).mockReturnValue(now * 1000);
-      const detail = await overlayCanonicalDetail({} as D1Database, id, new Response("{}"), {
+      const detail = await overlayCanonicalDetail(NO_DB, id, new Response("{}"), {
         kind: "ok", updatedAt: now, payload: { peggedAssets: [released] },
       });
       // A state-clocked preferred plan (BUIDL) never displays a provider row.
@@ -772,12 +773,12 @@ describe("chain dropout guard", () => {
     const confirmed = await runGuard(first);
     expect(first.chainCirculating!["X Layer"].current).toBe(0);
     expect(first.supplyRestored).toBeUndefined();
-    await persistChainDropoutState({} as D1Database, confirmed, NOW);
+    await persistChainDropoutState(NO_DB, confirmed, NOW);
     const saved = ChainDropoutStateSchema.parse(JSON.parse(mocks.setCache.mock.calls[0][2]));
     expect(Object.values(saved.pairs)).toEqual([expect.objectContaining({ chainId: "xlayer", baselineUsd: 0, releasedAt: NOW })]);
 
     mocks.getCache.mockResolvedValue({ value: JSON.stringify(saved), updatedAt: NOW });
-    const loaded = await loadChainDropoutState({} as D1Database);
+    const loaded = await loadChainDropoutState(NO_DB);
     mocks.onchain.mockRejectedValue(new Error("rpc down"));
     mocks.chart.mockResolvedValue({ response: { ok: false, status: 503 }, body: "" });
     const next = usdgXlayer();
@@ -791,7 +792,7 @@ describe("chain dropout guard", () => {
     // The persisted state is unreadable too: the confirmed zero is recovered from the latest
     // publication (`next`), whose guard sidecar is already gone because the chain is no longer flagged.
     mocks.getCache.mockRejectedValue(new Error("D1 unavailable"));
-    const unreadable = await loadChainDropoutState({} as D1Database);
+    const unreadable = await loadChainDropoutState(NO_DB);
     expect(unreadable.stateReadFailed).toBe(true);
     const afterFailure = usdgXlayer();
     expect(next.supplyChainGuard).toBeUndefined();
@@ -828,15 +829,8 @@ describe("chain dropout guard", () => {
   it("publishes unavailable, not a partial held total, when an ambiguous asset has a chain with no reference or current", async () => {
     const now = LATE_NOW;
     const state: ChainDropoutState = savedState("usdg-paxos", baseline("xlayer", 100_000_000, now - 900), baseline("ethereum", 20_000_000, now - 900));
-    const asset: PeggedAsset = {
-      ...usdg(),
-      circulating: { peggedUSD: 25_000_000 },
-      chainCirculating: {
-        Ethereum: leg(25_000_000, 20_000_000),
-        "X Layer": leg(0, 100_000_000),
-        Ink: { current: null },
-      },
-    };
+    const asset: PeggedAsset = { ...usdg(), circulating: { peggedUSD: 25_000_000 },
+      chainCirculating: { Ethereum: leg(25_000_000, 20_000_000), "X Layer": leg(0, 100_000_000), Ink: { current: null } } };
     const result = await runGuard(asset, { now, state });
     expect(asset.circulating).toEqual({});
     expect(asset).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "unavailable" } });
@@ -850,14 +844,7 @@ describe("chain dropout guard", () => {
     // Frozen $100M packet held for Solana (B=$80M) when X Layer (A) was $20M; A then grew to $100M
     // as an independent baseline before burning to a natively confirmed zero.
     const state: ChainDropoutState = savedState("usdg-paxos", { ...baseline("solana", 80_000_000, now - 2 * DAY, now - DAY), ambiguousSince: now - DAY, heldTotalUsd: 100_000_000 }, baseline("xlayer", 100_000_000, now - 900));
-    const asset: PeggedAsset = {
-      ...usdg(),
-      circulating: { peggedUSD: 0 },
-      chainCirculating: {
-        Solana: leg(0),
-        "X Layer": leg(0, 100_000_000),
-      },
-    };
+    const asset: PeggedAsset = { ...usdg(), circulating: { peggedUSD: 0 }, chainCirculating: { Solana: leg(0), "X Layer": leg(0, 100_000_000) } };
     const result = await runGuard(asset, { now, state });
     expect(asset.chainCirculating!["X Layer"].current).toBe(0);
     expect(asset.chainCirculating!.Solana.current).toBeNull();
@@ -908,11 +895,11 @@ describe("chain dropout guard", () => {
   it.each(["failed-read", "invalid-json", "invalid-schema"])("does not clobber persisted quarantine after %s", async (failure) => {
     if (failure === "failed-read") mocks.getCache.mockRejectedValue(new Error("D1 unavailable"));
     else mocks.getCache.mockResolvedValue({ value: failure === "invalid-json" ? "{" : JSON.stringify({ version: 2, pairs: {} }), updatedAt: NOW });
-    const loaded = await loadChainDropoutState({} as D1Database);
+    const loaded = await loadChainDropoutState(NO_DB);
     expect(loaded.stateReadFailed).toBe(true);
     const result = await runGuard(usdg(), { ...loaded });
     expect(result.quarantinedAssetIds).toEqual(["usdg-paxos"]);
-    await persistChainDropoutState({} as D1Database, result, NOW);
+    await persistChainDropoutState(NO_DB, result, NOW);
     expect(mocks.setCache).not.toHaveBeenCalled();
   });
 
@@ -930,14 +917,14 @@ describe("chain dropout guard", () => {
     expect(day1).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "quarantined", quarantinedSince: NOW } });
 
     mocks.getCache.mockRejectedValue(new Error("D1 unavailable"));
-    const loaded = await loadChainDropoutState({} as D1Database);
+    const loaded = await loadChainDropoutState(NO_DB);
     const day2 = outage(0);
     const second = await runGuard(day2, { now: NOW + DAY, ...loaded, previousAssetsById: new Map([["usdg-paxos", day1]]) });
     expect(second.quarantinedAssetIds).toEqual(["usdg-paxos"]);
     expect(day2.chainCirculating!.Solana.current).toBeNull();
     expect(day2.supplyChainGuard).toMatchObject({ status: "quarantined", quarantinedSince: NOW });
     expect(getCirculatingRawOrNull(day2)).toBe(321_300_000 + 627_500_000);
-    await persistChainDropoutState({} as D1Database, second, NOW + DAY);
+    await persistChainDropoutState(NO_DB, second, NOW + DAY);
     expect(mocks.setCache).not.toHaveBeenCalled();
   });
 
@@ -963,7 +950,7 @@ describe("chain dropout guard", () => {
   it("keeps publication successful when persisting guard state fails", async () => {
     mocks.setCache.mockRejectedValue(new Error("D1 write failed"));
     const result = await runGuard(usdg());
-    await expect(persistChainDropoutState({} as D1Database, result, NOW)).resolves.toBeUndefined();
+    await expect(persistChainDropoutState(NO_DB, result, NOW)).resolves.toBeUndefined();
     expect(mocks.setCache).toHaveBeenCalledTimes(1);
   });
 
@@ -987,10 +974,10 @@ describe("chain dropout guard", () => {
 
     let state = healthy.state;
     for (const now of [start + 900, start + 1800]) {
-      await persistChainDropoutState({} as D1Database, { ...healthy, state }, now);
+      await persistChainDropoutState(NO_DB, { ...healthy, state }, now);
       const calls = mocks.setCache.mock.calls;
       mocks.getCache.mockResolvedValue({ value: calls[calls.length - 1][2], updatedAt: now });
-      const loaded = await loadChainDropoutState({} as D1Database);
+      const loaded = await loadChainDropoutState(NO_DB);
       const outage = bridged(source, 0);
       const run = await runGuard(outage, { now, ...loaded });
       // Never source + repaired destination ($120M / $105M): the vetted pre-reattribution total is held.
@@ -1041,7 +1028,7 @@ describe("chain dropout guard", () => {
     const matched = listCurrent === 0;
     expect([wire.supplyChainGuard?.matchedComparisonWindows, getUsdMarketCapBaselineOrNull(wire, "day"), getPrevMonthRawOrNull(wire)])
       .toEqual(matched ? [["day", "week", "month"], 3_132_800_000, 2_899_000_000] : [undefined, null, null]);
-    const detail = await (await overlayCanonicalDetail({} as D1Database, asset.id, new Response("{}"),
+    const detail = await (await overlayCanonicalDetail(NO_DB, asset.id, new Response("{}"),
       { kind: "ok", updatedAt: NOW, payload: { peggedAssets: [wire] } })).json() as StablecoinDetailResponse;
     expect([detail.currentSupplyComparisonExcludedChains, projectStablecoinLiveSummary(detail, asset.id).nativeSupply.prevWeek])
       .toEqual(matched ? [["Hyperliquid L1"], 2_998_900_000] : [undefined, null]);

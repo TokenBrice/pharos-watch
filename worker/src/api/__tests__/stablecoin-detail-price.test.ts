@@ -17,12 +17,7 @@ vi.mock("../../lib/detail-cache-generation", () => ({
 }));
 
 const NOW = 1_800_000_000;
-const tokens = [{
-  date: NOW - 86_400,
-  totalCirculatingUSD: { peggedUSD: 123.456 },
-  totalCirculating: { peggedUSD: 121.001 },
-  circulating: { peggedUSD: 120.5 },
-}];
+const tokens = [{ date: NOW - 86_400, totalCirculatingUSD: { peggedUSD: 123.456 }, totalCirculating: { peggedUSD: 121.001 }, circulating: { peggedUSD: 120.5 } }];
 const detailBody = JSON.stringify({ tokens, providerField: "preserved" });
 
 function canonicalCoin(overrides: Record<string, unknown> = {}) {
@@ -304,17 +299,9 @@ describe("missing detail price enrichment", () => {
 
   describe("expired supply-chain-dropout quarantine", () => {
     const quarantinedSince = NOW - 8 * 86_400;
-    const expiredQuarantine = {
-      circulating: {}, supplyRestored: true, supplyObservedAt: quarantinedSince,
-      supplySource: "defillama",
-      supplyChainGuard: {
-        reason: "supply-chain-dropout", status: "unavailable", quarantinedSince,
-        chains: [{
-          chainId: "xlayer", chainLabel: "X Layer", listCurrentUsd: 0, baselineUsd: 1_427_900_000,
-          baselineObservedAt: quarantinedSince, baselineSource: "state", resolution: "unavailable",
-        }],
-      },
-    };
+    const expiredQuarantine = { circulating: {}, supplyRestored: true, supplyObservedAt: quarantinedSince, supplySource: "defillama",
+      supplyChainGuard: { reason: "supply-chain-dropout", status: "unavailable", quarantinedSince, chains: [{ chainId: "xlayer", chainLabel: "X Layer",
+        listCurrentUsd: 0, baselineUsd: 1_427_900_000, baselineObservedAt: quarantinedSince, baselineSource: "state", resolution: "unavailable" }] } };
 
     it("keeps current supply unavailable through detail and projection despite positive provider history", async () => {
       const body = await ovJson(makeDb(expiredQuarantine));

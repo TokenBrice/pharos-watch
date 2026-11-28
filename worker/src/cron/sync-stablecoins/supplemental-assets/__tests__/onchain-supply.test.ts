@@ -50,6 +50,8 @@ vi.mock("../../../../lib/chain-observation", async (importOriginal) => ({
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchOnChainSupplyPartition, prefersOnChainSupplyMcap } from "../onchain-supply";
 import * as xrplSupply from "../xrpl-supply";
 const BLOCK_HASH = `0x${"1".repeat(64)}` as const;
+const expectWithheld = (warn: { mock: { calls: unknown[][] } }, metadata: Record<string, unknown>) => expect(warn.mock.calls.map(([line]) => JSON.parse(String(line))))
+  .toContainEqual(expect.objectContaining({ event: "onchain-supply-contract-withheld", metadata: expect.objectContaining(metadata) }));
 beforeEach(() => {
   const nowMs = Date.now();
   vi.spyOn(Date, "now").mockReturnValue(nowMs);
@@ -131,13 +133,7 @@ describe("supply deployment failure reasons", () => {
     probeTrackedTokenSupplyMock.mockResolvedValue(null);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(await fetchOnChainMcap(meta, 1.04)).toBeNull();
-    expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toContainEqual(expect.objectContaining({
-      event: "onchain-supply-contract-withheld",
-      metadata: expect.objectContaining({
-        stablecoinId: meta.id, chain: "ethereum", contract: meta.contracts![0].address,
-        reason: "total-supply-read-unavailable",
-      }),
-    }));
+    expectWithheld(warn, { stablecoinId: meta.id, chain: "ethereum", contract: meta.contracts![0].address, reason: "total-supply-read-unavailable" });
   });
 
   it("preserves caller cancellation instead of classifying it as an unavailable supply read", async () => {
@@ -224,65 +220,26 @@ describe("joined EVM supply observations", () => {
 });
 
 
-function makeMeta(
-  input: Pick<StablecoinMeta, "id" | "name" | "symbol" | "contracts"> & {
-    detailProvider?: StablecoinMeta["detailProvider"];
-    flags?: Partial<StablecoinMeta["flags"]>;
-  },
-): StablecoinMeta {
-  return {
-    detailProvider: "coingecko",
-    ...input,
-    flags: {
-      pegCurrency: "USD", backing: "rwa-backed", governance: "centralized-dependent",
-      ...input.flags,
-    },
-  } as StablecoinMeta;
+function makeMeta(input: Pick<StablecoinMeta, "id" | "name" | "symbol" | "contracts">
+  & { detailProvider?: StablecoinMeta["detailProvider"]; flags?: Partial<StablecoinMeta["flags"]> }): StablecoinMeta {
+  return { detailProvider: "coingecko", ...input,
+    flags: { pegCurrency: "USD", backing: "rwa-backed", governance: "centralized-dependent", ...input.flags } } as StablecoinMeta;
 }
 
-function makeMovementMeta(): StablecoinMeta {
-  return makeMeta({
-    id: "usdcx-movement",
-    name: "Movement USDCx",
-    symbol: "USDCx",
-    contracts: [{
-      chain: "movement",
-      address: "0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e",
-      decimals: 6,
-    }],
-  });
-}
+const YIELD_NAV_FLAGS = { backing: "crypto-backed", yieldBearing: true, navToken: true } as const;
+const makeMovementMeta = () => makeMeta({ id: "usdcx-movement", name: "Movement USDCx", symbol: "USDCx",
+  contracts: [{ chain: "movement", address: "0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e", decimals: 6 }] });
 
-function movementChainRpcs(): Map<string, ChainRpcConfig> {
-  return new Map<string, ChainRpcConfig>([
-    ["movement", { chainId: "movement", chainName: "Movement", type: "other", endpoints: [{ url: "https://mainnet.movementnetwork.xyz/v1", operator: "public", keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full" }], explorerUrl: "https://explorer.movementnetwork.xyz" }],
-    ["ethereum", { chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [{ url: "https://ethereum-rpc.publicnode.com", operator: "public", keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full" }], explorerUrl: "https://etherscan.io" }],
-  ]);
-}
+const publicRpc = (chainId: string, chainName: string, type: ChainRpcConfig["type"], url: string, explorerUrl: string): [string, ChainRpcConfig] => [chainId, {
+  chainId, chainName, type, endpoints: [{ url, operator: "public", keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full" }], explorerUrl }];
+const movementChainRpcs = () => new Map<string, ChainRpcConfig>([
+  publicRpc("movement", "Movement", "other", "https://mainnet.movementnetwork.xyz/v1", "https://explorer.movementnetwork.xyz"),
+  publicRpc("ethereum", "Ethereum", "evm", "https://ethereum-rpc.publicnode.com", "https://etherscan.io"),
+]);
 
-function makeSkyMeta(): StablecoinMeta {
-  return makeMeta({
-    id: "susds-sky",
-    name: "Savings USDS",
-    symbol: "sUSDS",
-    contracts: [
-      { chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 18 },
-      { chain: "base", address: "0x0000000000000000000000000000000000000002", decimals: 18 },
-      { chain: "optimism", address: "0x0000000000000000000000000000000000000003", decimals: 18 },
-      { chain: "arbitrum", address: "0x0000000000000000000000000000000000000004", decimals: 18 },
-      { chain: "unichain", address: "0x0000000000000000000000000000000000000005", decimals: 18 },
-    ],
-    flags: {
-      backing: "crypto-backed",
-      yieldBearing: true,
-      navToken: true,
-    },
-  });
-}
-
-function makeChfauMeta(): StablecoinMeta {
-  return TRACKED_META_BY_ID.get("chfau-allunity")!;
-}
+const makeSkyMeta = () => makeMeta({ id: "susds-sky", name: "Savings USDS", symbol: "sUSDS", flags: YIELD_NAV_FLAGS,
+  contracts: ["ethereum", "base", "optimism", "arbitrum", "unichain"].map((chain, i) => ({ chain, address: `0x${String(i + 1).padStart(40, "0")}`, decimals: 18 })) });
+const makeChfauMeta = () => TRACKED_META_BY_ID.get("chfau-allunity")!;
 
 const SUSDE_OFT = "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2";
 const SUSDE_REPRESENTATION_CHAINS = [
@@ -290,59 +247,21 @@ const SUSDE_REPRESENTATION_CHAINS = [
   "base", "bsc", "morph-l2", "scroll", "kava", "swellchain", "mode", "mantle",
   "arbitrum", "manta", "blast", "optimism", "zksync", "avalanche", "solana", "monad",
 ];
+const makeSusdeMeta = () => makeMeta({ id: "susde-ethena", name: "Staked USDe", symbol: "sUSDe", flags: YIELD_NAV_FLAGS, contracts: [
+  { chain: "ethereum", address: "0x9d39a5de30e57443bff2a8307a4256c8797a3497", decimals: 18 },
+  ...SUSDE_REPRESENTATION_CHAINS.map((chain) => ({ chain, address: SUSDE_OFT, decimals: 18 })),
+] });
+const makeGldtMeta = () => makeMeta({ id: "gldt-gold-dao", name: "Gold Token", symbol: "GLDT", detailProvider: "commodity",
+  contracts: [...["ethereum", "base", "arbitrum"].map((chain) => ({ chain, address: "0x86856814e74456893cfc8946bedcbb472b5fa856", decimals: 8 })),
+    { chain: "icp", address: "6c7su-kiaaa-aaaar-qaira-cai", decimals: 8 }],
+  flags: { pegCurrency: "GOLD", yieldBearing: false, navToken: false } });
+const makeSingleContractMeta = () => makeMeta({ id: "susdc-spark", name: "Spark Savings USDC", symbol: "sUSDC", flags: YIELD_NAV_FLAGS,
+  contracts: [{ chain: "ethereum", address: "0x0000000000000000000000000000000000000009", decimals: 18 }] });
 
-function makeSusdeMeta(): StablecoinMeta {
-  return makeMeta({
-    id: "susde-ethena",
-    name: "Staked USDe",
-    symbol: "sUSDe",
-    contracts: [
-      { chain: "ethereum", address: "0x9d39a5de30e57443bff2a8307a4256c8797a3497", decimals: 18 },
-      ...SUSDE_REPRESENTATION_CHAINS.map((chain) => ({ chain, address: SUSDE_OFT, decimals: 18 })),
-    ],
-    flags: {
-      backing: "crypto-backed",
-      yieldBearing: true,
-      navToken: true,
-    },
-  });
-}
-
-function makeGldtMeta(): StablecoinMeta {
-  const evm = "0x86856814e74456893cfc8946bedcbb472b5fa856";
-  return makeMeta({
-    id: "gldt-gold-dao",
-    name: "Gold Token",
-    symbol: "GLDT",
-    detailProvider: "commodity",
-    contracts: [
-      { chain: "ethereum", address: evm, decimals: 8 },
-      { chain: "base", address: evm, decimals: 8 },
-      { chain: "arbitrum", address: evm, decimals: 8 },
-      { chain: "icp", address: "6c7su-kiaaa-aaaar-qaira-cai", decimals: 8 },
-    ],
-    flags: {
-      pegCurrency: "GOLD",
-      yieldBearing: false,
-      navToken: false,
-    },
-  });
-}
-
-function makeSingleContractMeta(): StablecoinMeta {
-  return makeMeta({
-    id: "susdc-spark",
-    name: "Spark Savings USDC",
-    symbol: "sUSDC",
-    contracts: [
-      { chain: "ethereum", address: "0x0000000000000000000000000000000000000009", decimals: 18 },
-    ],
-    flags: {
-      backing: "crypto-backed",
-      yieldBearing: true,
-      navToken: true,
-    },
-  });
+async function expectOnChainFailure(meta: StablecoinMeta, reason: string, chainRpcs?: Map<string, ChainRpcConfig>) {
+  const onFailure = vi.fn();
+  await expect(fetchOnChainMcap(meta, 1, chainRpcs, undefined, undefined, onFailure)).resolves.toBeNull();
+  expect(onFailure).toHaveBeenCalledWith(reason);
 }
 
 describe("fetchOnChainMcap", () => {
@@ -354,31 +273,14 @@ describe("fetchOnChainMcap", () => {
 
   it("refuses a Movement deployment that is not the reviewed USDCx asset", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const onFailure = vi.fn();
-
-    await expect(fetchOnChainMcap(
-      { ...makeMovementMeta(), id: "usdcx-unconfigured" }, 1, movementChainRpcs(), undefined, undefined, onFailure,
-    )).resolves.toBeNull();
-
+    await expectOnChainFailure({ ...makeMovementMeta(), id: "usdcx-unconfigured" }, "legs-unreadable", movementChainRpcs());
     expect(fetchMoveFungibleAssetSupplyMock).not.toHaveBeenCalled();
-    expect(onFailure).toHaveBeenCalledWith("legs-unreadable");
-    expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toContainEqual(expect.objectContaining({
-      event: "onchain-supply-contract-withheld",
-      metadata: expect.objectContaining({ stablecoinId: "usdcx-unconfigured", reason: "supply-probe-failed" }),
-    }));
+    expectWithheld(warn, { stablecoinId: "usdcx-unconfigured", reason: "supply-probe-failed" });
   });
 
   it("withholds Movement stock whose ledger decimals do not match the tracked deployment", async () => {
-    fetchMoveFungibleAssetSupplyMock.mockResolvedValue({
-      rawSupply: 1_000_000n, decimals: 8, ledgerVersion: "199722477",
-    });
-    const onFailure = vi.fn();
-
-    await expect(fetchOnChainMcap(
-      makeMovementMeta(), 1, movementChainRpcs(), undefined, undefined, onFailure,
-    )).resolves.toBeNull();
-
-    expect(onFailure).toHaveBeenCalledWith("partition-invalid");
+    fetchMoveFungibleAssetSupplyMock.mockResolvedValue({ rawSupply: 1_000_000n, decimals: 8, ledgerVersion: "199722477" });
+    await expectOnChainFailure(makeMovementMeta(), "partition-invalid", movementChainRpcs());
   });
 
   it.each([
@@ -398,35 +300,19 @@ describe("fetchOnChainMcap", () => {
     const holders = CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[meta.id].holderAddresses;
     vi.mocked(evmRpc.fetchEvmUint256AtBlock).mockImplementation(async (_chain, _contract, data) =>
       data === TOTAL_SUPPLY_SELECTOR ? 100n * 10n ** 18n : read(data, holders));
-    const onFailure = vi.fn();
-
-    await expect(fetchOnChainMcap(meta, 1, undefined, undefined, undefined, onFailure)).resolves.toBeNull();
-
-    expect(onFailure).toHaveBeenCalledWith(failure);
+    await expectOnChainFailure(meta, failure);
   });
 
   it("rejects a curated exclusion on a deployment outside the exclusion chain", async () => {
     const source = TRACKED_META_BY_ID.get("usg-tangent")!;
-    const meta = {
-      ...source,
-      contracts: [{ ...source.contracts![0], chain: "base" }],
-    };
     probeTrackedTokenSupplyMock.mockResolvedValue(1_000n * 10n ** 18n);
-    const onFailure = vi.fn();
-
-    await expect(fetchOnChainMcap(meta, 1, undefined, undefined, undefined, onFailure)).resolves.toBeNull();
-
-    expect(onFailure).toHaveBeenCalledWith("partition-invalid");
+    await expectOnChainFailure({ ...source, contracts: [{ ...source.contracts![0], chain: "base" }] }, "partition-invalid");
   });
 
   it("passes through the resolved chain and chain label for the single-contract fallback", async () => {
     probeTrackedTokenSupplyMock.mockResolvedValue(1_000n * 10n ** 18n);
 
-    await expect(fetchOnChainMcap(makeSingleContractMeta(), 1)).resolves.toMatchObject({
-      mcap: 1_000,
-      chain: "ethereum",
-      chainLabel: expect.any(String),
-    });
+    await expect(fetchOnChainMcap(makeSingleContractMeta(), 1)).resolves.toMatchObject({ mcap: 1_000, chain: "ethereum", chainLabel: expect.any(String) });
   });
 
   it.each([
@@ -436,12 +322,7 @@ describe("fetchOnChainMcap", () => {
     { chain: "ethereum", decimals: 6, amountEncoding: { kind: "xrpl-issued-currency" as const } },
   ])("skips deployments without fixed-decimal amounts: %j", async (deployment) => {
     const source = makeSingleContractMeta();
-    const meta = {
-      ...source,
-      contracts: [{ ...source.contracts![0], ...deployment }],
-    };
-
-    await expect(fetchOnChainMcap(meta, 1)).resolves.toBeNull();
+    await expect(fetchOnChainMcap({ ...source, contracts: [{ ...source.contracts![0], ...deployment }] }, 1)).resolves.toBeNull();
     expect(probeTrackedTokenSupplyMock).not.toHaveBeenCalled();
     expect(fetchErc20TotalSupplyMock).not.toHaveBeenCalled();
   });
@@ -449,33 +330,18 @@ describe("fetchOnChainMcap", () => {
 
 describe("fetchCuratedAggregateOnChainMcap", () => {
   it("admits Movement USDCx only when its pinned-ledger supply reconciles to xReserve", async () => {
-    fetchMoveFungibleAssetSupplyMock.mockResolvedValue({
-      rawSupply: 1_739_632_096_715n,
-      decimals: 6,
-      ledgerVersion: "199722477",
-    });
+    fetchMoveFungibleAssetSupplyMock.mockResolvedValue({ rawSupply: 1_739_632_096_715n, decimals: 6, ledgerVersion: "199722477" });
     fetchOnchainUint256Mock.mockResolvedValue(1_739_679_096_715n);
-
-    const result = await fetchCuratedAggregateOnChainMcap(
-      makeMovementMeta(), 1, movementChainRpcs(),
-    );
-
-    expect(result).toMatchObject({
-      mcap: 1_739_632.096715,
-      supplySource: "onchain-total-supply",
-      chainCirculating: { Movement: { current: 1_739_632.096715, chainId: "movement" } },
+    await expect(fetchCuratedAggregateOnChainMcap(makeMovementMeta(), 1, movementChainRpcs())).resolves.toMatchObject({
+      mcap: 1_739_632.096715, supplySource: "onchain-total-supply", chainCirculating: { Movement: { current: 1_739_632.096715, chainId: "movement" } },
     });
   });
 
   it("threads admitted native transport into Movement without changing xReserve reconciliation", async () => {
     const dwellirNative = createDwellirNativeCapability("native-test-key-placeholder");
-    fetchMoveFungibleAssetSupplyMock.mockResolvedValue({
-      rawSupply: 100_000_000n, decimals: 6, ledgerVersion: "199722477",
-    });
+    fetchMoveFungibleAssetSupplyMock.mockResolvedValue({ rawSupply: 100_000_000n, decimals: 6, ledgerVersion: "199722477" });
     fetchOnchainUint256Mock.mockResolvedValue(100_000_000n);
-    const result = await fetchCuratedAggregateOnChainMcap(
-      makeMovementMeta(), 1, movementChainRpcs(), undefined, dwellirNative,
-    );
+    const result = await fetchCuratedAggregateOnChainMcap(makeMovementMeta(), 1, movementChainRpcs(), undefined, dwellirNative);
     expect(result?.mcap).toBe(100);
     expect(fetchMoveFungibleAssetSupplyMock.mock.calls[0]?.[3]).toEqual({ dwellirNative });
     expect(fetchOnchainUint256Mock).toHaveBeenCalled();
@@ -802,36 +668,12 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
 
 describe("curation-expanded complete supply rosters", () => {
   const cases: { id: string; canonical?: string; supplies: Record<string, number> }[] = [
-    {
-      id: "susdt-spark",
-      canonical: undefined,
-      supplies: { ethereum: 100, arbitrum: 10, xlayer: 20 },
-    },
-    {
-      id: "syrupusdc-maple",
-      canonical: "ethereum",
-      supplies: { ethereum: 100, base: 10, arbitrum: 10, solana: 10, ink: 10, monad: 10, robinhood: 10, tempo: 10, arc: 10 },
-    },
-    {
-      id: "syzusd-yuzu",
-      canonical: "plasma",
-      supplies: { plasma: 100, ethereum: 10, monad: 10, hyperevm: 10, sei: 10, pharos: 10, berachain: 10, aptos: 0.25, base: 10 },
-    },
-    {
-      id: "susdc-spark-v1",
-      canonical: undefined,
-      supplies: { ethereum: 100, arbitrum: 10, base: 20, optimism: 30, unichain: 40 },
-    },
-    {
-      id: "susn-noon",
-      canonical: "ethereum",
-      supplies: { ethereum: 100, zksync: 5, sophon: 5, starknet: 5, hyperevm: 5, base: 5, citrea: 5, berachain: 5, tac: 5, solana: 5, bsc: 0 },
-    },
-    {
-      id: "apyusd-apyx",
-      canonical: "ethereum",
-      supplies: { ethereum: 100, base: 10, bsc: 10, monad: 10, solana: 10 },
-    },
+    { id: "susdt-spark", supplies: { ethereum: 100, arbitrum: 10, xlayer: 20 } },
+    { id: "syrupusdc-maple", canonical: "ethereum", supplies: { ethereum: 100, base: 10, arbitrum: 10, solana: 10, ink: 10, monad: 10, robinhood: 10, tempo: 10, arc: 10 } },
+    { id: "syzusd-yuzu", canonical: "plasma", supplies: { plasma: 100, ethereum: 10, monad: 10, hyperevm: 10, sei: 10, pharos: 10, berachain: 10, aptos: 0.25, base: 10 } },
+    { id: "susdc-spark-v1", supplies: { ethereum: 100, arbitrum: 10, base: 20, optimism: 30, unichain: 40 } },
+    { id: "susn-noon", canonical: "ethereum", supplies: { ethereum: 100, zksync: 5, sophon: 5, starknet: 5, hyperevm: 5, base: 5, citrea: 5, berachain: 5, tac: 5, solana: 5, bsc: 0 } },
+    { id: "apyusd-apyx", canonical: "ethereum", supplies: { ethereum: 100, base: 10, bsc: 10, monad: 10, solana: 10 } },
     { id: "uty-xsy", canonical: "base", supplies: { base: 100, avalanche: 10, katana: 20 } },
     { id: "mxne-real-mxn", supplies: { base: 100, solana: 10, stellar: 0 } },
     { id: "strusd-tori", canonical: "ethereum", supplies: { ethereum: 100, monad: 10, pharos: 5 } },
@@ -1053,10 +895,7 @@ describe("discovery native supply aggregates", () => {
         await expect(fetchCuratedAggregateOnChainMcap(
           makeMeta({ id, name: id, symbol: id, contracts }), 1.25,
         )).resolves.toBeNull();
-        expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toContainEqual(expect.objectContaining({
-          event: "onchain-supply-contract-withheld",
-          metadata: expect.objectContaining({ stablecoinId: id, chain: failedChain, reason: "total-supply-read-unavailable" }),
-        }));
+        expectWithheld(warn, { stablecoinId: id, chain: failedChain, reason: "total-supply-read-unavailable" });
         warn.mockRestore();
       }
     }
@@ -1145,26 +984,25 @@ describe("discovery native supply aggregates", () => {
     const meta = TRACKED_META_BY_ID.get("eurc-circle")!;
     const nowSec = Math.floor(Date.now() / 1000);
     const mintAddr = "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr";
-    const premints = [
-      "89LjSs8wP3EZNCKcs8aCxngQaEuyhUyGE4STkFwNgRT3",
-      "HQHDva1bR4vqxvz6Y8yaLvqkD4AeWCDso8aJ9v5rfLHY",
-      "A6sLLUWebvoUUnQoCiB45ktetd34iamfD8kwTsBSReAb",
-    ] as const;
-    const makeMint = (supply: bigint, decimals = 6): SolanaAccount => {
+    const premints = ["89LjSs8wP3EZNCKcs8aCxngQaEuyhUyGE4STkFwNgRT3", "HQHDva1bR4vqxvz6Y8yaLvqkD4AeWCDso8aJ9v5rfLHY", "A6sLLUWebvoUUnQoCiB45ktetd34iamfD8kwTsBSReAb"];
+    const makeMint = (supply: bigint): SolanaAccount => {
       const data = new Uint8Array(82);
-      const view = new DataView(data.buffer);
-      view.setBigUint64(36, supply, true);
-      data[44] = decimals;
-      data[45] = 1;
+      new DataView(data.buffer).setBigUint64(36, supply, true);
+      data[44] = 6; // decimals
+      data[45] = 1; // initialized
       return { owner: SOLANA_TOKEN_PROGRAM, data };
     };
-    const makeTokenAccount = (mint: string, amount: bigint, state = 1): SolanaAccount => {
+    const makeTokenAccount = (amount: bigint, mint = mintAddr): SolanaAccount => {
       const data = new Uint8Array(165);
       data.set(publicKeyBytes(mint), 0);
       new DataView(data.buffer).setBigUint64(64, amount, true);
-      data[108] = state;
+      data[108] = 1; // initialized
       return { owner: SOLANA_TOKEN_PROGRAM, data };
     };
+    // The mint account, then the listed pre-mint token accounts in order.
+    const solanaAccounts = (supply: bigint, ...held: (SolanaAccount | null)[]) =>
+      new Map<string, SolanaAccount | null>([[mintAddr, makeMint(supply)], ...held.map((account, i) => [premints[i], account] as const)]);
+    const empty = makeTokenAccount(0n);
     const evmSupplies: Record<string, bigint> = {
       ethereum: 320_000_000_000_000n, base: 48_000_000_000_000n, avalanche: 3_600_000_000_000n,
       worldchain: 400_000_000_000n, cronos: 270_000_000_000n, plasma: 230_000_000_000n, arc: 10_500_000_000_000n,
@@ -1172,12 +1010,7 @@ describe("discovery native supply aggregates", () => {
     vi.mocked(evmRpc.fetchEvmUint256AtBlock).mockImplementation(async (chain) => (chain ? evmSupplies[chain] ?? null : null));
     observeStellarSupplyMock.mockReset().mockResolvedValue({ rawSupply: 4_500_000n * 10n ** 7n, observedAt: nowSec - 40 });
     fetchSolanaAccountsMock.mockReset().mockResolvedValue({
-      accounts: new Map<string, SolanaAccount | null>([
-        [mintAddr, makeMint(115_000_000_000_000n)],
-        [premints[0], makeTokenAccount(mintAddr, 25_000_000_000_000n)],
-        [premints[1], makeTokenAccount(mintAddr, 20_000_000_000n)],
-        [premints[2], makeTokenAccount(mintAddr, 19_980_000_000_000n)],
-      ]),
+      accounts: solanaAccounts(115_000_000_000_000n, makeTokenAccount(25_000_000_000_000n), makeTokenAccount(20_000_000_000n), makeTokenAccount(19_980_000_000_000n)),
       // Solana finalized cluster clock may drift +2s ahead of UTC; aggregate observedAt stays <= nowSec.
       observedBlock: { chain: "solana", number: 472_979_263, timestamp: nowSec + 2 },
     });
@@ -1194,40 +1027,17 @@ describe("discovery native supply aggregates", () => {
     expect(result?.chainCirculating?.Solana?.current).toBeCloseTo(70_000_000 * 1.1, 4);
 
     // Preferred-native carry/restore must accept EURC's onchain-circulating-supply aggregate packet.
-    const restored = restorePreferredNativeSupply(
-      { id: meta.id, name: meta.name, symbol: meta.symbol, circulating: {} },
-      {
-        id: meta.id, name: meta.name, symbol: meta.symbol,
-        circulating: { peggedEUR: result!.mcap },
-        chainCirculating: Object.fromEntries(
-          Object.entries(result!.chainCirculating!).map(([k, v]) => [k, { chainId: v.chainId, current: v.current }]),
-        ),
-        supplySource: result!.supplySource, supplyObservedAt: result!.observedAt,
-      },
-      nowSec + 60,
-    );
-    expect(restored).toMatchObject({
-      supplySource: "onchain-circulating-supply",
-      supplyObservedAt: result!.observedAt,
-      supplyRestored: true,
-    });
+    const { id, name, symbol } = meta;
+    expect(restorePreferredNativeSupply({ id, name, symbol, circulating: {} }, { id, name, symbol, circulating: { peggedEUR: result!.mcap },
+      chainCirculating: Object.fromEntries(Object.entries(result!.chainCirculating!).map(([k, v]) => [k, { chainId: v.chainId, current: v.current }])),
+      supplySource: result!.supplySource, supplyObservedAt: result!.observedAt }, nowSec + 60))
+      .toMatchObject({ supplySource: "onchain-circulating-supply", supplyObservedAt: result!.observedAt, supplyRestored: true });
 
     // Fail closed when a pre-mint account is missing, bound to another mint, or exceeds total supply.
     for (const badAccounts of [
-      new Map<string, SolanaAccount | null>([
-        [mintAddr, makeMint(115_000_000_000_000n)], [premints[0], null],
-        [premints[1], makeTokenAccount(mintAddr, 0n)], [premints[2], makeTokenAccount(mintAddr, 0n)],
-      ]),
-      new Map<string, SolanaAccount | null>([
-        [mintAddr, makeMint(115_000_000_000_000n)],
-        [premints[0], makeTokenAccount("So11111111111111111111111111111111111111112", 1n)],
-        [premints[1], makeTokenAccount(mintAddr, 0n)], [premints[2], makeTokenAccount(mintAddr, 0n)],
-      ]),
-      new Map<string, SolanaAccount | null>([
-        [mintAddr, makeMint(10_000_000_000_000n)],
-        [premints[0], makeTokenAccount(mintAddr, 10_000_000_000_000n)],
-        [premints[1], makeTokenAccount(mintAddr, 0n)], [premints[2], makeTokenAccount(mintAddr, 0n)],
-      ]),
+      solanaAccounts(115_000_000_000_000n, null, empty, empty),
+      solanaAccounts(115_000_000_000_000n, makeTokenAccount(1n, "So11111111111111111111111111111111111111112"), empty, empty),
+      solanaAccounts(10_000_000_000_000n, makeTokenAccount(10_000_000_000_000n), empty, empty),
     ]) {
       fetchSolanaAccountsMock.mockResolvedValueOnce({
         accounts: badAccounts, observedBlock: { chain: "solana", number: 472_979_264, timestamp: nowSec - 10 },
@@ -1236,21 +1046,10 @@ describe("discovery native supply aggregates", () => {
     }
 
     // Slot freshness is enforced for Solana excluded-account reads even without requireStateClock.
-    const validAccounts = new Map<string, SolanaAccount | null>([
-      [mintAddr, makeMint(115_000_000_000_000n)],
-      [premints[0], makeTokenAccount(mintAddr, 25_000_000_000_000n)],
-    ]);
-    const syntheticMeta = makeMeta({
-      id: "synthetic-solana-excluded",
-      name: "Synthetic",
-      symbol: "SYN",
-      contracts: [{ chain: "solana", address: mintAddr, decimals: 6 }],
-    });
+    const validAccounts = solanaAccounts(115_000_000_000_000n, makeTokenAccount(25_000_000_000_000n));
+    const syntheticMeta = makeMeta({ id: "synthetic-solana-excluded", name: "Synthetic", symbol: "SYN", contracts: [{ chain: "solana", address: mintAddr, decimals: 6 }] });
     vi.spyOn(onchainSupplyProbe, "selectCuratedAggregateOnchainSupplyProbeContracts").mockReturnValue([
-      {
-        config: { chain: "solana", excludedTokenAccounts: [premints[0]] },
-        contract: syntheticMeta.contracts![0],
-      },
+      { config: { chain: "solana", excludedTokenAccounts: [premints[0]] }, contract: syntheticMeta.contracts![0] },
     ]);
     for (const staleOrFutureTs of [nowSec - 301, nowSec + 61]) {
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -1258,24 +1057,14 @@ describe("discovery native supply aggregates", () => {
         accounts: validAccounts, observedBlock: { chain: "solana", number: 472_979_265, timestamp: staleOrFutureTs },
       });
       await expect(fetchCuratedAggregateOnChainMcap(syntheticMeta, 1, buildChainRpcs())).resolves.toBeNull();
-      expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toContainEqual(expect.objectContaining({
-        event: "onchain-supply-contract-withheld",
-        metadata: expect.objectContaining({
-          stablecoinId: "synthetic-solana-excluded",
-          chain: "solana",
-          reason: "supply-state-stale-or-future",
-        }),
-      }));
+      expectWithheld(warn, { stablecoinId: "synthetic-solana-excluded", chain: "solana", reason: "supply-state-stale-or-future" });
       warn.mockRestore();
     }
     fetchSolanaAccountsMock.mockResolvedValueOnce({
       accounts: validAccounts, observedBlock: { chain: "solana", number: 472_979_266, timestamp: nowSec - 10 },
     });
-    await expect(fetchCuratedAggregateOnChainMcap(syntheticMeta, 1, buildChainRpcs())).resolves.toMatchObject({
-      supplySource: "onchain-circulating-supply",
-      nativeSupply: 90_000_000,
-      observedAt: nowSec - 10,
-    });
+    await expect(fetchCuratedAggregateOnChainMcap(syntheticMeta, 1, buildChainRpcs()))
+      .resolves.toMatchObject({ supplySource: "onchain-circulating-supply", nativeSupply: 90_000_000, observedAt: nowSec - 10 });
   });
 
   it("enforces EIP-1898 clocks across BRLA's live EVM chains and steps back on 1s Polygon validator skew", async () => {
