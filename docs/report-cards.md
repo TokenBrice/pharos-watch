@@ -181,6 +181,8 @@ The server renders the preview into the first HTML flush, outside any Suspense b
 
 ## API
 
+The site detail requests `payout=assets` to include structured primary payout, input capacity, modeled cost and diagnostic conversion evidence. Older detail clients and the keyed full representation receive their original nested wire shape.
+
 `GET /api/report-cards/v9` is the full live Safety Score API. `GET /api/dependency-graph/v1` exposes a free, no-key graph projection of the same accepted publication, not another scoring authority.
 
 Coalesce generation-bound reads; verify integrity/live health before `200`. Missing/invalid evidence returns reason-bearing `503 no-store`; valid health identity/time mismatches serve held accepted bytes. Never rescore or fall back to V8; retired unversioned/preview routes return `404`.

@@ -281,9 +281,10 @@ describe("dex-liquidity scoring", () => {
     expect(partial.effectiveDepth).toMatchObject({ amountUsd: 5_000, coverage: "partial", unknownPoolCount: 1 });
     expect(stale.extra).not.toHaveProperty("effectiveTvl");
     expect(stale.extra?.fluidSwapStatus?.reason).toBe("fluid-swap-state-expired");
-    expect((await score([fluid()])).scores.get("trusd-tori")).toMatchObject({ score: null,
-      effectiveDepth: { coverage: "unavailable", amountUsd: null } });
-    expect((await score([fluid(paused)])).scores.get("trusd-tori")).toMatchObject({ score: 0,
+    expect((await score([fluid()])).scores.get("trusd-tori")).toMatchObject({ score: null, hhi: null, durability: null,
+      liquidityScoreUnavailableReason: "swap-availability-unverified",
+      effectiveDepth: { coverage: "unavailable", reason: "swap-availability-unverified", amountUsd: null } });
+    expect((await score([fluid(paused)])).scores.get("trusd-tori")).toMatchObject({ score: 0, hhi: null,
       effectiveDepth: { coverage: "complete", amountUsd: 0 } });
     expect((await score([fluid(active)])).scores.get("trusd-tori")!.effectiveTvl).toBe(2_204_489);
   });

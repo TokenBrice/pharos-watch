@@ -685,8 +685,8 @@ export interface LiquidityFallbackCounters {
 
 export type FullScoreResult = ScoreResult & {
   effectiveDepth?: import("@shared/types/dex-liquidity").DexEffectiveDepth;
-  hhi: number;
-  durability: number;
+  hhi: number | null;
+  durability: number | null;
   components: ScoreComponents;
   weightedBalanceRatio: number | null;
   organicFrac: number | null;

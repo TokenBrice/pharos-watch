@@ -177,7 +177,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
 
       liquidityScore: dex?.liquidityScore ?? null,
       effectiveTvlUsd: dex?.effectiveDepth
-        ? (dex.effectiveDepth.coverage === "complete" ? dex.effectiveDepth.amountUsd : null)
+        ? dex.effectiveDepth.amountUsd
         : dex?.effectiveTvlUsd ?? null,
       concentrationHhi: dex?.concentrationHhi ?? null,
       chainTvl: dex?.chainTvl ?? {},

@@ -39,6 +39,7 @@ export const LiquidityScoreUnavailableReasonSchema = z.enum([
   "activity-completeness-unknown",
   "no-retained-pools",
   "invalid-coverage-evidence",
+  "swap-availability-unverified",
 ]);
 export type LiquidityScoreUnavailableReason = z.infer<typeof LiquidityScoreUnavailableReasonSchema>;
 
@@ -166,7 +167,7 @@ const fluidDepthPoolCounts = {
 export const DexEffectiveDepthSchema = z.discriminatedUnion("coverage", [
   z.object({ coverage: z.literal("complete"), amountUsd: z.number().nonnegative(), ...fluidDepthPoolCounts, unknownPoolCount: z.literal(0) }),
   z.object({ coverage: z.literal("partial"), amountUsd: z.number().nonnegative(), ...fluidDepthPoolCounts, unknownPoolCount: z.number().int().positive() }),
-  z.object({ coverage: z.literal("unavailable"), amountUsd: z.null(), ...fluidDepthPoolCounts, unknownPoolCount: z.number().int().positive() }),
+  z.object({ coverage: z.literal("unavailable"), reason: z.literal("swap-availability-unverified").optional(), amountUsd: z.null(), ...fluidDepthPoolCounts, unknownPoolCount: z.number().int().positive() }),
 ]);
 export type DexEffectiveDepth = z.infer<typeof DexEffectiveDepthSchema>;
 

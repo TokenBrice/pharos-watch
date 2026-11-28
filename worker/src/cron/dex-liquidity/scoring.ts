@@ -637,7 +637,7 @@ export async function computeStablecoinScores(
     const scored = computeLiquidityScore(scoreInputs, durability, circulatingUsd, fallbackCounters);
     if (noUsableSwaps) {
       scored.score = rebuilt.unknownPoolCount > 0 ? null : 0;
-      scored.unavailableReason = null;
+      scored.unavailableReason = rebuilt.unknownPoolCount > 0 ? "swap-availability-unverified" : null;
     }
 
     const weightedBalanceRatio = weightedRatio(m.balanceRatioWeightedSum, m.totalTvlForBalance);
@@ -664,15 +664,15 @@ export async function computeStablecoinScores(
         effectiveDepth: rebuilt.unknownPoolCount === 0
           ? { coverage: "complete", amountUsd: Math.round(m.effectiveTvl), pausedPoolCount: rebuilt.pausedPoolCount, unknownPoolCount: 0 }
           : noUsableSwaps
-            ? { coverage: "unavailable", amountUsd: null, pausedPoolCount: rebuilt.pausedPoolCount, unknownPoolCount: rebuilt.unknownPoolCount }
+            ? { coverage: "unavailable", reason: "swap-availability-unverified", amountUsd: null, pausedPoolCount: rebuilt.pausedPoolCount, unknownPoolCount: rebuilt.unknownPoolCount }
             : { coverage: "partial", amountUsd: Math.round(m.effectiveTvl), pausedPoolCount: rebuilt.pausedPoolCount, unknownPoolCount: rebuilt.unknownPoolCount },
       } : {}),
       vol24h: m.totalVolume24hUsd,
       volumeAvailability: volume.volumeAvailability,
       score: scored.score,
       liquidityScoreUnavailableReason: scored.unavailableReason,
-      hhi: Math.round(rebuilt.hhi * 10000) / 10000,
-      durability,
+      hhi: rebuilt.usableTvlUsd > 0 ? Math.round(rebuilt.hhi * 10000) / 10000 : null,
+      durability: noUsableSwaps && rebuilt.unknownPoolCount > 0 ? null : durability,
       components: scored.components,
       weightedBalanceRatio,
       organicFrac,

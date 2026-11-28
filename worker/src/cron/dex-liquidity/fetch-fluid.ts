@@ -34,11 +34,11 @@ const FLUID_API_BASE = "https://api.fluid.instadapp.io/v2";
  */
 const FLUID_MAX_RESPONSE_BYTES = 256 * 1024;
 
-async function readFluidIndex(url: string, signal?: AbortSignal) {
+async function readFluidIndex(url: string, timeoutMs: number, retries: number, signal?: AbortSignal) {
   const checkedAtSec = Math.floor(Date.now() / 1000);
   const result = await fetchJsonWithRetry<unknown>(url, {
     cache: "no-store", headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal,
-  }, 0, { timeoutMs: 2_500, maxResponseBytes: 512 * 1024 });
+  }, retries, { timeoutMs, maxResponseBytes: 512 * 1024, maxRetryDelayMs: FLUID_RETRY_DELAY_CAP_MS });
   if (!result?.response.ok) throw new Error("index unavailable");
   const serverDate = Date.parse(result.response.headers.get("date") ?? "");
   return {
@@ -210,7 +210,7 @@ export async function fetchFluidPools(
 
   for (const [chain, chainId] of Object.entries(FLUID_CHAINS) as Array<[keyof typeof FLUID_CHAINS, number]>) {
     try {
-      const state = await readFluidIndex(`${FLUID_API_BASE}/${chainId}/dexes`, signal);
+      const state = await readFluidIndex(`${FLUID_API_BASE}/${chainId}/dexes`, 2_500, 1, signal);
       indexFluidSwapStatuses(fluidSwapStatuses, chain, state.payload, state.checkedAtSec);
     } catch (error) {
       rethrowIfAborted(error, signal);
@@ -325,7 +325,7 @@ export async function fetchFluidPools(
 
   if (fluidSwapStatuses.size > 0) {
     try {
-      const aliases = await readFluidIndex("https://yields.llama.fi/poolsPro?project=fluid-dex", signal);
+      const aliases = await readFluidIndex("https://yields.llama.fi/poolsPro?project=fluid-dex", 10_000, 0, signal);
       indexFluidDefiLlamaAliases(fluidSwapStatuses, aliases.payload);
     } catch (error) {
       rethrowIfAborted(error, signal);

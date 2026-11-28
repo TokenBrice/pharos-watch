@@ -42,6 +42,7 @@ export function computeDepthToMcapRatio(
 /** Short labels for the producer's NR reason codes (never inferred client-side). */
 export const LIQUIDITY_NR_REASON_LABELS: Record<LiquidityScoreUnavailableReason, string> = {
   "activity-coverage-below-floor": "Volume coverage below floor",
+  "swap-availability-unverified": "Swap availability unverified",
   "activity-missing": "No 24h volume observed",
   "activity-stale": "24h volume stale",
   "activity-completeness-unknown": "Volume completeness unknown",

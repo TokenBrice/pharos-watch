@@ -997,6 +997,8 @@ async function buildDexLiquidityPoolState(
     },
   });
 
+  const fluidIndex = sourceState.directApiPhase.results.find((entry) => entry.normalizedProtocol === "fluid")?.result.fluidSwapStatuses;
+  attachFluidSwapStatuses(metrics, fluidIndex);
   const staged = await mergeStagedPools(
     ctx.db,
     metrics,
@@ -1010,7 +1012,7 @@ async function buildDexLiquidityPoolState(
     sourceState.priceObservations,
   );
   const { stagedWriteback, observedThisRun } = staged;
-  const fluidIndex = sourceState.directApiPhase.results.find((entry) => entry.normalizedProtocol === "fluid")?.result.fluidSwapStatuses;
+  // Staging can add registry-only Fluid pools after live quote capture.
   attachFluidSwapStatuses(metrics, fluidIndex);
   fluidIndex?.clear();
   mergeDexPriceObservationMap(sourceState.priceObservations, staged.priceObservations);

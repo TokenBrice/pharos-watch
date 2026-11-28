@@ -295,10 +295,12 @@ export const handleDexLiquidity = async (
       topPools,
       liquidityScore: evidence == null ? null : row.liquidity_score,
       // The reason comes from whoever nulled the score: this publisher's
-      // quarantine, else the producer's recorded decision. Never inferred.
+      // quarantine, else the producer's decision. Swap-state NR is carried in
+      // effectiveDepth.reason so strict clients can still read the legacy enum.
       liquidityScoreUnavailableReason: evidence == null
         ? "invalid-coverage-evidence"
-        : row.liquidity_score == null ? scoreDetails.liquidityScoreUnavailableReason : null,
+        : row.liquidity_score == null && scoreDetails.liquidityScoreUnavailableReason !== "swap-availability-unverified"
+          ? scoreDetails.liquidityScoreUnavailableReason : null,
       concentrationHhi: row.concentration_hhi,
       depthStability: row.depth_stability,
       // A trend needs two trend-bearing observations: a zero-pool placeholder is

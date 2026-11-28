@@ -227,13 +227,16 @@ describe("materialized V9 response", () => {
       expect(diagnostics.reserveCompositionAdmission).toEqual(card.reserveCompositionAdmission);
       const servedExit = plainCard.breakdowns!.exit;
       expect(diagnostics.breakdowns!.exit).toEqual(servedExit);
-      if (handle === handleReportCardsV9Detail) expect(servedExit).toEqual(exit);
-      else {
-        for (const key of ["payoutAssets", "inputCapacityUsd", "costEvidence"]) expect(servedExit.primaryRoute!.capacity).not.toHaveProperty(key);
-        for (const key of ["conversion", "payoutAssets"]) expect(servedExit.alternatives[0]).not.toHaveProperty(key);
-        expect(servedExit.alternatives[0]!.label).toContain("Conversion to strUSD");
-        expect(active.snapshot!.cards[0]!.breakdowns!.exit).toEqual(servedExit);
+      if (handle === handleReportCardsV9Detail) {
+        url.searchParams.set("payout", "assets");
+        const detailed = await handle(db, url);
+        expect(detailed.headers.get("ETag")).not.toBe(optedIn.headers.get("ETag"));
+        expect((await readCard(detailed)).breakdowns!.exit).toEqual(exit);
       }
+      for (const key of ["payoutAssets", "inputCapacityUsd", "costEvidence"]) expect(servedExit.primaryRoute!.capacity).not.toHaveProperty(key);
+      for (const key of ["conversion", "payoutAssets"]) expect(servedExit.alternatives[0]).not.toHaveProperty(key);
+      expect(servedExit.alternatives[0]!.label).toContain("Conversion to strUSD");
+      expect(active.snapshot!.cards[0]!.breakdowns!.exit).toEqual(servedExit);
       expect(optedIn.headers.get("ETag")).not.toBe(plain.headers.get("ETag"));
     }
   });

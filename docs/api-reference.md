@@ -443,11 +443,11 @@ The standalone redemption contract is described in [Redemption Backstops](./rede
 
 ## DEX liquidity availability
 
-On `/api/dex-liquidity`, `totalTvlUsd` includes retained pools with paused swaps. For nonempty inventories published under v7.57, `effectiveDepth` reports the admitted `amountUsd`, `coverage`, `pausedPoolCount` and `unknownPoolCount`. Complete coverage can include a confirmed zero. Partial coverage gives a lower bound. Unavailable coverage has a null amount. The legacy numeric `effectiveTvlUsd` remains the sum of admitted contributions. Older rows omit the coverage record.
+On `/api/dex-liquidity`, `totalTvlUsd` includes retained pools with paused swaps. For nonempty inventories published under v7.57, `effectiveDepth` reports the admitted `amountUsd`, `coverage`, `pausedPoolCount` and `unknownPoolCount`. Complete coverage can include a confirmed zero. Partial coverage gives a lower bound. Unavailable swap coverage has a null amount and the reason `swap-availability-unverified`. The existing nullable NR reason field keeps its legacy vocabulary. Concentration is null with no usable swaps, and durability is null when swap availability cannot be established. The legacy numeric `effectiveTvlUsd` remains the sum of admitted contributions. Older rows omit the coverage record.
 
 In current and historical DEWS signals, optional `signals.liq.liquidityScore`, `liquidityScore7dAgo` and `tvlDelta7dUnavailableReason` explain which weekly comparison contributed. The retained method and timestamps determine comparability.
 
-The site-only `/api/dex-liquidity-coin` detail projection adds `weeklyExitRouteBaselines` for comparable external sales. The historical and current capacities refer to the same pool, payout, request size, cost limit and model. The site-only `/api/report-cards/v9-detail?stablecoin=<id>` carries `payoutAssets`, `inputCapacityUsd` and `costEvidence` in the accepted primary Exit capacity. A diagnostic alternative can carry `conversion` and its own `payoutAssets`. Older publications can lack those fields.
+The site-only `/api/dex-liquidity-coin` detail projection adds `weeklyExitRouteBaselines` for comparable external sales. The historical and current capacities refer to the same pool, payout, request size, cost limit and model. The site-only `/api/report-cards/v9-detail?stablecoin=<id>&payout=assets` carries `payoutAssets`, `inputCapacityUsd` and `costEvidence` in the accepted primary Exit capacity. A diagnostic alternative can carry `conversion` and its own `payoutAssets`. Older publications can lack those fields.
 
 ## Reserve Availability
 
