@@ -959,6 +959,8 @@ describe("decideDepegAsset", () => {
       expect(escOf(t0 + 900, { ...armed, peak_escalation_candidate_at: null, peak_escalation_candidate_seen_at: null }, 0.93)).toEqual(uEsc(400, t0 + 870));
       const s0 = t0 - 30 * D - 60;
       expect(escOf(t0, makeUsdEvent({ started_at: s0, peak_deviation_bps: -400 }), 0.96, { priceObservedAt: s0 + 30 * D, priceUpdatedAt: s0 + 30 * D })).toBeUndefined();
+      // A replayed pre-Day-30 deadband quote is no new tick, so it cannot clear a candidate armed after Day 30.
+      expect(escOf(t0, makeUsdEvent({ started_at: s0, peak_deviation_bps: -700, peak_escalation_anchor_bps: 400, peak_escalation_candidate_at: cAt, peak_escalation_candidate_seen_at: cAt, ...cov(cAt) }), 0.994, { priceObservedAt: t0 - 100, priceUpdatedAt: t0 - 100 })).toBeUndefined();
       const db = makeUsdEvent({ started_at: t0 - 31 * D, peak_deviation_bps: -200 });
       expect(escOf(t0, db, 0.9925)).toEqual(uEsc(100));
       const seeded = { ...db, peak_escalation_anchor_bps: 100, ...cov(cAt) };

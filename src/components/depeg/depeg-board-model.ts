@@ -7,31 +7,34 @@ import {
 } from "@shared/lib/classification";
 import { readTrackerDeviation, type DepegTrackerRow } from "@/lib/depeg-sort";
 
-/** A held deviation is not an observed reading, so it never supports a "clear" verdict. */
-function hasObservedDeviation(row: DepegTrackerRow): boolean {
-  return readTrackerDeviation(row).deviationBps != null;
+/**
+ * A held deviation, or one whose reference expired at the board's assessment clock, is not an
+ * observed reading, so it never supports a "clear" verdict (R2).
+ */
+function hasObservedDeviation(row: DepegTrackerRow, nowSec?: number): boolean {
+  return readTrackerDeviation(row, nowSec).deviationBps != null;
 }
 
-export function statusLabel(row: DepegTrackerRow): string {
+export function statusLabel(row: DepegTrackerRow, nowSec?: number): string {
   if (row.coin.activeDepeg) return "open";
   // A threshold crossing awaiting confirmation (the hero's "Awaiting confirmation" figure).
   if (row.pendingIncident) return "awaiting";
   if (row.coin.depegEventCoverageLimited) return "floor";
   if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") return row.dews.band.toLowerCase();
-  if (!hasObservedDeviation(row) || !Number.isFinite(row.dews?.score)) {
+  if (!hasObservedDeviation(row, nowSec) || !Number.isFinite(row.dews?.score)) {
     return DEPEG_TRACKER_UNKNOWN_STATUS.label;
   }
   return "clear";
 }
 
-export function statusClassName(row: DepegTrackerRow): string {
+export function statusClassName(row: DepegTrackerRow, nowSec?: number): string {
   if (row.coin.activeDepeg) return DEPEG_ROW_STATUS_CLASSES.active.pill;
   if (row.pendingIncident) return DEPEG_ROW_STATUS_CLASSES.pending.pill;
   if (row.coin.depegEventCoverageLimited) return DEPEG_ROW_STATUS_CLASSES.coverageLimited.pill;
   if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") {
     return DEPEG_ROW_STATUS_CLASSES.watch.pill;
   }
-  if (!hasObservedDeviation(row) || !Number.isFinite(row.dews?.score)) {
+  if (!hasObservedDeviation(row, nowSec) || !Number.isFinite(row.dews?.score)) {
     return DEPEG_TRACKER_UNKNOWN_STATUS.cls;
   }
   return DEPEG_ROW_STATUS_CLASSES.clear.pill;

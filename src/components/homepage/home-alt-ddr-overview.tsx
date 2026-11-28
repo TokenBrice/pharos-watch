@@ -9,7 +9,7 @@ import { HomeAltTrackerLink } from "@/components/homepage/home-alt-tracker-link"
 import { HomeSectionHeader } from "@/components/homepage/home-section-header";
 import { usePegSummary } from "@/hooks/api-hooks";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
-import { useMinuteClockSec } from "@/hooks/use-minute-clock-sec";
+import { useMinuteClockSec, useOpenIncidentHorizonClock } from "@/hooks/use-minute-clock-sec";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
@@ -425,7 +425,14 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
   const { data: resolverData, error: resolverError } = resolver;
   const { data: resolverReviewData, error: resolverReviewError } = resolverReview;
   const openIncidents = pegSummaryQuery.data?.openIncidents;
-  const clockSec = nowSec > 0 ? nowSec : (pegSummaryQuery.data?.openIncidentsAsOfSec ?? 0);
+  const openIncidentsAsOfSec = pegSummaryQuery.data?.openIncidentsAsOfSec;
+  // The badge shares the homepage cards' horizon clock. This reader stays passive (no refetch),
+  // so a row crossing a boundary shows no badge until the shared peg summary revalidates.
+  const clockSec = useOpenIncidentHorizonClock(
+    openIncidents,
+    openIncidentsAsOfSec,
+    nowSec > 0 ? nowSec : (openIncidentsAsOfSec ?? 0),
+  );
 
   // Every ongoing depeg, worst gap first; whole-book rows passively join `openIncidents` by `eventId`.
   const items = useMemo(

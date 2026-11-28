@@ -14,6 +14,7 @@ import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { compareDepegTrackerRows, type DepegTableSortKey } from "@/components/depeg/depeg-table-logic";
 import { readTrackerDeviation, type DepegTrackerRow } from "@/lib/depeg-sort";
+import { readUnroundedPublishedDeviation } from "@/lib/current-peg";
 import type { CsvColumn } from "@/lib/exports/csv";
 import { cn } from "@/lib/utils";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
@@ -89,9 +90,10 @@ export function matchesDepegStatusFilter(
   if (filter === "dews_alert") {
     return row.dews != null && isThreatBand(row.dews.band) && THREAT_BAND_ORDER[row.dews.band] >= THREAT_BAND_ORDER.ALERT;
   }
-  // R1/R2: an unavailable or held deviation is never classified as at peg.
+  // R1/R2: an unavailable or held deviation is never classified as at peg. The threshold reads
+  // the unrounded deviation, as the detector does, so a 99.6 bps USD move is not rounded off peg.
   if (row.coin.activeDepeg || row.pendingIncident) return false;
-  const { deviationBps } = readTrackerDeviation(row, nowSec);
+  const { deviationBps } = readUnroundedPublishedDeviation(row.coin.pegCurrency, row.coin, undefined, nowSec);
   if (deviationBps == null) return false;
   const threshold = row.coin.pegCurrency === "USD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
   return Math.abs(deviationBps) < threshold;
@@ -172,13 +174,14 @@ const BOARD_COLUMNS: readonly DataTableColumn<DepegTableSortKey>[] = [
   },
 ];
 
+/** Export columns read the board's assessment clock, so an expired reference never exports `clear`. */
 export function buildDepegExportColumns(nowSec?: number): CsvColumn<DepegTrackerRow>[] {
   return [
     { header: "Rank", accessor: (_row, index) => index + 1 },
     { header: "Symbol", accessor: (row) => row.coin.symbol },
     { header: "Name", accessor: (row) => row.coin.name },
     { header: "Peg", accessor: (row) => row.coin.pegCurrency },
-    { header: "Status", accessor: (row) => statusLabel(row) },
+    { header: "Status", accessor: (row) => statusLabel(row, nowSec) },
     { header: "Incident Horizon", accessor: (row) => (row.coin.activeDepeg ? (row.openIncidentTier ?? null) : null) },
     { header: "Current Deviation (bps)", accessor: (row) => readTrackerDeviation(row, nowSec).deviationBps },
     { header: "Worst Deviation (bps)", accessor: (row) => row.coin.worstDeviationBps },
@@ -196,8 +199,6 @@ export function buildDepegExportColumns(nowSec?: number): CsvColumn<DepegTracker
   ];
 }
 
-export const DEPEG_EXPORT_COLUMNS: CsvColumn<DepegTrackerRow>[] = buildDepegExportColumns();
-
 function InstrumentTableRow({
   row,
   rank,
@@ -214,7 +215,8 @@ function InstrumentTableRow({
   const prefetch = usePrefetchStablecoin();
   const occupancyBasisId = useId();
   const coin = row.coin;
-  const { deviationBps, referenceNote } = readTrackerDeviation(row, nowSeconds > 0 ? nowSeconds : undefined);
+  const deviationClockSec = nowSeconds > 0 ? nowSeconds : undefined;
+  const { deviationBps, referenceNote } = readTrackerDeviation(row, deviationClockSec);
   const deviationClass = deviationBps == null
     ? "text-muted-foreground"
     : deviationColorClass(Math.abs(deviationBps));
@@ -278,8 +280,8 @@ function InstrumentTableRow({
           />
         </button>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          <span className={cn("inline-flex items-center rounded-sm border px-1.5 py-0.5 text-xs font-semibold uppercase leading-none", statusClassName(row))}>
-            {statusLabel(row)}
+          <span className={cn("inline-flex items-center rounded-sm border px-1.5 py-0.5 text-xs font-semibold uppercase leading-none", statusClassName(row, deviationClockSec))}>
+            {statusLabel(row, deviationClockSec)}
           </span>
           {tierBadge ? (
             <span

@@ -73,9 +73,9 @@ describe("compact homepage evidence admission", () => {
     expect(result.retainedLanes).toEqual(["incidents"]);
     expect(reconcileHomepageEvidence(failed, null, now).data?.incidents.data).toBeNull();
   });
-  it("rotates on peg:6.56 and admits split/unsplit incidents", () => {
-    expect([HOMEPAGE_EVIDENCE_VERSION, HOMEPAGE_EVIDENCE_METHODOLOGY.includes("peg:6.56")]).toEqual([2, true]);
-    expect(parseHomepageEvidence(encode().replace("peg:6.56", "peg:6.55"), now)).toBeNull();
+  it("rotates on peg:6.57 and admits split/unsplit incidents", () => {
+    expect([HOMEPAGE_EVIDENCE_VERSION, HOMEPAGE_EVIDENCE_METHODOLOGY.includes("peg:6.57")]).toEqual([2, true]);
+    expect(parseHomepageEvidence(encode().replace("peg:6.57", "peg:6.56"), now)).toBeNull();
     for (const d of [{ activeDepegCount: 17, recentActiveDepegCount: 4, longRunningActiveDepegCount: 13 }, { activeDepegCount: 17 }]) {
       const s = makeHomepageEvidence(now / 1000 - 30); s.incidents.data = d;
       expect(parseHomepageEvidence(encode(s), now)?.incidents.data).toEqual(d);
