@@ -30,11 +30,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/incident-reviews-v1.json",
-      "sha256": "c8cffacb123e0196d23d6b8a70b44638c680110d2044d8450dc1dd7935b0a96f"
+      "sha256": "0cf235d805a3804ace36a27cfd8ae73806b168208a325cbd605cad7adfc75fb0"
     },
     {
       "path": "shared/data/safety-score-v9/incident-runtime-v1.generated.json",
-      "sha256": "d69eb3e2f66fdab0cf5cf22f5a1062f22b2cf321879c1a4ab82d5719be1f1863"
+      "sha256": "5a91e1b11c545b0f717d87b1b13139b6be5755de20741650cf4a3ba486616e66"
     },
     {
       "path": "shared/data/safety-score-v9/lane-emitter-descriptors-v1.generated.json",
@@ -82,11 +82,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "49772aa6505ea3ba9e3bf029f5c1c4a983f738aaef022ac248863613d7475bf3"
+      "sha256": "f6dd18b39c36452b3113dbcc12e85038a29d20fb54e23fa531acd903ec116972"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "2d033ccfb9ca98800b6d246ab370ecc682c514210a4edc5d17bd0b1b997008b2"
+      "sha256": "76f26328c2e4545f7cafba9c4809a80a7c54538d55142df389eb8d2cfe24b36f"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
@@ -1379,7 +1379,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-27-block-26506658-shock-coverage.json.gz"
     }
   ],
-  "digest": "32475fcd724c661546e55226a4b4f62f4e259f001f5cadcee8ec639a2c1e53c2"
+  "digest": "6a802b7a1a09225c8db786ec29f7ff01557e8272e91086eb94bfc3794a3e7f44"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
