@@ -109,6 +109,10 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "94e1e0a706c70fc2d94838c004a5b00e9552806307248221fcebd5ecf5cda82d"
     },
     {
+      "path": "shared/lib/chains/index.ts",
+      "sha256": "174326d8f8f80dca42cff7f220b18bff381fc1ea00d57fae90615fd6d42e44ee"
+    },
+    {
       "path": "shared/lib/classification/pegs.ts",
       "sha256": "673ab6c52e40245b21383a18c2b1aec53b04424639a9fa9939cd7747d5481c70"
     },
@@ -177,6 +181,14 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "4a30389eb84c01e8281e02dbe07e332fc98be30cbba1a338a11fd3f4e7f4a443"
     },
     {
+      "path": "shared/lib/dex-deployment-coverage.ts",
+      "sha256": "8401853fd8f64435e4b3499738aba62541f8ef22879260e6a55ee8f2fa3f36d9"
+    },
+    {
+      "path": "shared/lib/dex-soroban-identity.ts",
+      "sha256": "6f306ac2aa82f0703276fce1777f68f63fe4897401c2fc064965218dcfb7fc82"
+    },
+    {
       "path": "shared/lib/error-utils.ts",
       "sha256": "b1dad5e73463d78a13c15fb6bf9fe428557c909c82e9b61794930506dc571391"
     },
@@ -195,6 +207,10 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     {
       "path": "shared/lib/exit-route-scoring.ts",
       "sha256": "02656a912856d6ec511c418cd07e3caaaf60c17955aa55cf5247fad1036fff04"
+    },
+    {
+      "path": "shared/lib/fluid-swap-status.ts",
+      "sha256": "5570279b8a13f8c3db13b6736de503e146d31a98becb45b8fec62a2b3d246b1a"
     },
     {
       "path": "shared/lib/fnv1a.ts",
@@ -833,6 +849,18 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "290b5d52f874b290cd575a028abd2b82b5049175119d5b915b68a9ea49f24d36"
     },
     {
+      "path": "shared/types/dex-execution-legacy.ts",
+      "sha256": "fe04f25e6b8b34a885ac29110473df25f60ea108f84d37cc11b2d1875a1eeafc"
+    },
+    {
+      "path": "shared/types/dex-execution.ts",
+      "sha256": "9931b9529fc8464b196e95cb2a96468db5895c19e7c020b75810b5d1d9d6b33d"
+    },
+    {
+      "path": "shared/types/dex-liquidity.ts",
+      "sha256": "1a4b8b3e0b6d30f6b922befbdb6c282d2a0bebc522426bf9ea0e8b801af15528"
+    },
+    {
       "path": "shared/types/exit-output-price.ts",
       "sha256": "5022b6c3cd46189fa12145befe1eb71700b09a79c985e8fed3bddcb336325f5f"
     },
@@ -1379,7 +1407,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-27-block-26506658-shock-coverage.json.gz"
     }
   ],
-  "digest": "7130cdcbcb5fcfd641dd2c54515534e28f6f7c8a1c8febdf3741739ac9e6bb2f"
+  "digest": "bffe0c7e507b17211cbac94728ede92c8473673dea39fabf45a09d5bd78f83f4"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
