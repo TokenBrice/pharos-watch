@@ -3,11 +3,11 @@
     "version": "7.1",
     "title": "Require affirmative swap availability for Fluid pool prices",
     "date": "2026-11-28",
-    "effectiveAt": 1795893360,
+    "effectiveAt": 1795867833,
     "summary": "Fluid pools must have current evidence that swaps are active before their prices can contribute to the aggregate DEX price or the pool challenge.",
     "impact": [
       "Swap status follows the physical Fluid pool across provider aliases. Historical volume remains in its observation window when swaps pause.",
-      "Activation time is provisional until the first accepted DEX publication."
+      "The first published DEX generation was dated 2026-11-28 12:10:33 UTC."
     ],
     "commits": [],
     "reconstructed": false
