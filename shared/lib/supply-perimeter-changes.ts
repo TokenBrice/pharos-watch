@@ -243,47 +243,47 @@ export const SUPPLY_PERIMETER_CHANGES = [
   // === #2169 Wave 2 non-USD native checkpoints + #2393 CADC legacy/successor registers (Pricing v7.2) ===
   // Undated DefiLlama caps move to clocked complete native rosters: CADD adds Solana, Tempo and Arc
   // (owner ruling D8), CADC counts its legacy and successor registers (D10), and KRWQ, XOFm, ZARm and
-  // tGBP reconcile to DefiLlama's native totals. Provisional at the planned 14:08 UTC activation slot:
-  // re-date each entry to the supply observation clock of the first published packet with the new
-  // quantity (see the note above).
+  // tGBP reconcile to DefiLlama's native totals. Dated to the first sync-stablecoins on the PR #2446
+  // build (14:15:36 UTC), or to tGBP's earlier first pinned observation (14:15:35 UTC); the old
+  // Worker's last run (14:00:30 UTC) published undated DefiLlama caps for all six.
   {
     stablecoinId: "cadd-cad-digital",
-    changedAt: Date.parse("2026-11-28T14:08:00Z") / 1000,
+    changedAt: Date.parse("2026-11-28T14:15:36Z") / 1000,
     chainIds: ["ethereum", "base", "solana", "tempo", "arc"],
     evidenceUrl: "https://tetradg.com/supported-blockchains/",
     marketWide: false,
   },
   {
     stablecoinId: "krwq-iq",
-    changedAt: Date.parse("2026-11-28T14:08:00Z") / 1000,
+    changedAt: Date.parse("2026-11-28T14:15:36Z") / 1000,
     chainIds: ["ethereum", "base", "polygon", "fraxtal", "codex", "morph-l2"],
     evidenceUrl: "https://github.com/TokenBrice/pharos-watch/issues/2169",
     marketWide: false,
   },
   {
     stablecoinId: "xofm-mento",
-    changedAt: Date.parse("2026-11-28T14:08:00Z") / 1000,
+    changedAt: Date.parse("2026-11-28T14:15:36Z") / 1000,
     chainIds: ["celo"],
     evidenceUrl: "https://github.com/TokenBrice/pharos-watch/issues/2169",
     marketWide: false,
   },
   {
     stablecoinId: "zarm-mento",
-    changedAt: Date.parse("2026-11-28T14:08:00Z") / 1000,
+    changedAt: Date.parse("2026-11-28T14:15:36Z") / 1000,
     chainIds: ["celo"],
     evidenceUrl: "https://github.com/TokenBrice/pharos-watch/issues/2169",
     marketWide: false,
   },
   {
     stablecoinId: "tgbp-tokenised",
-    changedAt: Date.parse("2026-11-28T14:08:00Z") / 1000,
+    changedAt: Date.parse("2026-11-28T14:15:35Z") / 1000,
     chainIds: ["ethereum", "base", "bsc", "polygon", "avalanche", "solana", "arbitrum", "gnosis", "arc"],
     evidenceUrl: "https://github.com/TokenBrice/pharos-watch/issues/2169",
     marketWide: false,
   },
   {
     stablecoinId: "cadc-cad-coin",
-    changedAt: Date.parse("2026-11-28T14:08:00Z") / 1000,
+    changedAt: Date.parse("2026-11-28T14:15:36Z") / 1000,
     chainIds: ["ethereum", "polygon", "arbitrum", "base", "linea", "solana"],
     evidenceUrl: "https://loon.finance/cadc",
     marketWide: false,
