@@ -86,6 +86,17 @@ async function archiveFixture(encoding?: "legacy" | "dictionary") {
 
 afterEach(() => vi.restoreAllMocks());
 
+/** Runs the local `list --gaps` CLI over 2026-10-01..08 against `sqlite` and parses its JSON report. */
+async function listOctoberGaps(sqlite: { prepare(sql: string): { all(): unknown[] } }, nowSec: number) {
+  const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+  const queryRaw = vi.fn((sql: string) => JSON.stringify([{ success: true, results: sqlite.prepare(sql).all() }]));
+  await runSafetyScoreCaptureArchiveCli(["list", "--gaps", "--from", "2026-10-01", "--to", "2026-10-08", "--local"],
+    { client: { queryRaw }, nowSec });
+  const outputCall = stdout.mock.calls[stdout.mock.calls.length - 1];
+  if (!outputCall) throw new Error("Expected archive gap report output");
+  return { report: JSON.parse(String(outputCall[0])), queryRaw };
+}
+
 describe("Safety Score capture archive export", () => {
   it.each(["legacy", "dictionary"] as const)("round-trips exact %s rows through the capture CLI parser and full envelope restoration, including offline export", async encoding => {
     const fixture = await archiveFixture(encoding);
@@ -193,13 +204,7 @@ describe("Safety Score capture archive export", () => {
       // Unchanged accepted publications have attempts but no change-only journal cards.
       insert.run(id, id, from + 200, from + 200, "accepted", row.methodology_version, row.policy_digest, row.evaluation_build_digest, 0, 1);
     }
-    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
-    const queryRaw = vi.fn((sql: string) => JSON.stringify([{ success: true, results: sqlite.prepare(sql).all() }]));
-    await runSafetyScoreCaptureArchiveCli(["list", "--gaps", "--from", "2026-10-01", "--to", "2026-10-08", "--local"],
-      { client: { queryRaw }, nowSec: from + 3_600 });
-    const outputCall = stdout.mock.calls[stdout.mock.calls.length - 1];
-    if (!outputCall) throw new Error("Expected archive gap report output");
-    const report = JSON.parse(String(outputCall[0]));
+    const { report, queryRaw } = await listOctoberGaps(sqlite, from + 3_600);
     expect(report.generations).toEqual([row]);
     expect(report.gaps).toHaveLength(1001);
     expect(report.gaps[0]).toMatchObject({
@@ -225,13 +230,7 @@ describe("Safety Score capture archive export", () => {
     const from = Date.parse("2026-10-01T00:00:00Z") / 1000;
     const generationId = `report-cards:v9:v1:${"d".repeat(64)}`;
     insertCronRun(sqlite, { startedAt: from + 300, metadata: JSON.stringify({ publication: { publicationGenerationId: generationId } }) });
-    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
-    const queryRaw = vi.fn((sql: string) => JSON.stringify([{ success: true, results: sqlite.prepare(sql).all() }]));
-    await runSafetyScoreCaptureArchiveCli(["list", "--gaps", "--from", "2026-10-01", "--to", "2026-10-08", "--local"],
-      { client: { queryRaw }, nowSec: from + 3_600 });
-    const outputCall = stdout.mock.calls[stdout.mock.calls.length - 1];
-    if (!outputCall) throw new Error("Expected archive gap report output");
-    const report = JSON.parse(String(outputCall[0]));
+    const { report } = await listOctoberGaps(sqlite, from + 3_600);
     expect(report.gaps).toEqual([{
       generation_id: generationId, evidence_sources: ["recent-cron"], journal: null,
       recent_cron_runs: [{ run_id: 1, started_at: from + 300, status: "ok" }],
@@ -254,13 +253,7 @@ describe("Safety Score capture archive export", () => {
     const metadata = JSON.stringify({ publication: { publicationGenerationId: generationId } });
     insertCronRun(sqlite, { startedAt: from + 210, metadata });
     insertCronRun(sqlite, { startedAt: from + 240, metadata, status: "degraded" });
-    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
-    const queryRaw = vi.fn((sql: string) => JSON.stringify([{ success: true, results: sqlite.prepare(sql).all() }]));
-    await runSafetyScoreCaptureArchiveCli(["list", "--gaps", "--from", "2026-10-01", "--to", "2026-10-08", "--local"],
-      { client: { queryRaw }, nowSec: from + 3_600 });
-    const outputCall = stdout.mock.calls[stdout.mock.calls.length - 1];
-    if (!outputCall) throw new Error("Expected archive gap report output");
-    const report = JSON.parse(String(outputCall[0]));
+    const { report } = await listOctoberGaps(sqlite, from + 3_600);
     expect(report.gaps).toHaveLength(1);
     expect(report.gaps[0]).toMatchObject({
       generation_id: generationId, evidence_sources: ["accepted-attempt-journal", "recent-cron"],
@@ -286,13 +279,7 @@ describe("Safety Score capture archive export", () => {
     insertCronRun(sqlite, { startedAt: to, metadata: JSON.stringify({ publication: { publicationGenerationId: `report-cards:v9:v1:${"3".repeat(64)}` } }) });
     insertCronRun(sqlite, { startedAt: from + 600, productive: 0, status: "skipped_neutral",
       metadata: JSON.stringify({ publication: { publicationGenerationId: `report-cards:v9:v1:${"4".repeat(64)}` } }) });
-    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
-    const queryRaw = vi.fn((sql: string) => JSON.stringify([{ success: true, results: sqlite.prepare(sql).all() }]));
-    await runSafetyScoreCaptureArchiveCli(["list", "--gaps", "--from", "2026-10-01", "--to", "2026-10-08", "--local"],
-      { client: { queryRaw }, nowSec: from + 3_600 });
-    const outputCall = stdout.mock.calls[stdout.mock.calls.length - 1];
-    if (!outputCall) throw new Error("Expected archive gap report output");
-    const report = JSON.parse(String(outputCall[0]));
+    const { report } = await listOctoberGaps(sqlite, from + 3_600);
     expect(report.gaps.map((gap: { generation_id: string }) => gap.generation_id)).toEqual([gapGeneration]);
     expect(report.recentCronEvidence.rows).toEqual({
       productive: 4, validGeneration: 2, archiveIndexed: 1, missingGeneration: 1, malformedGeneration: 1, gapGenerations: 1,

@@ -52,6 +52,8 @@ function freshRequiredFamilyRows(nowSec: number): Record<string, YieldCacheFixtu
   );
 }
 
+const loadState = (db: D1Database, nowSec: number) => loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+
 describe("supplemental family cache acceptance window", () => {
   beforeEach(() => {
     resetSyncYieldDataTest();
@@ -71,7 +73,7 @@ describe("supplemental family cache acceptance window", () => {
       [morphoKey]: supplementalFamilyCacheRow([morphoCandidate(nowSec - familyAgeSec)], nowSec - familyAgeSec),
     });
 
-    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+    const state = await loadState(db, nowSec);
 
     expect(state.supplementalCandidates).toEqual([morphoCandidate(nowSec - familyAgeSec)]);
     expect(state.supplementalMeta).toMatchObject({
@@ -95,7 +97,7 @@ describe("supplemental family cache acceptance window", () => {
       [morphoKey]: supplementalFamilyCacheRow([morphoCandidate(nowSec - familyAgeSec)], nowSec - familyAgeSec),
     });
 
-    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+    const state = await loadState(db, nowSec);
 
     expect(state.supplementalCandidates).toEqual([]);
     expect(state.supplementalMeta).toMatchObject({
@@ -138,7 +140,7 @@ describe("supplemental family cache acceptance window", () => {
 
     installYieldCacheReader(vi.mocked(getCache), rows);
 
-    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+    const state = await loadState(db, nowSec);
 
     // Only the sibling family's row survives. The same stored row is
     // `supplemental-malformed` on /status and cannot prove catch-up, so the
@@ -169,7 +171,7 @@ describe("supplemental family cache acceptance window", () => {
       }), nowSec),
     });
 
-    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+    const state = await loadState(db, nowSec);
 
     // Read validation quarantines the malformed row only; the family's valid
     // source still publishes (R8) and the run stays clean.
@@ -197,7 +199,7 @@ describe("supplemental family cache acceptance window", () => {
 
     installYieldCacheReader(vi.mocked(getCache), staleRows);
 
-    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+    const state = await loadState(db, nowSec);
 
     expect(state.supplementalCandidates).toEqual([]);
     expect(state.supplementalMeta).toMatchObject({
@@ -226,7 +228,7 @@ describe("supplemental family cache acceptance window", () => {
       ),
     });
 
-    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+    const state = await loadState(db, nowSec);
 
     expect(state.supplementalCandidates).toEqual([]);
     expect(state.supplementalMeta).toMatchObject({
@@ -256,7 +258,7 @@ describe("supplemental family cache acceptance window", () => {
       ),
     });
 
-    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+    const state = await loadState(db, nowSec);
 
     expect(state.supplementalMeta.degradedFamilies).toEqual(["morpho"]);
     expect(state.supplementalMeta.degradedFamilyReasons).toEqual({ morpho: "fetch-failed" });
@@ -277,7 +279,7 @@ describe("supplemental family cache acceptance window", () => {
         results, ["morpho"], nowSec - HOUR_SEC, { morpho: "old-fetch-failed" },
         { morpho: supplementalFamilySnapshotHash(oldRow) }), nowSec - HOUR_SEC),
     });
-    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+    const state = await loadState(db, nowSec);
     expect(state.supplementalMeta.degradedFamilies).not.toContain("morpho");
     expect(state.supplementalMeta.degradedFamilyReasons).not.toHaveProperty("morpho");
     expect(state.supplementalMeta.unknownOutcomeFamilies).toContain("morpho");
@@ -300,7 +302,7 @@ describe("supplemental family cache acceptance window", () => {
       }, nowSec),
     });
 
-    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+    const state = await loadState(db, nowSec);
 
     expect(state.supplementalMeta.degradedFamilies).toEqual([]);
   });
@@ -316,7 +318,7 @@ describe("supplemental family cache acceptance window", () => {
         supplementalFamilyCacheRow([pendleCandidate(nowSec - pendleAgeSec)], nowSec - pendleAgeSec),
     });
 
-    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+    const state = await loadState(db, nowSec);
 
     expect(state.supplementalCandidates).toEqual([pendleCandidate(nowSec - pendleAgeSec)]);
     expect(state.supplementalMeta).toMatchObject({
@@ -337,7 +339,7 @@ describe("supplemental family cache acceptance window", () => {
         supplementalFamilyCacheRow([pendleCandidate(nowSec - pendleAgeSec)], nowSec - pendleAgeSec),
     });
 
-    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+    const state = await loadState(db, nowSec);
 
     expect(state.supplementalCandidates).toEqual([]);
     expect(state.supplementalMeta).toMatchObject({
@@ -366,7 +368,7 @@ describe("supplemental family cache acceptance window", () => {
       ),
     });
 
-    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+    const state = await loadState(db, nowSec);
 
     if (expectedReason == null) {
       expect(state.supplementalMeta).toMatchObject({ fallbackMode: null, degradedFamilies: [] });

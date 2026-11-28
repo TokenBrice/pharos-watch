@@ -144,6 +144,8 @@ afterEach(() => {
   fixtures.closeAll();
 });
 
+const deliverDaily = (db: D1Database) => deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+
 describe("Telegram digest outbox", () => {
   it.each(["current", "previous", "legacy", "launch"] as const)("preserves later announcements with the %s finalizer/payload", async (mode) => {
     const { sqlite, db } = fixtures.open();
@@ -172,7 +174,7 @@ describe("Telegram digest outbox", () => {
       }
     } else {
       mockFetch([{ match: () => true, body: { ok: true } }]);
-      expect((await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10")).outcome).toBe("sent");
+      expect((await deliverDaily(db)).outcome).toBe("sent");
     }
     expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(pendingKey)).toEqual({
       value: JSON.stringify(mode === "previous" || mode === "legacy" ? ["usdt-tether", "usdc-circle"] : ["usdc-circle"]),
@@ -213,7 +215,7 @@ describe("Telegram digest outbox", () => {
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     });
 
-    const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+    const result = await deliverDaily(db);
 
     expect(result).toMatchObject({ outcome: "sent", chunksSent: 1 });
     expect(fetchSpy.mock.calls.map((call) => String(call[0]).split("/").pop())).toEqual([
@@ -247,7 +249,7 @@ describe("Telegram digest outbox", () => {
       ],
     }]);
 
-    const first = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+    const first = await deliverDaily(db);
 
     expect(first).toMatchObject({
       outcome: "pending",
@@ -294,7 +296,7 @@ describe("Telegram digest outbox", () => {
       ],
     }]);
 
-    const first = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+    const first = await deliverDaily(db);
 
     expect(first).toMatchObject({ outcome: "pending", chunksSent: 0, nextChunkIndex: 0 });
     expect(loadEdition(sqlite)).toMatchObject({
@@ -320,7 +322,7 @@ describe("Telegram digest outbox", () => {
     await enqueueDaily(db);
     const fetchMock = mockFetch([{ match: () => true, body: { ok: true } }]);
 
-    const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+    const result = await deliverDaily(db);
 
     expect(result).toMatchObject({ outcome: "sent", chunksSent: 1 });
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/sendMessage");
@@ -346,7 +348,7 @@ describe("Telegram digest outbox", () => {
       },
     }]);
 
-    const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+    const result = await deliverDaily(db);
 
     expect(statesAtFetch).toEqual(["sending"]);
     expect(result).toMatchObject({ outcome: "sent", state: "sent", chunksSent: 1 });
@@ -374,7 +376,7 @@ describe("Telegram digest outbox", () => {
       ],
     }]);
 
-    const first = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+    const first = await deliverDaily(db);
     expect(first).toMatchObject({ outcome: "pending", errorClass: "rate_limit", retryAfterSec: 45 });
     expect(loadEdition(sqlite)).toMatchObject({ state: "pending", attempts: 1 });
     const retryAt = loadEdition(sqlite).next_attempt_at!;
@@ -428,7 +430,7 @@ describe("Telegram digest outbox", () => {
       ],
     }]);
 
-    const first = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+    const first = await deliverDaily(db);
     expect(first).toMatchObject({ outcome: "pending", chunksSent: 1, nextChunkIndex: 1 });
     expect(loadEdition(sqlite)).toMatchObject({ state: "pending", next_chunk_index: 1 });
     expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(successActions[0]!.key)).toBeUndefined();
@@ -454,7 +456,7 @@ describe("Telegram digest outbox", () => {
     await enqueueDaily(db, { successActions });
     const fetchMock = mockFetch([{ match: () => true, outcomes: [new DOMException("timed out after request start", "TimeoutError")] }]);
 
-    const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+    const result = await deliverDaily(db);
     expect(result).toMatchObject({ outcome: "execution_unknown", errorClass: "timeout" });
     expect(loadEdition(sqlite)).toMatchObject({ state: "execution_unknown", next_chunk_index: 0 });
 
@@ -522,7 +524,7 @@ describe("Telegram digest outbox", () => {
     }]);
 
     for (let attempt = 1; attempt <= 13; attempt++) {
-      const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+      const result = await deliverDaily(db);
       const row = loadEdition(sqlite);
       expect(row.attempts).toBe(attempt);
       if (attempt < 13) {
@@ -557,7 +559,7 @@ describe("Telegram digest outbox", () => {
       status: 503,
     }]);
 
-    const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+    const result = await deliverDaily(db);
 
     expect(result).toMatchObject({
       outcome: "failed_permanent",
@@ -608,7 +610,7 @@ describe("Telegram digest outbox", () => {
       ]), "daily:2026-07-10");
     const fetchMock = mockFetch([], { requireMatch: true });
 
-    const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+    const result = await deliverDaily(db);
 
     expect(result).toMatchObject({ outcome: "failed_permanent", chunksSent: 0, chunkCount: 0 });
     expect(result.errorClass).toMatch(/^invalid_stored_payload:/);
@@ -632,7 +634,7 @@ describe("Telegram digest outbox", () => {
 
     // A later run of the same edition reports the named terminal state instead
     // of throwing while reading a payload it can never send.
-    const replay = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+    const replay = await deliverDaily(db);
     expect(replay).toMatchObject({
       outcome: "skipped",
       state: "failed_permanent",
@@ -689,7 +691,7 @@ describe("Telegram digest outbox", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockFetch([{ match: () => true, body: { ok: true } }]);
 
-    await expect(deliverTelegramDigestEdition(db, creds, "daily:2026-07-10"))
+    await expect(deliverDaily(db))
       .rejects.toThrow("fault after Telegram acceptance");
 
     expect(loadEdition(sqlite)).toMatchObject({
@@ -712,7 +714,7 @@ describe("Telegram digest outbox", () => {
       status: 400,
     }]);
 
-    const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+    const result = await deliverDaily(db);
     expect(result).toMatchObject({ outcome: "failed_permanent", errorClass: "formatting_error" });
     expect(loadEdition(sqlite)).toMatchObject({
       state: "failed_permanent",
@@ -744,7 +746,7 @@ describe("Telegram digest outbox", () => {
     expect(candidate).toMatchObject({ created: false, payloadMatched: false });
     expect(JSON.parse(loadEdition(sqlite).payload_chunks_json)).toEqual(retained);
     const fetchMock = mockFetch([{ match: () => true, body: { ok: true } }]);
-    expect(await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10"))
+    expect(await deliverDaily(db))
       .toMatchObject({ outcome: "sent", chunksSent: 2 });
     expect(fetchMock.mock.calls.map(telegramRequestText)).toEqual(retained);
     expect(JSON.parse(loadEdition(sqlite).payload_chunks_json)).toEqual(retained);
@@ -825,7 +827,7 @@ describe("Telegram digest outbox", () => {
       );
     const fetchMock = mockFetch([], { requireMatch: true });
 
-    const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+    const result = await deliverDaily(db);
 
     expect(result).toMatchObject({
       outcome: "failed_permanent",
@@ -866,7 +868,7 @@ describe("Telegram digest outbox", () => {
     });
     const fetchMock = mockFetch([], { requireMatch: true });
 
-    const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+    const result = await deliverDaily(db);
 
     expect(result).toMatchObject({
       outcome: "failed_permanent",

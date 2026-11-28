@@ -49,6 +49,8 @@ afterEach(() => {
   sqliteFixtures.closeAll();
 });
 
+const remediateRequest = () => makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" });
+
 describe("handleRemediateBlacklistAmountGaps", () => {
   it.each([
     [10, "resolved"], [null, "resolved"], [10, "suppressed"], [null, "suppressed"],
@@ -69,7 +71,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
     });
     const pending = handleRemediateBlacklistAmountGapsTrusted({
       db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps?dryRun=false"),
-      request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+      request: remediateRequest(),
     });
     await providerStarted;
     if (mutation === "suppressed") {
@@ -100,7 +102,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue(receiptResponse(25));
     const response = await handleRemediateBlacklistAmountGapsTrusted({
       db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps?dryRun=false&onlyMissingProvenance=true"),
-      request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+      request: remediateRequest(),
     });
     expect((await readJsonResponse(response, 200) as { applied: { resolved: number } }).applied.resolved).toBe(1);
     expect(sqlite.prepare(`SELECT amount_native, amount_status, config_key IS NOT NULL AS has_config,
@@ -122,7 +124,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
     });
     const response = await handleRemediateBlacklistAmountGapsTrusted({
       db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps?dryRun=false"),
-      request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+      request: remediateRequest(),
     });
     expect((await readJsonResponse(response, 200) as { applied: { resolved: number; providerFailed: number } }).applied)
       .toMatchObject({ resolved: 0, providerFailed: 1 });
@@ -157,7 +159,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
       vi.mocked(fetchAlchemyLogs).mockResolvedValue({ logs: [], complete: true, scannedToBlock: 100, calls: 1, maxDepth: 0 });
       const response = await handleRemediateBlacklistAmountGapsTrusted({
         db, chainRpcs, url: makeApiUrl("/api/remediate-blacklist-amount-gaps?dryRun=false"),
-        request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+        request: remediateRequest(),
       });
       expect((await readJsonResponse(response, 200) as { applied: { resolved: number } }).applied.resolved)
         .toBe(outcome === "resolved" ? 1 : 0);
@@ -196,7 +198,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
     });
     const response = await handleRemediateBlacklistAmountGapsTrusted({
       db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps?dryRun=false"),
-      request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+      request: remediateRequest(),
     });
     expect(await readJsonResponse(response, 200)).toMatchObject({
       budgetExhausted: true, skippedDueBudget: 1,
@@ -214,7 +216,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
     const response = await handleRemediateBlacklistAmountGapsTrusted({
       db,
       url: makeApiUrl(`/api/remediate-blacklist-amount-gaps?chainId=tron&dryRun=${dryRun}`),
-      request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+      request: remediateRequest(),
     });
 
     expect(response.status).toBe(400);
@@ -233,7 +235,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
     const response = await handleRemediateBlacklistAmountGapsTrusted({
       db,
       url: makeApiUrl(`/api/remediate-blacklist-amount-gaps?dryRun=${dryRun}`),
-      request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+      request: remediateRequest(),
     });
 
     expect(response.status).toBe(200);
@@ -255,7 +257,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
     const before = sqlite.prepare("SELECT * FROM blacklist_events ORDER BY id").all();
     const response = await handleRemediateBlacklistAmountGapsTrusted({
       db, url: makeApiUrl(`/api/remediate-blacklist-amount-gaps?dryRun=${dryRun}`),
-      request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+      request: remediateRequest(),
     });
     expect(await readJsonResponse(response, 200)).toMatchObject({ candidateCount: 0 });
     expect(sqlite.prepare("SELECT * FROM blacklist_events ORDER BY id").all()).toEqual(before);
@@ -579,7 +581,7 @@ describe("handleRemediateBlacklistAmountGaps ambiguous commit", () => {
     const response = await handleRemediateBlacklistAmountGapsTrusted({
       db,
       url: makeApiUrl("/api/remediate-blacklist-amount-gaps?dryRun=false"),
-      request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+      request: remediateRequest(),
     });
 
     // Precondition: the first attempt committed the repair to D1.

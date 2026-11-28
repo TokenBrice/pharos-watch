@@ -319,6 +319,10 @@ function reserveParentCascadeFixture() {
 
 const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
 
+/** Candidate built from `fixedInput` with its reviewed extension at the fixture publication clock. */
+const buildReviewedCandidate = (fixedInput: Parameters<typeof reviewedExtension>[0]) =>
+  buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+
 describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
   let cascadeFixture!: ReturnType<typeof reserveParentCascadeFixture>;
   let cascadeBaseline!: ReturnType<typeof buildSafetyScoreV9Candidate>;
@@ -336,7 +340,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       sharedBookAssetIds: ["alpha"],
     };
     fixedInput.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixedInput);
-    const result = buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+    const result = buildReviewedCandidate(fixedInput);
     const fact = result.compiledFacts.assets[0]!.supply;
     const fingerprint = Object.values(result.compiledFacts.sourceFingerprints).find((source) => source.generationId === fact.sourceGenerationId)!;
     expect(result.candidate.cards[0]!.supply).toEqual({
@@ -349,7 +353,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
 
   it("prefers the first unverified intermediary for a structural serial claim", () => {
     const fixedInput = exactFixedInput("alpha");
-    const result = buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+    const result = buildReviewedCandidate(fixedInput);
     const asset = structuredClone(result.compiledFacts.assets[0]!);
     asset.dependencies.edges = [{
       edgeKey: "wrapper:beta", upstreamAssetId: "beta", dependencyType: "wrapper",
@@ -372,7 +376,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
 
   it("keeps a mixed native and verified bridge aggregate unannotated, but preserves unverified risk", () => {
     const fixedInput = exactFixedInput("alpha");
-    const result = buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+    const result = buildReviewedCandidate(fixedInput);
     const asset = structuredClone(result.compiledFacts.assets[0]!);
     asset.dependencies.edges = [{
       edgeKey: "wrapper:beta", upstreamAssetId: "beta", dependencyType: "wrapper",
@@ -390,14 +394,14 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
 
   it("does not assign the Sky shared book to an unknown captured scope", () => {
     const fixedInput = exactFixedInput("alpha");
-    const result = buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+    const result = buildReviewedCandidate(fixedInput);
     Object.assign(fixedInput.liveReserveProvenanceMap.alpha!, { balanceSheetScope: "unknown-book", sharedBookAssetIds: ["alpha"] });
     expect(publicDependencyMetadata(result.compiledFacts.assets[0]!, result.compiledFacts, fixedInput, { id: "alpha" }).sharedBookId).toBeNull();
   });
 
   it("retains distinct keyed withheld slices sharing a label and preserves different reasons", () => {
     const fixedInput = exactFixedInput("alpha");
-    const result = buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+    const result = buildReviewedCandidate(fixedInput);
     const asset = structuredClone(result.compiledFacts.assets[0]!);
     asset.dependencies.edges = [];
     asset.gaps = [];
@@ -417,7 +421,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
 
   it("discloses an untyped sibling even when the same upstream has a modeled edge", () => {
     const fixedInput = exactFixedInput("alpha");
-    const result = buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+    const result = buildReviewedCandidate(fixedInput);
     const asset = structuredClone(result.compiledFacts.assets[0]!);
     asset.dependencies.edges = [{
       edgeKey: "wrapper:beta", upstreamAssetId: "beta", dependencyType: "wrapper",
@@ -443,7 +447,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
 
   it("discloses withheld identities without inventing graph endpoints or treating cash as a relationship", () => {
     const fixedInput = exactFixedInput("alpha");
-    const result = buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+    const result = buildReviewedCandidate(fixedInput);
     const asset = structuredClone(result.compiledFacts.assets[0]!);
     asset.dependencies.edges = [];
     asset.dependencies.rejectionReasons = [{ sliceIndex: 0, reason: "no-match" }, { sliceIndex: 1, reason: "expired" }];

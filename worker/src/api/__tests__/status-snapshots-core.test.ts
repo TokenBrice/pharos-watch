@@ -35,6 +35,11 @@ import {
 } from "./status.test-support";
 import { TELEGRAM_PENDING_CAPACITY_SQL } from "../../telegram/outbox/pending-capacity";
 
+/** Trusted admin `GET /api/status` with a request carrying the admin key. */
+function adminStatus(db: Parameters<typeof handleStatus>[0]["db"], extra: Omit<Parameters<typeof handleStatus>[0], "db"> = {}) {
+  return handleStatus({ db, trustedAdmin: true, request: fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" }), ...extra });
+}
+
 function fixtureMockD1(
   overrides: NonNullable<Parameters<typeof buildStatusD1Scenario>[0]>["overrides"] = [],
 ) {
@@ -434,16 +439,9 @@ describe("handleStatus", () => {
       },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
 
-    const body = (await readJsonResponse(res, 200)) as {
-      rawOverallStatus: string;
-      availabilityStatus: string;
-      overallStatus: string;
-      confidence: number;
-      causes: { availability: Array<{ code: string }> };
-    };
+    const body = await readJsonResponse<StatusResponse>(res, 200);
     expect(body.rawOverallStatus).toBe("degraded");
     expect(body.availabilityStatus).toBe("degraded");
     expect(body.overallStatus).toBe("degraded");
@@ -598,24 +596,9 @@ describe("handleStatus", () => {
       },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request, workerCanaryMode: "status" });
+    const res = await adminStatus(db, { workerCanaryMode: "status" });
 
-    const body = (await readJsonResponse(res, 200)) as {
-      summary: {
-        canaryTotalChecks?: number;
-        canaryErrorCount?: number;
-        canaryDegradedCount?: number;
-        canarySkippedCount?: number;
-        canaryStaleCount?: number;
-      };
-      canaries: {
-        errorCount: number;
-        degradedCount: number;
-        skippedCount: number;
-        staleCount: number;
-      } | null;
-    };
+    const body = await readJsonResponse<StatusResponse>(res, 200);
     expect(body.summary).toMatchObject({
       canaryTotalChecks: 3,
       canaryErrorCount: 1,
@@ -666,14 +649,9 @@ describe("handleStatus", () => {
       },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request, workerCanaryMode: "status" });
+    const res = await adminStatus(db, { workerCanaryMode: "status" });
 
-    const body = (await readJsonResponse(res, 200)) as {
-      summary: Record<string, unknown>;
-      canaries: unknown;
-      sectionErrors: Record<string, { code: string }>;
-    };
+    const body = await readJsonResponse<StatusResponse>(res, 200);
     expect(body.canaries).toBeNull();
     expect(body.sectionErrors.canaries?.code).toBe("canary_status_query_failed");
     expect(body.summary).not.toHaveProperty("canaryTotalChecks");
@@ -698,13 +676,9 @@ describe("handleStatus", () => {
       },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
 
-    const body = (await readJsonResponse(res, 200)) as {
-      dependencyHealth: Record<string, unknown> | null;
-      sectionErrors: Record<string, { code: string; message: string } | undefined>;
-    };
+    const body = await readJsonResponse<StatusResponse>(res, 200);
     expect(dependencyHealthSpy).toHaveBeenCalledOnce();
     expect(body.dependencyHealth).toBeNull();
     expect(body.sectionErrors.dependencyHealth).toEqual({
@@ -748,15 +722,9 @@ describe("handleStatus", () => {
       ...makeMinimalLiveStatusRows(now),
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
 
-    const body = (await readJsonResponse(res, 200)) as {
-      rawOverallStatus: string;
-      availabilityStatus: string;
-      causes: { availability: Array<{ code: string }> };
-      sectionErrors: Record<string, { code: string; message: string } | undefined>;
-    };
+    const body = await readJsonResponse<StatusResponse>(res, 200);
     expect(["healthy", "degraded", "stale"]).toContain(body.rawOverallStatus);
     expect(["healthy", "degraded", "stale"]).toContain(body.availabilityStatus);
     expect(body.causes.availability.map((cause) => cause.code)).not.toContain("stale-snapshot-sentinel");
@@ -779,11 +747,7 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status?refresh=live", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    const body = (await readJsonResponse(res, 200)) as {
-      rawOverallStatus: string;
-      availabilityStatus: string;
-      causes: { availability: Array<{ code: string }> };
-    };
+    const body = await readJsonResponse<StatusResponse>(res, 200);
     expect(["healthy", "degraded", "stale"]).toContain(body.rawOverallStatus);
     expect(["healthy", "degraded", "stale"]).toContain(body.availabilityStatus);
     expect(body.causes.availability.map((cause) => cause.code)).not.toContain("fresh-snapshot-sentinel");
@@ -867,8 +831,7 @@ describe("handleStatus", () => {
         consecutive_stale: 0, confidence: 1, causes_json: "[]" } },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
 
     const body = (await readJsonResponse(res, 200)) as StatusResponse;
     for (const key of [
@@ -937,8 +900,7 @@ describe("handleStatus", () => {
         } }),
       }] },
     ]);
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
     const body = await readJsonResponse<{ liquidityHealth: unknown }>(res, 200);
     expect(body.liquidityHealth).toMatchObject({
       currentCoverage: 120, previousCoverage: null,
@@ -969,8 +931,7 @@ describe("handleStatus", () => {
       }] },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
 
     const body = await readJsonResponse<{
       liquidityHealth: unknown;
@@ -1031,8 +992,7 @@ describe("handleStatus", () => {
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
 
     const body = (await readJsonResponse(res, 200)) as Record<string, unknown>;
 
@@ -1089,13 +1049,7 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    const body = (await readJsonResponse(res, 200)) as {
-      availabilityStatus: string;
-      summary: { unhealthyCrons: number | null; cronErrors: number | null; cronHistoryUnavailableReason?: string | null };
-      sectionErrors: Record<string, { code: string }>;
-      crons: Record<string, { healthy: boolean | null; telemetryUnknown?: boolean; telemetryUnknownReason?: string }>;
-      causes: { availability: Array<{ code: string }> };
-    };
+    const body = await readJsonResponse<StatusResponse>(res, 200);
 
     expect(body.availabilityStatus).toBe("healthy");
     expect(body.summary.unhealthyCrons).toBeNull();
@@ -1306,8 +1260,7 @@ describe("handleStatus telegram and cron surfaces", () => {
     const db = telegramStatusMockD1([
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
 
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
@@ -1323,8 +1276,7 @@ describe("handleStatus telegram and cron surfaces", () => {
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
     const body = (await res.json()) as {
       crons: Record<string, { runs: unknown[]; healthy: boolean; expectedIntervalSec: number }>;
     };
@@ -1383,15 +1335,7 @@ describe("handleStatus telegram and cron surfaces", () => {
     const request = fixtureMakeApiRequest("/api/status?refresh=live", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    const body = (await readJsonResponse(res, 200)) as {
-      budgetOnlySurfaces: Array<{
-        job: string;
-        telemetryStatus: string;
-        outcome: string;
-        skippedReason?: string | null;
-      }>;
-      summary: { budgetOnlySurfaceCount?: number; budgetOnlySurfaceMissingTelemetry?: number };
-    };
+    const body = await readJsonResponse<StatusResponse>(res, 200);
     expect(body.budgetOnlySurfaces).toEqual([
       expect.objectContaining({
         job: "price-corroboration",
@@ -1535,8 +1479,7 @@ describe("handleStatus telegram and cron surfaces", () => {
     { match: "blacklist_events", rows: [], first: { total: 1000, missing: 0, missing_recent: 0 } },
     { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },], true);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
     const body = (await res.json()) as {
       availabilityStatus: string;
       summary: { unhealthyCrons: number; cronErrors: number };
@@ -1575,8 +1518,7 @@ describe("handleStatus telegram and cron surfaces", () => {
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
     const body = (await res.json()) as {
       crons: Record<string, { healthy: boolean; inFlight?: unknown | null }>;
       summary: { unhealthyCrons: number };
@@ -1601,8 +1543,7 @@ describe("handleStatus telegram and cron surfaces", () => {
     { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
     { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },], true);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
     const body = (await res.json()) as {
       availabilityStatus: string;
       summary: {
@@ -1684,8 +1625,7 @@ describe("handleStatus telegram and cron surfaces", () => {
       },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
     const body = (await res.json()) as {
       telegramBot: {
         totalChats: number;
@@ -1774,12 +1714,8 @@ describe("handleStatus telegram and cron surfaces", () => {
       },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
-    const body = (await readJsonResponse(res, 200)) as {
-      sectionErrors: Record<string, { code: string; message: string } | undefined>;
-      telegramBot: unknown;
-    };
+    const res = await adminStatus(db);
+    const body = await readJsonResponse<StatusResponse>(res, 200);
 
     expect(body.telegramBot).toBeNull();
     expect(body.sectionErrors.telegramBot).toEqual({
@@ -1815,13 +1751,8 @@ describe("handleStatus telegram and cron surfaces", () => {
       return originalPrepare(sql);
     }) as typeof db.prepare;
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
-    const body = (await readJsonResponse(res, 200)) as {
-      dbHealthy: boolean;
-      rawOverallStatus: string;
-      overallStatus: string;
-    };
+    const res = await adminStatus(db);
+    const body = await readJsonResponse<StatusResponse>(res, 200);
 
     expect(body.dbHealthy).toBe(false);
     expect(["degraded", "stale"]).toContain(body.rawOverallStatus);
@@ -1841,8 +1772,7 @@ describe("handleStatus telegram and cron surfaces", () => {
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
     const body = (await res.json()) as {
       crons: Record<string, { healthy: boolean }>;
     };
@@ -1868,8 +1798,7 @@ describe("handleStatus telegram and cron surfaces", () => {
     { match: "blacklist_events", rows: [], first: { total: 1000, missing: 1, missing_recent: 0 } },
     { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },], true);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
     const body = (await res.json()) as {
       availabilityStatus: string;
       summary: { unhealthyCrons: number; degradedCrons: number };

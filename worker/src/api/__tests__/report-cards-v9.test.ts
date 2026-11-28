@@ -83,6 +83,12 @@ async function seedCohort() {
   return { sqlite, db: createSqliteD1(sqlite), publication: cohortPublication! };
 }
 
+/** The next accepted publication after the seeded one. */
+const nextPublication = () => makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
+/** Persist `publication` while leaving public materialization pending. */
+const persistDeferred = (db: D1Database, publication: Parameters<typeof currentInput>[0]) =>
+  persistSafetyScoreV9Publication(db, { ...currentInput(publication), deferPublicMaterialization: true });
+
 const databases: DatabaseSync[] = [];
 function database() {
   const sqlite = createLatestSchemaSqlite().sqlite;
@@ -516,7 +522,7 @@ describe("materialized V9 response", () => {
     const before = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
     const manifests = sqlite.prepare("SELECT * FROM safety_score_public_manifests").all();
     sqlite.exec("CREATE TRIGGER refuse_fragment BEFORE INSERT ON safety_score_public_fragments BEGIN SELECT RAISE(ABORT, 'fragment failed'); END");
-    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
+    const next = nextPublication();
     await expect(persistSafetyScoreV9Publication(db, currentInput(next))).rejects.toThrow();
     expect(sqlite.prepare("SELECT * FROM cache ORDER BY key").all()).toEqual(before);
     expect(sqlite.prepare("SELECT * FROM safety_score_public_manifests").all()).toEqual(manifests);
@@ -524,7 +530,7 @@ describe("materialized V9 response", () => {
 
   it("without deferral, selects the staged generation inside the acceptance batch", async () => {
     const { db, sqlite } = await seed();
-    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
+    const next = nextPublication();
     expect((await persistSafetyScoreV9Publication(db, currentInput(next))).acceptedMaterialization).toBeNull();
     expect(readManifest(sqlite).safetyScoreIdentity.publicationGenerationId).toBe(next.publicationGenerationId);
     expect(JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)!.value as string))
@@ -539,8 +545,8 @@ describe("materialized V9 response", () => {
     const marker = sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY);
     expect(JSON.parse(marker!.value as string)).toMatchObject({ publicationGenerationId: publication.publicationGenerationId });
     sqlite.exec("CREATE TRIGGER refuse_fragment BEFORE INSERT ON safety_score_public_fragments BEGIN SELECT RAISE(ABORT, 'fragment failed'); END");
-    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
-    const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
+    const next = nextPublication();
+    const persisted = await persistDeferred(db, next);
     await expect(materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!)).rejects.toThrow();
     expect(sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)).toEqual(marker);
     expect(sqlite.prepare("SELECT * FROM safety_score_public_manifests").all()).toEqual(manifests);
@@ -580,9 +586,9 @@ describe("materialized V9 response", () => {
 
   it("does not select a materialization whose generation is no longer accepted", async () => {
     const { db, sqlite, publication } = await seed();
-    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
+    const next = nextPublication();
     const third = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 150, publicationGenerationId: "report-cards:v9:third" });
-    const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
+    const persisted = await persistDeferred(db, next);
     await persistSafetyScoreV9Publication(db, { ...currentInput(third), deferPublicMaterialization: true });
     expect(await materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!))
       .toEqual({ status: "superseded", publicationGenerationId: next.publicationGenerationId });
@@ -606,7 +612,7 @@ describe("materialized V9 response", () => {
 
   it("never advances representation selection on a stale accepted writer", async () => {
     const { db, sqlite, publication } = await seed();
-    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
+    const next = nextPublication();
     await persistAndMaterialize(db, currentInput(next));
     await expect(persistSafetyScoreV9Publication(db, currentInput(publication))).rejects.toThrow();
     expect(readManifest(sqlite).safetyScoreIdentity.publicationGenerationId).toBe(next.publicationGenerationId);
@@ -646,7 +652,7 @@ describe("materialized V9 response", () => {
     const { db, sqlite, publication } = await seedCohort();
     const oldRows = sqlite.prepare("SELECT key, value, updated_at FROM cache").all();
     const expected = ReportCardsV9CurrentResponseSchema.parse(await (await handleReportCardsV9(db)).json());
-    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
+    const next = nextPublication();
     await persistAndMaterialize(db, currentInput(next));
     const nextRows = sqlite.prepare("SELECT key, value, updated_at FROM cache").all();
     const selection = sqlite.prepare("UPDATE safety_score_public_manifests SET retired_at = CASE WHEN generation_id = ? THEN NULL ELSE 1 END");
@@ -793,7 +799,7 @@ describe("generation-bound compact Safety Scores", () => {
       cards: publication.cards.map(card => card.id === "usdc-circle" ? makeReportCardsV9PricedExcludedCard(cause, { id: "usdc-circle" }) : card),
       publishedAtSec: 130, publicationGenerationId: "report-cards:v9:priced-excluded",
     });
-    const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
+    const persisted = await persistDeferred(db, next);
     await materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!);
     const responses = [await handleReportCardsV9(db), await handleReportCardsV9Table(db), await handleReportCardsV9Detail(db, detailUrl())];
     const bodies = await Promise.all(responses.map(response => response.json() as Promise<{ completeness: unknown }>));
@@ -817,7 +823,7 @@ describe("generation-bound compact Safety Scores", () => {
       cards: [publication.cards[0]!, makeReportCardsV9Card({ id: "lusd-liquity" }), ...publication.cards.slice(1)],
       publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next",
     });
-    const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
+    const persisted = await persistDeferred(db, next);
     const before = sqlite.prepare("SELECT * FROM safety_score_site_manifests").all();
     const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
     const pending = await handleReportCardsV9Detail(db, detailUrl("lusd-liquity"));
@@ -890,8 +896,8 @@ describe("generation-bound compact Safety Scores", () => {
     const table = await (await handleReportCardsV9Table(db)).json() as object;
     const detail = await (await handleReportCardsV9Detail(db, detailUrl())).json() as object;
     sqlite.exec("CREATE TRIGGER refuse_site BEFORE INSERT ON safety_score_site_fragments BEGIN SELECT RAISE(ABORT, 'site write failed'); END");
-    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
-    const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
+    const next = nextPublication();
+    const persisted = await persistDeferred(db, next);
     expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex)!.updated_at).toBe(130);
     await expect(materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!)).rejects.toThrow();
     for (const age of [60, CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec, CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec + 1]) {
@@ -918,8 +924,8 @@ describe("generation-bound compact Safety Scores", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(140_000);
     sqlite.exec("CREATE TRIGGER refuse_site BEFORE INSERT ON safety_score_site_fragments BEGIN SELECT RAISE(ABORT, 'site write failed'); END");
-    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
-    const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
+    const next = nextPublication();
+    const persisted = await persistDeferred(db, next);
     await expect(materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!)).rejects.toThrow();
 
     // The accepted row's clock leads this reading isolate by 10 s (writer/reader
@@ -951,7 +957,7 @@ describe("generation-bound compact Safety Scores", () => {
       cards: [makeReportCardsV9Card({ id: "dai-makerdao", evidence: { level: "adequate", freshness: "current", reasons: [{
         code: "unresolved-control-identity", message: "x".repeat(2_400_000), path: "control:incidentState",
       }] } }), makeReportCardsV9Card({ id: "usdc-circle" })] });
-    const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
+    const persisted = await persistDeferred(db, next);
     const source = structuredClone(persisted.acceptedMaterialization!);
     const canonical = sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication);
     const selected = sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY);
@@ -1092,7 +1098,7 @@ describe("generation-bound compact Safety Scores", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(140_000);
     const marker = sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY);
-    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
+    const next = nextPublication();
     let removed = false;
     const racedDb = {
       ...db,

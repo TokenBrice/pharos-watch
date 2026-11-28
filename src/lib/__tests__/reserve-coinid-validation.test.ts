@@ -19,6 +19,13 @@ const KNOWN_TICKERS = [
   "FRXUSD",
   "USD0",
 ];
+// Reasons shared by several reviewed rows.
+const IST_PSM_BUCKET =
+  "IST's PSM bucket aggregates multiple IBC stablecoins, so no single tracked stablecoin coinId is representative.";
+const LEGACY_FRAX_SELF_EXPOSURE =
+  "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.";
+const RE_POOLED_ATTRIBUTION_WITHHELD =
+  "Re protocol-pooled reserve; token attribution withheld without an attributable denominator and tranche waterfall (WS1.B3 gate, NC-116)";
 const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "u-united-stables::USDC, USDT and USD1 stablecoins (individual and Binance-Peg weights undisclosed)::USDC",
@@ -82,15 +89,15 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   ],
   [
     "ist-agoric::Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)::USDC",
-    "IST's PSM bucket aggregates multiple IBC stablecoins, so no single tracked stablecoin coinId is representative.",
+    IST_PSM_BUCKET,
   ],
   [
     "ist-agoric::Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)::USDT",
-    "IST's PSM bucket aggregates multiple IBC stablecoins, so no single tracked stablecoin coinId is representative.",
+    IST_PSM_BUCKET,
   ],
   [
     "ist-agoric::Parity Stability Module stablecoin reserves (IBC USDC/USDT/DAI)::DAI",
-    "IST's PSM bucket aggregates multiple IBC stablecoins, so no single tracked stablecoin coinId is representative.",
+    IST_PSM_BUCKET,
   ],
   [
     "nxusd-nereus::Nereus overcollateralized crypto positions including DAI collateral::DAI",
@@ -110,47 +117,47 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   ],
   [
     "frax-frax::Legacy FRAX (ethereum)::FRAX",
-    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+    LEGACY_FRAX_SELF_EXPOSURE,
   ],
   [
     "frax-frax::Legacy FRAX (bsc)::FRAX",
-    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+    LEGACY_FRAX_SELF_EXPOSURE,
   ],
   [
     "frax-frax::Legacy FRAX (arbitrum)::FRAX",
-    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+    LEGACY_FRAX_SELF_EXPOSURE,
   ],
   [
     "frax-frax::Legacy FRAX (avalanche)::FRAX",
-    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+    LEGACY_FRAX_SELF_EXPOSURE,
   ],
   [
     "frax-frax::Legacy FRAX (optimism)::FRAX",
-    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+    LEGACY_FRAX_SELF_EXPOSURE,
   ],
   [
     "frax-frax::Legacy FRAX (fantom)::FRAX",
-    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+    LEGACY_FRAX_SELF_EXPOSURE,
   ],
   [
     "frax-frax::Legacy FRAX (polygon)::FRAX",
-    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+    LEGACY_FRAX_SELF_EXPOSURE,
   ],
   [
     "frax-frax::Legacy FRAX (boba)::FRAX",
-    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+    LEGACY_FRAX_SELF_EXPOSURE,
   ],
   [
     "frax-frax::Legacy FRAX (zksync)::FRAX",
-    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+    LEGACY_FRAX_SELF_EXPOSURE,
   ],
   [
     "frax-frax::Legacy FRAX (polygon-zkevm)::FRAX",
-    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+    LEGACY_FRAX_SELF_EXPOSURE,
   ],
   [
     "frax-frax::Legacy FRAX (aurora)::FRAX",
-    "Legacy v1 FRAX held on the Frax balance sheet against its verified issuer deployment is subject self exposure, not an upstream dependency edge.",
+    LEGACY_FRAX_SELF_EXPOSURE,
   ],
   [
     "frax-frax::Other reported Frax assets::FRAX",
@@ -190,27 +197,27 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   ],
   [
     "reusd-re-protocol::reUSD / sUSDe LP position::USDe",
-    "Re protocol-pooled reserve; token attribution withheld without an attributable denominator and tranche waterfall (WS1.B3 gate, NC-116)",
+    RE_POOLED_ATTRIBUTION_WITHHELD,
   ],
   [
     "reusd-re-protocol::sUSDe (delta-neutral ETH basis)::USDe",
-    "Re protocol-pooled reserve; token attribution withheld without an attributable denominator and tranche waterfall (WS1.B3 gate, NC-116)",
+    RE_POOLED_ATTRIBUTION_WITHHELD,
   ],
   [
     "reusd-re-protocol::USDC reserves::USDC",
-    "Re protocol-pooled reserve; token attribution withheld without an attributable denominator and tranche waterfall (WS1.B3 gate, NC-116)",
+    RE_POOLED_ATTRIBUTION_WITHHELD,
   ],
   [
     "reusd-re-protocol::USDT reserves::USDT",
-    "Re protocol-pooled reserve; token attribution withheld without an attributable denominator and tranche waterfall (WS1.B3 gate, NC-116)",
+    RE_POOLED_ATTRIBUTION_WITHHELD,
   ],
   [
     "reusd-re-protocol::USDe (delta-neutral ETH basis)::USDe",
-    "Re protocol-pooled reserve; token attribution withheld without an attributable denominator and tranche waterfall (WS1.B3 gate, NC-116)",
+    RE_POOLED_ATTRIBUTION_WITHHELD,
   ],
   [
     "reusd-re-protocol::sUSDS (Sky savings USDS)::USDS",
-    "Re protocol-pooled reserve; token attribution withheld without an attributable denominator and tranche waterfall (WS1.B3 gate, NC-116)",
+    RE_POOLED_ATTRIBUTION_WITHHELD,
   ],
   [
     "usdu-usdu-finance::USDU constituent of Curve USDU/USDC LP backing::USDC",

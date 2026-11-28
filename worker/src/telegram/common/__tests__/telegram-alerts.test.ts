@@ -20,6 +20,9 @@ import {
   type FreezeAlert,
 } from "../alerts-formatting";
 
+const USDE_DEPEG = { stablecoinId: "usde-ethena", symbol: "USDe", direction: "below" as const, deviationBps: 120, price: 0.988, pegReference: 1 };
+const USDT_DEWS_ALERT = { stablecoinId: "usdt-tether", symbol: "USDT", oldBand: "CALM" as const, newBand: "ALERT" as const, score: 50, topSignals: [] };
+
 describe("formatConsolidatedMessage", () => {
   it("includes all alert sections and links coin symbols in multi-coin alerts", () => {
     const msg = formatConsolidatedMessage({
@@ -239,7 +242,7 @@ describe("alert template", () => {
   it("stacks two events by severity, puts recoveries last, and links multi-coin symbols", () => {
     const msg = formatConsolidatedMessage(emptyConsolidatedAlerts({
       depegResolved: [{ stablecoinId: "usdc-circle", symbol: "USDC", durationMinutes: 192, peakDeviationBps: 260, recoveryPrice: 0.9996 }],
-      depegTriggered: [{ stablecoinId: "usde-ethena", symbol: "USDe", direction: "below", deviationBps: 120, price: 0.988, pegReference: 1 }],
+      depegTriggered: [USDE_DEPEG],
     }));
     const [first, second] = msg.split("\n\n");
     expect(first).toBe('▼ <a href="https://pharos.watch/stablecoin/usde-ethena"><b>USDe</b></a> lost its peg: $0.9880, 1.2% below $1.00');
@@ -666,7 +669,7 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
   it("offers Snooze top coin 24h, Pause all 4h, and Manage Alerts (no step-down) on a multi-coin first chunk", () => {
     const multiCoin: ConsolidatedAlerts = emptyConsolidatedAlerts({ dews: [
       { stablecoinId: "usdc-circle", symbol: "USDC", oldBand: "CALM", newBand: "WARNING", score: 42, topSignals: [] },
-      { stablecoinId: "usdt-tether", symbol: "USDT", oldBand: "CALM", newBand: "ALERT", score: 50, topSignals: [] },
+      USDT_DEWS_ALERT,
     ] });
     const markup = buildAlertReplyMarkup(multiCoin, 0, { privateChat: true });
     expect(markup.inline_keyboard.length).toBe(2);
@@ -678,7 +681,7 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
 
   it("drops step-down buttons on multi-coin group alerts and uses Group settings", () => {
     const mixed: ConsolidatedAlerts = emptyConsolidatedAlerts({
-      depegTriggered: [{ stablecoinId: "usde-ethena", symbol: "USDe", direction: "below", deviationBps: 120, price: 0.988, pegReference: 1 }],
+      depegTriggered: [USDE_DEPEG],
       safety: [
         { stablecoinId: "wm-m0", symbol: "wM", oldGrade: "C-", newGrade: "D", oldScore: 51, newScore: 44 },
         { stablecoinId: "usdc-circle", symbol: "USDC", oldGrade: "A", newGrade: "B", oldScore: 88, newScore: 74 },
@@ -700,7 +703,7 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
     [undefined, null, null],
   ] as const)("emits non-Off depeg step-down only when a quieter step exists for %j", (fewerBase, expectedCallback, expectedLabel) => {
     const depeg = emptyConsolidatedAlerts({
-      depegTriggered: [{ stablecoinId: "usde-ethena", symbol: "USDe", direction: "below", deviationBps: 120, price: 0.988, pegReference: 1 }],
+      depegTriggered: [USDE_DEPEG],
     });
     const markup = buildAlertReplyMarkup(depeg, 0, { privateChat: true, fewerBase });
     const callbacks = collectCallbackData(markup);
@@ -740,7 +743,7 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
   it("keeps only the chat-wide pause on overflow chunks", () => {
     const multiCoin: ConsolidatedAlerts = emptyConsolidatedAlerts({ dews: [
       { stablecoinId: "usdc-circle", symbol: "USDC", oldBand: "CALM", newBand: "WARNING", score: 42, topSignals: [] },
-      { stablecoinId: "usdt-tether", symbol: "USDT", oldBand: "CALM", newBand: "ALERT", score: 50, topSignals: [] },
+      USDT_DEWS_ALERT,
     ] });
     expect(collectCallbackData(buildAlertReplyMarkup(multiCoin, 1))).toEqual(["snooze:4h"]);
     expect(collectCallbackData(buildAlertReplyMarkup(singleCoinAlerts("usdc-circle"), 1))).toEqual(["snooze:4h"]);
@@ -774,7 +777,7 @@ describe("resolveAlertLinkPreviewOptions", () => {
   function multiCoinAlerts(): ConsolidatedAlerts {
     return emptyConsolidatedAlerts({ dews: [
       { stablecoinId: "usdc-circle", symbol: "USDC", oldBand: "CALM", newBand: "ALERT", score: 42, topSignals: [] },
-      { stablecoinId: "usdt-tether", symbol: "USDT", oldBand: "CALM", newBand: "ALERT", score: 50, topSignals: [] },
+      USDT_DEWS_ALERT,
     ] });
   }
 

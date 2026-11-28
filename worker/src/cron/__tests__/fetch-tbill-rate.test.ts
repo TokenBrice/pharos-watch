@@ -137,6 +137,8 @@ const EMPTY_NON_USD_BENCHMARKS = {
 const priorUsd = { key: "USD", rate: 3.72, recordDate: "2026-03-02", fetchedAt: 1773100800, source: "fred-dgs3mo" };
 const writtenBenchmarks = () => cacheWritePayload<{ benchmarks: YieldBenchmarkRegistry }>("risk_free_rates").benchmarks;
 
+const gbpStreakPayload = () => cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY);
+
 describe("fetchTbillRate", () => {
 
   const latestCachePayload = () => cacheWritePayload<ParsedYieldBenchmarkMeta>("risk_free_rate");
@@ -472,7 +474,7 @@ describe("fetchTbillRate", () => {
         retained: true,
       }),
     ]);
-    expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
+    expect(gbpStreakPayload()).toMatchObject({
       consecutiveRetainedRuns: 1,
       lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
       lastMarketSource: "fred-sonia-compounded-index",
@@ -516,7 +518,7 @@ describe("fetchTbillRate", () => {
       gbpRetainedFallbackStreak: 2,
       gbpRetainedFallbackEventThreshold: 2,
     });
-    expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
+    expect(gbpStreakPayload()).toMatchObject({
       consecutiveRetainedRuns: 2,
       firstRetainedAt: 1774479600,
       lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
@@ -568,7 +570,7 @@ describe("fetchTbillRate", () => {
       gbpFreshPublicationStreak: 1,
       gbpFreshPublicationVerifiedTwice: false,
     });
-    expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
+    expect(gbpStreakPayload()).toMatchObject({
       consecutiveRetainedRuns: 0,
       recoveredSource: "fred-sonia-compounded-index",
     });
@@ -602,7 +604,7 @@ describe("fetchTbillRate", () => {
       gbpFreshPublicationStreak: 2,
       gbpFreshPublicationVerifiedTwice: true,
     });
-    expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
+    expect(gbpStreakPayload()).toMatchObject({
       consecutiveFreshRuns: 2,
       lastFreshSource: "fred-sonia-compounded-index",
       generationId: expect.any(String),
@@ -704,7 +706,7 @@ describe("fetchTbillRate", () => {
       vi.mocked(logCronEvent).mockClear();
       if (failure.startsWith("confirmed")) {
         vi.mocked(logCronEvent).mockImplementationOnce(async (_database, event) => {
-          expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
+          expect(gbpStreakPayload()).toMatchObject({
             consecutiveRetainedRuns: 0, generationId: cacheWritePayload("risk_free_rates").generationId,
           });
           return { ...event, event: "cron_event", severity: event.severity ?? "info", recordedAt: Date.now() / 1000 };
@@ -722,7 +724,7 @@ describe("fetchTbillRate", () => {
       if (failure.startsWith("confirmed") || failure === "ambiguous-committed") {
         const generationId = cacheWritePayload("risk_free_rates").generationId;
         expect(generationId).not.toBe(marker.generationId);
-        expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
+        expect(gbpStreakPayload()).toMatchObject({
           generationId, consecutiveRetainedRuns: 0, consecutiveFreshRuns: 1,
         });
         expect(cacheWritePayload("fetch-tbill-rate:usd-fresh-streak")).toMatchObject({
@@ -747,7 +749,7 @@ describe("fetchTbillRate", () => {
     });
     vi.mocked(logCronEvent).mockRejectedValueOnce(new Error("event unavailable"));
     await expect(runBenchmarks()).resolves.toMatchObject({ status: "ok" });
-    expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
+    expect(gbpStreakPayload()).toMatchObject({
       consecutiveRetainedRuns: 0, consecutiveFreshRuns: 1,
       generationId: cacheWritePayload("risk_free_rates").generationId,
     });

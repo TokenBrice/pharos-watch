@@ -30,6 +30,8 @@ const silverContributors = (observedAtSec: number) => ["silver-a", "silver-b", "
   assetId, observedAtSec, provenanceKey: "coingecko", derivation: "spot-derived" as const,
 }));
 
+const emptyPeerMedian = () => ({ rates: {}, counts: {}, contributorsByPeg: {} });
+
 describe("resolveMetalReferenceRates", () => {
   const fixtures = createLatestSchemaFixtureTracker();
   afterEach(() => fixtures.closeAll());
@@ -95,7 +97,7 @@ describe("resolveMetalReferenceRates", () => {
 
     const result = await resolveMetalReferenceRates({
       prevRates: { peggedGOLD: 100, peggedSILVER: 1_000 },
-      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
+      commodityPeerMedian: emptyPeerMedian(),
       syncStartSec: 1_800_000_000,
       validateRate: validateMetalRate,
     });
@@ -117,7 +119,7 @@ describe("resolveMetalReferenceRates", () => {
 
     const live = await resolveMetalReferenceRates({
       prevRates: {},
-      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
+      commodityPeerMedian: emptyPeerMedian(),
       syncStartSec: 1_800_000_000,
       validateRate: validateMetalRate,
     });
@@ -150,7 +152,7 @@ describe("resolveMetalReferenceRates", () => {
     });
     const result = await resolveMetalReferenceRates({
       prevRates: {},
-      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
+      commodityPeerMedian: emptyPeerMedian(),
       syncStartSec: 1_790_095_300,
       validateRate: validateMetalRate,
     });
@@ -167,7 +169,7 @@ describe("resolveMetalReferenceRates", () => {
     })).mockResolvedValueOnce(null);
     const result = await resolveMetalReferenceRates({
       prevRates: { peggedGOLD: 2900 },
-      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
+      commodityPeerMedian: emptyPeerMedian(),
       syncStartSec,
       validateRate: validateMetalRate,
     });
@@ -184,7 +186,7 @@ describe("resolveMetalReferenceRates", () => {
     const result = await resolveMetalReferenceRates({
       prevRates: { peggedGOLD: 2_900, peggedSILVER: 40.448374 },
       prevRateIsFresh: (pegKey) => pegKey !== "peggedSILVER",
-      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
+      commodityPeerMedian: emptyPeerMedian(),
       freshChainlinkRates: { peggedSILVER: 50.39 },
       syncStartSec,
       validateRate: validateWithPriorDelta,
@@ -206,7 +208,7 @@ describe("resolveMetalReferenceRates", () => {
     const result = await resolveMetalReferenceRates({
       prevRates: { peggedGOLD: 2_900, peggedSILVER: 40.448374 },
       prevRateIsFresh: () => true,
-      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
+      commodityPeerMedian: emptyPeerMedian(),
       syncStartSec,
       validateRate: validateWithPriorDelta,
     });
@@ -232,7 +234,7 @@ describe("resolveMetalReferenceRates", () => {
     const result = await resolveMetalReferenceRates({
       prevRates: { peggedGOLD: 2_900, peggedSILVER: 40.448374 },
       prevRateIsFresh: () => true,
-      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
+      commodityPeerMedian: emptyPeerMedian(),
       syncStartSec,
       validateRate: validateWithPriorDelta,
     });
@@ -252,7 +254,7 @@ describe("resolveMetalReferenceRates", () => {
     const result = await resolveMetalReferenceRates({
       prevRates: { peggedGOLD: 5_000, peggedSILVER: 40.448374 },
       prevRateIsFresh: () => false,
-      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
+      commodityPeerMedian: emptyPeerMedian(),
       freshChainlinkRates: {},
       syncStartSec,
       validateRate: validateWithPriorDelta,
@@ -299,7 +301,7 @@ describe("resolveMetalReferenceRates", () => {
     const result = await resolveMetalReferenceRates({
       prevRates: { peggedGOLD: 2_900, peggedSILVER: 50 },
       prevRateIsFresh: () => false,
-      commodityPeerMedian: { rates: {}, counts: {}, contributorsByPeg: {} },
+      commodityPeerMedian: emptyPeerMedian(),
       freshChainlinkRates: {},
       syncStartSec,
       validateRate: validateWithPriorDelta,

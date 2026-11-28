@@ -81,6 +81,16 @@ function makePriorityCandidate(
   };
 }
 
+/** Every eth_call hangs until its signal aborts, then rejects with the abort reason. */
+function hangEvmCallsUntilAbort(): void {
+  fetchEvmCallHexAtBlockMock.mockImplementation(
+    (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
+      new Promise<never>((_resolve, reject) => {
+        options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
+      }),
+  );
+}
+
 describe("authoritative-price-sources", () => {
   beforeEach(() => {
     resetAuthoritativePriceSourceMocks();
@@ -932,12 +942,7 @@ describe("authoritative-price-sources", () => {
     vi.useFakeTimers();
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     try {
-      fetchEvmCallHexAtBlockMock.mockImplementation(
-        (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
-          new Promise<never>((_resolve, reject) => {
-            options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
-          }),
-      );
+      hangEvmCallsUntilAbort();
       const stats = createAuthoritativeLivePriceOverrideStats();
       const run = fetchLiveOverrides(
         [
@@ -1023,12 +1028,7 @@ describe("authoritative-price-sources", () => {
       return { call, release: () => release(kavaOverride) };
     };
     try {
-      fetchEvmCallHexAtBlockMock.mockImplementation(
-        (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
-          new Promise<never>((_resolve, reject) => {
-            options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
-          }),
-      );
+      hangEvmCallsUntilAbort();
       const assets = [
         unpricedChild("usdx-kava"),
         unpricedChild("cusd-cap"),
@@ -1099,12 +1099,7 @@ describe("authoritative-price-sources", () => {
       metadata: { inheritedFrom: "musd-metamask", parentReplaySafe: true },
     });
     try {
-      fetchEvmCallHexAtBlockMock.mockImplementation(
-        (_chain: string, _to: string, _data: string, _block: number | "latest", options?: { signal?: AbortSignal }) =>
-          new Promise<never>((_resolve, reject) => {
-            options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
-          }),
-      );
+      hangEvmCallsUntilAbort();
       const stats = createAuthoritativeLivePriceOverrideStats();
       const run = fetchLiveOverrides(
         [

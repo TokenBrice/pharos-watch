@@ -89,6 +89,8 @@ function expectSummaryBudget(container: HTMLElement, scenario: FailureScenario) 
 }
 
 
+const renderDraft = (scenario: FailureScenario) => render(<FailureScenarioModule selection={{ scenario, isDraft: true }} />);
+
 describe("coin-agnostic failure scenarios", () => {
   it("stamps the state pin and review date once, in the footer, and folds the reviewer", () => {
     const scenario = makeScenario({
@@ -129,7 +131,7 @@ describe("coin-agnostic failure scenarios", () => {
     { name: "nine-step three-route path", scenario: THREE_BRANCHES, length: 9, breakpoint: "@[78rem]/evidence:block", hide: "@[78rem]/evidence:hidden", clock: true },
     { name: "non-time labels", scenario: NON_TIME, length: 5, breakpoint: "@[45rem]/evidence:block", hide: "@[45rem]/evidence:hidden", clock: false },
   ])("renders $name as pure data", ({ scenario, length, breakpoint, hide, clock }) => {
-    const { container } = render(<FailureScenarioModule selection={{ scenario, isDraft: true }} />);
+    const { container } = renderDraft(scenario);
     expect(screen.getByRole("heading", { name: scenario.title })).toBeDefined();
     expectSummaryBudget(container, scenario);
     const route = buildScenarioRoute(scenario);
@@ -182,7 +184,7 @@ describe("coin-agnostic failure scenarios", () => {
     const scenario = makeScenario({ stages: ["T+2w", "T+1d", "T+3w", "T+4d", "T+4w"].map((elapsed, index) => makeStage(`bank-${index}`, elapsed)) });
     const route = buildScenarioRoute(scenario);
     expect(buildScenarioClock(scenario, route)?.horizonHours).toBe(672);
-    const { container } = render(<FailureScenarioModule selection={{ scenario, isDraft: true }} />);
+    const { container } = renderDraft(scenario);
     expectSummaryBudget(container, scenario);
     expect(container.querySelectorAll("details[data-scenario-step]")).toHaveLength(5);
     expect(container.querySelector("#failure-scenario-clock")).not.toBeNull();
@@ -191,7 +193,7 @@ describe("coin-agnostic failure scenarios", () => {
   it.each(["T+0", "T+7d", "No timeline"])("omits the ruler for a single instant or no timeline: %s", (elapsed) => {
     const scenario = makeScenario({ stages: LINEAR.stages.map((stage) => ({ ...stage, elapsed })) });
     expect(buildScenarioClock(scenario, buildScenarioRoute(scenario))).toBeNull();
-    const { container } = render(<FailureScenarioModule selection={{ scenario, isDraft: true }} />);
+    const { container } = renderDraft(scenario);
     expect(container.querySelector("#failure-scenario-clock")).toBeNull();
     expect(container.querySelectorAll("details[data-scenario-step]")).toHaveLength(5);
   });
@@ -201,7 +203,7 @@ describe("coin-agnostic failure scenarios", () => {
       stages: LINEAR.stages.map((stage, index) => index === 2 ? { ...stage, elapsed: "Timing unknown" } : stage),
       window: { label: "Settlement window", fromStageId: "linear-1", toStageId: "linear-5", duration: "Several days", note: "Timing depends on the provider." },
     });
-    const { container } = render(<FailureScenarioModule selection={{ scenario, isDraft: true }} />);
+    const { container } = renderDraft(scenario);
     expect(container.querySelector("#failure-scenario-clock")).toBeNull();
     expect(screen.getByText("Settlement window · Several days")).toBeDefined();
     expect(container.textContent).toContain(scenario.window!.note);
@@ -211,14 +213,14 @@ describe("coin-agnostic failure scenarios", () => {
     const scenario = makeScenario({ stages: LINEAR.stages.map((stage, index) => index === 4 ? { ...stage, elapsed: "T+4d → T+1w" } : stage) });
     const clock = buildScenarioClock(scenario, buildScenarioRoute(scenario))!;
     expect(clock.rows[0].spans).toEqual([{ start: 96, end: 168, number: 5, hypothetical: true, terminal: true }]);
-    const { container } = render(<FailureScenarioModule selection={{ scenario, isDraft: true }} />);
+    const { container } = renderDraft(scenario);
     const ruler = container.querySelector('[role="img"]')!;
     expect(within(ruler as HTMLElement).getByText("5").classList.contains("bg-foreground")).toBe(true);
   });
 
   it("wraps a long linear path into two balanced rows before the vertical spine", () => {
     const scenario = makeScenario({ stages: Array.from({ length: 7 }, (_, index) => makeStage(`seven-${index + 1}`, `T+${index}d`)) });
-    const { container } = render(<FailureScenarioModule selection={{ scenario, isDraft: true }} />);
+    const { container } = renderDraft(scenario);
     const wrapped = container.querySelector('[data-route-layout="wrapped"]')!;
     expect(wrapped.className).toBe("hidden @[46rem]/evidence:block @[61rem]/evidence:hidden");
     expect(container.querySelector('[data-route-layout="vertical"]')!.className).toBe("@[46rem]/evidence:hidden");
@@ -236,7 +238,7 @@ describe("coin-agnostic failure scenarios", () => {
     expect(routeMapBreakpoint(8)?.show).toBe("hidden @[69rem]/evidence:block");
     expect(routeMapBreakpoint(11)).toBeUndefined();
     const scenario = makeScenario({ stages: Array.from({ length: 11 }, (_, index) => makeStage(`long-${index}`, `T+${index}h`)) });
-    const { container } = render(<FailureScenarioModule selection={{ scenario, isDraft: true }} />);
+    const { container } = renderDraft(scenario);
     expect(container.querySelector('[data-route-layout="horizontal"]')).toBeNull();
     expect(container.querySelector('[data-route-layout="vertical"]')!.querySelectorAll("a")).toHaveLength(11);
   });

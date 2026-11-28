@@ -160,6 +160,8 @@ function makeReceiptLog(txHash: string, topics: string[]) {
   };
 }
 
+const mockUsdtBlockTimestamp = () => vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+
 describe("syncMintBurn", () => {
   beforeEach(() => {
     resetMintBurnMocks();
@@ -182,7 +184,7 @@ describe("syncMintBurn", () => {
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000))
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
 
-    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    mockUsdtBlockTimestamp();
 
     const batch = db.batch.bind(db);
     vi.spyOn(db, "batch").mockImplementation(async (statements) => {
@@ -553,7 +555,7 @@ describe("syncMintBurn", () => {
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [makeBurnLog()]))
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
 
-    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    mockUsdtBlockTimestamp();
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
@@ -573,7 +575,7 @@ describe("syncMintBurn", () => {
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [makeBurnLog({ blockNumber: 22_000_000 })]))
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
 
-    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    mockUsdtBlockTimestamp();
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
@@ -595,7 +597,7 @@ describe("syncMintBurn", () => {
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000))
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
 
-    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    mockUsdtBlockTimestamp();
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
@@ -695,7 +697,7 @@ describe("syncMintBurn", () => {
         ]))
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
 
-    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    mockUsdtBlockTimestamp();
     vi.mocked(getAlchemyTransactionContextBatchMany).mockImplementation(async (_url, txHashes: string[]) =>
       new Map(txHashes.map((txHash) => [txHash, txHash === mintBurnTestHash(14)
         ? {
@@ -743,7 +745,7 @@ describe("syncMintBurn", () => {
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [makeMintLog({ txHash: mintBurnTestHash(16) })]))
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000))
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
-    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    mockUsdtBlockTimestamp();
     vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValueOnce(new Map());
 
     const result = await syncMintBurn(db, "alchemy-key");
@@ -772,7 +774,7 @@ describe("syncMintBurn", () => {
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [makeMintLog({ txHash: mintBurnTestHash(17) })]))
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000))
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
-    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    mockUsdtBlockTimestamp();
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
     const result = await withRpcRequestObserver({ beforeRequest: () => false, onOutcome: vi.fn() }, () =>
@@ -933,7 +935,7 @@ describe("syncMintBurn", () => {
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000, [makeBurnLog({ txHash: mintBurnTestHash(18), logIndex: 1 })]))
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
 
-    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    mockUsdtBlockTimestamp();
 
     const result = await syncMintBurn(db, "alchemy-key");
     const meta = JSON.parse(result.metadata);
@@ -965,7 +967,7 @@ describe("syncMintBurn", () => {
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000))
       .mockResolvedValueOnce(mintBurnScanResult(22_000_000));
 
-    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    mockUsdtBlockTimestamp();
     // Insert path must succeed so affectedHours gets populated before recalc runs.
     vi.mocked(batchExecute)
       .mockResolvedValueOnce(0)

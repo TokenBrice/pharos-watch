@@ -78,6 +78,8 @@ function select(scenario: FailureScenario, allowDrafts = false, clock = now) {
   return selectFailureScenario({ [scenario.coinId]: scenario }, scenario.coinId, { allowDrafts, now: clock });
 }
 
+const expectInvalidScenario = (scenario: unknown) => expect(FailureScenarioSchema.safeParse(scenario).success).toBe(false);
+
 describe("failure scenario publication", () => {
   it("hides drafts in production and marks explicitly allowed previews", () => {
     const scenario = fixture();
@@ -139,7 +141,7 @@ describe("failure scenario schema and identity", () => {
     scenario.coinId = "unknown-fixture-coin";
     scenario.stages[0]!.targets![0]!.address = "0xgg";
     expect(FailureScenarioStructuralSchema.safeParse(scenario).success).toBe(true);
-    expect(FailureScenarioSchema.safeParse(scenario).success).toBe(false);
+    expectInvalidScenario(scenario);
   });
 
   it("retains EVM admission for alternative branch targets", () => {
@@ -157,14 +159,14 @@ describe("failure scenario schema and identity", () => {
   it.each(["stages", "defenders", "keyFigures"] as const)("rejects dangling %s sourceIds", (field) => {
     const scenario = fixture();
     scenario[field][0]!.sourceIds = ["missing"];
-    expect(FailureScenarioSchema.safeParse(scenario).success).toBe(false);
+    expectInvalidScenario(scenario);
   });
 
   it("rejects unknown catalog ids and mismatched record keys", () => {
     const scenario = fixture();
     expect(FailureScenariosByIdSchema.safeParse({ other: scenario }).success).toBe(false);
     scenario.coinId = "unknown-fixture-coin";
-    expect(FailureScenarioSchema.safeParse(scenario).success).toBe(false);
+    expectInvalidScenario(scenario);
   });
 
   it("requires canonical falsifier ids and rejects duplicate ids within a record", () => {
@@ -182,7 +184,7 @@ describe("failure scenario schema and identity", () => {
     const blankId = fixture();
     blankId.falsifiers[0]!.id = " ";
     for (const scenario of [missingId, blankId]) {
-      expect(FailureScenarioSchema.safeParse(scenario).success).toBe(false);
+      expectInvalidScenario(scenario);
     }
     const distinct = fixture();
     distinct.falsifiers.push({ ...distinct.falsifiers[0]!, id: "another-route-removed" });
@@ -200,7 +202,7 @@ describe("failure scenario schema and identity", () => {
   it.each(["missing", "operator-capture", "outcome"])("rejects invalid branch splice stage %s", (afterStageId) => {
     const scenario = branchedFixture();
     scenario.branchPoint!.afterStageId = afterStageId;
-    expect(FailureScenarioSchema.safeParse(scenario).success).toBe(false);
+    expectInvalidScenario(scenario);
   });
 
   it("rejects duplicate stage ids across trunk and branches or between branches", () => {
@@ -209,7 +211,7 @@ describe("failure scenario schema and identity", () => {
     const branchDuplicate = branchedFixture();
     branchDuplicate.branchPoint!.branches[1]!.stages[0]!.id = "operator-capture";
     for (const scenario of [trunkDuplicate, branchDuplicate]) {
-      expect(FailureScenarioSchema.safeParse(scenario).success).toBe(false);
+      expectInvalidScenario(scenario);
     }
   });
 
@@ -221,7 +223,7 @@ describe("failure scenario schema and identity", () => {
     const empty = branchedFixture();
     empty.branchPoint!.branches[0]!.stages = [];
     for (const scenario of [duplicate, single, empty]) {
-      expect(FailureScenarioSchema.safeParse(scenario).success).toBe(false);
+      expectInvalidScenario(scenario);
     }
   });
 
@@ -233,7 +235,7 @@ describe("failure scenario schema and identity", () => {
     const extraFigure = fixture();
     Object.assign(extraFigure.keyFigures[0]!, { unknown: true });
     for (const scenario of [dangling, extraBranch, extraFigure]) {
-      expect(FailureScenarioSchema.safeParse(scenario).success).toBe(false);
+      expectInvalidScenario(scenario);
     }
     const missingFigures = { ...fixture() };
     Reflect.deleteProperty(missingFigures, "keyFigures");
@@ -253,11 +255,11 @@ describe("failure scenario schema and identity", () => {
       expect(FailureScenarioSchema.safeParse(scenario).success).toBe(true);
       scenario.window!.fromStageId = to!;
       scenario.window!.toStageId = from!;
-      expect(FailureScenarioSchema.safeParse(scenario).success).toBe(false);
+      expectInvalidScenario(scenario);
     }
     scenario.window!.fromStageId = "operator-capture";
     scenario.window!.toStageId = "missing";
-    expect(FailureScenarioSchema.safeParse(scenario).success).toBe(false);
+    expectInvalidScenario(scenario);
   });
 
   it("rejects duplicate stage/source ids and missing or reversed window references", () => {
@@ -271,7 +273,7 @@ describe("failure scenario schema and identity", () => {
     reversedWindow.window!.fromStageId = "outcome";
     reversedWindow.window!.toStageId = "capture";
     for (const scenario of [duplicateStage, duplicateSource, missingWindow, reversedWindow]) {
-      expect(FailureScenarioSchema.safeParse(scenario).success).toBe(false);
+      expectInvalidScenario(scenario);
     }
   });
 
@@ -282,7 +284,7 @@ describe("failure scenario schema and identity", () => {
     invalidAddress.stages[0]!.targets![0]!.address = "0xgg";
     const invalidUrl = { ...fixture(), sources: [{ id: "source", label: "Bad URL", url: "ftp://example.com" }] };
     for (const scenario of [invalidDate, invalidAddress, invalidUrl, { ...fixture(), unknown: true }]) {
-      expect(FailureScenarioSchema.safeParse(scenario).success).toBe(false);
+      expectInvalidScenario(scenario);
     }
     const invalidNested = fixture();
     Object.assign(invalidNested.stages[0]!, { unknown: true });

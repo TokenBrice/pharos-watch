@@ -29,6 +29,9 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 const IUSD_QUOTE_HEX = "0x00000000000000000000000000000000000000000000000000000000000f4240";
 const ZERO_WORD_HEX = `0x${"0".repeat(64)}` as `0x${string}`;
 
+/** gtUSDC (Gauntlet) at its fixture $128M circulating supply. */
+const gtusdc = () => asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } });
+
 describe("authoritative-price-sources", () => {
   beforeEach(() => {
     resetAuthoritativePriceSourceMocks();
@@ -100,7 +103,7 @@ describe("authoritative-price-sources", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     const overrides = await fetchLiveOverrides([
-      asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+      gtusdc(),
       freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec }),
     ]);
 
@@ -133,7 +136,7 @@ describe("authoritative-price-sources", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     const overrides = await fetchLiveOverrides([
-      asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+      gtusdc(),
       freshParent("usdc-circle", 0.9999, "coingecko+pyth", {
         nowSec,
         observedAt: nowSec - ageSec,
@@ -151,7 +154,7 @@ describe("authoritative-price-sources", () => {
     try {
       fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${1_010_000n.toString(16).padStart(64, "0")}`);
       const overrides = await fetchLiveOverrides([
-        asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+        gtusdc(),
         freshParent("usdc-circle", 0.9999, "coingecko+pyth", {
           nowSec, observedAt: nowSec - 300, priceSyncedAt: nowSec - 60,
         }),
@@ -228,7 +231,7 @@ describe("authoritative-price-sources", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     const overrides = await fetchLiveOverrides([
-      asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+      gtusdc(),
       freshParent("usdc-circle", 0.9999, "alchemy-address+coingecko+moralis-address", {
         nowSec,
         priceObservedAtMode: "local_fetch",
@@ -269,7 +272,7 @@ describe("authoritative-price-sources", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     const overrides = await fetchLiveOverrides([
-      asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+      gtusdc(),
       freshParent("usdc-circle", 0.9999, "bitstamp+coingecko+coingecko-onchain-address+kraken+pyth+redstone", {
         nowSec,
         priceObservedAtMode: "local_fetch",
@@ -303,7 +306,7 @@ describe("authoritative-price-sources", () => {
 
     for (const lane of softLanes) {
       const overrides = await fetchLiveOverrides([
-        asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+        gtusdc(),
         freshParent("usdc-circle", 0.9999, `coingecko+pyth+${lane}`, { nowSec }),
       ]);
 
@@ -349,7 +352,7 @@ describe("authoritative-price-sources", () => {
 
     const overrides = await fetchLiveOverrides(
       [
-        asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+        gtusdc(),
         freshParent("usdc-circle", 0.9999, "coingecko+coingecko-onchain-address", {
           nowSec,
           priceObservedAtMode: "local_fetch",
@@ -412,7 +415,7 @@ describe("authoritative-price-sources", () => {
 
     const overrides = await fetchLiveOverrides(
       [
-        asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+        gtusdc(),
         freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec }),
       ],
       { db, stats },
@@ -549,7 +552,7 @@ describe("authoritative-price-sources", () => {
 
     const overrides = await fetchLiveOverrides(
       [
-        asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+        gtusdc(),
         freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec }),
       ],
       { db, stats },
@@ -578,7 +581,7 @@ describe("authoritative-price-sources", () => {
 
     const overrides = await fetchLiveOverrides(
       [
-        asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+        gtusdc(),
         freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec }),
       ],
       { db },
@@ -831,7 +834,7 @@ describe("authoritative-price-sources", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
     const overrides = await fetchLiveOverrides([
-      asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+      gtusdc(),
       freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec, priceConfidence: "low" }),
     ]);
 
@@ -899,7 +902,7 @@ describe("authoritative-price-sources", () => {
     const stats = createAuthoritativeLivePriceOverrideStats();
 
     const overrides = await fetchLiveOverrides([
-      asset("gtusdc-gauntlet", { circulating: { peggedUSD: 128_000_000 } }),
+      gtusdc(),
       freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec }),
     ], { stats });
 

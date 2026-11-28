@@ -44,6 +44,15 @@ function rpcBlockHeader(block: unknown): FakeReply {
 }
 
 /** Transport double that records every call and measures how many were open at once. */
+/** A fake transport whose head is block 0x64 and that serves any block header; `reply` answers the rest. */
+function headAt100Transport(reply: (call: RecordedCall) => FakeReply) {
+  return createFakeTransport((call) => {
+    if (call.method === "eth_blockNumber") return rpcResult("0x64");
+    if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+    return reply(call);
+  });
+}
+
 function createFakeTransport(reply: (call: RecordedCall) => FakeReply) {
   const calls: RecordedCall[] = [];
   let inFlight = 0;
@@ -142,9 +151,7 @@ describe("rpc parity probe", () => {
 
   it("redacts bare dRPC query credentials and records failed log ranges", async () => {
     const drpcKey = "query-key-sensitive-test";
-    const transport = createFakeTransport((call) => {
-      if (call.method === "eth_blockNumber") return rpcResult("0x64");
-      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+    const transport = headAt100Transport((call) => {
       if (call.method === "eth_call") {
         const contract = call.params[0] as { data?: string };
         return rpcResult(contract.data === "0x42cbb15c" ? "0x64" : "0x7");
@@ -171,9 +178,7 @@ describe("rpc parity probe", () => {
 
   it.each(["HeaderNotFound(0x65)", "No state available", "header not found", "not-found"])(
     "keeps above-head reference insufficiency separate from latest availability: %s", async (message) => {
-      const transport = createFakeTransport((call) => {
-        if (call.method === "eth_blockNumber") return rpcResult("0x64");
-        if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+      const transport = headAt100Transport((call) => {
         if (call.method === "eth_call") {
           const target = call.params[0];
           if (target && typeof target === "object" && "data" in target && target.data === "0x42cbb15c") return rpcResult("0x65");
@@ -210,9 +215,7 @@ describe("rpc parity probe", () => {
   );
 
   it("does not excuse not-found failures at H2 or on latest and retains comparator details", async () => {
-    const transport = createFakeTransport((call) => {
-      if (call.method === "eth_blockNumber") return rpcResult("0x64");
-      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+    const transport = headAt100Transport((call) => {
       if (call.method === "eth_call") {
         const target = call.params[0];
         if (target && typeof target === "object" && "data" in target && target.data === "0x42cbb15c") return rpcResult("0x64");
@@ -227,9 +230,7 @@ describe("rpc parity probe", () => {
   });
 
   it("counts an unavailable numeric read at the served head as a provider failure", async () => {
-    const transport = createFakeTransport((call) => {
-      if (call.method === "eth_blockNumber") return rpcResult("0x64");
-      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+    const transport = headAt100Transport((call) => {
       if (call.method === "eth_call") {
         const target = call.params[0];
         if (target && typeof target === "object" && "data" in target && target.data === "0x42cbb15c") return rpcResult("0x64");
@@ -322,9 +323,7 @@ describe("rpc parity probe", () => {
   });
 
   it("narrows the log window on high-volume chains and reports an all-clear sample", async () => {
-    const transport = createFakeTransport((call) => {
-      if (call.method === "eth_blockNumber") return rpcResult("0x64");
-      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+    const transport = headAt100Transport((call) => {
       if (call.method === "eth_call") return rpcResult("0x1");
       return rpcResult([]);
     });
@@ -501,9 +500,7 @@ describe("rpc parity probe", () => {
 
   it("replays the comparator operator's auth, keeps pins keyless, and identifies every request", async () => {
     const alchemyKey = "parity-test-alchemy-key";
-    const transport = createFakeTransport((call) => {
-      if (call.method === "eth_blockNumber") return rpcResult("0x64");
-      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+    const transport = headAt100Transport((call) => {
       if (call.method === "eth_call") return rpcResult("0x1");
       return rpcResult([]);
     });
@@ -855,9 +852,7 @@ describe("rpc parity probe", () => {
     ["different", "stale", "no-bracket-match"], ["matched", "indeterminate", "served-block-ahead"],
     ["not-found", "indeterminate", "reference-unavailable"], ["capped", "indeterminate", "bracket-too-wide"],
   ])("reads one block past a stable token miss (%s)", async (mode, verdict, reason) => {
-    const transport = createFakeTransport((call) => {
-      if (call.method === "eth_blockNumber") return rpcResult("0x64");
-      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+    const transport = headAt100Transport((call) => {
       if (call.method !== "eth_call") return rpcResult([]);
       if ((call.params[0] as { data: string }).data === "0x42cbb15c") return rpcResult("0x64");
       if (call.params[1] === "0x65" && mode === "not-found") {
@@ -1047,9 +1042,7 @@ describe("rpc parity probe", () => {
   });
 
   it("keeps the Worldchain public comparator keyless with census Alchemy configured", async () => {
-    const transport = createFakeTransport((call) => {
-      if (call.method === "eth_blockNumber") return rpcResult("0x64");
-      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+    const transport = headAt100Transport((call) => {
       if (call.method === "eth_call") return rpcResult(call.params[1] === "latest" ? "0x64" : "0x7");
       return rpcResult([]);
     });

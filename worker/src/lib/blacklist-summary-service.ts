@@ -534,7 +534,7 @@ function hydratePrePilotChartPoints(payload: unknown): unknown {
   const record = payload as Record<string, unknown>;
   if (!Array.isArray(record.chart)) return payload;
   let changed = false;
-  const chart = record.chart.map((point) => {
+  const chart = record.chart.map((point: unknown) => {
     if (!point || typeof point !== "object" || Array.isArray(point)) return point;
     const pointRecord = point as Record<string, unknown>;
     const missing = BLACKLIST_ROLLOUT_OPTIONAL_CHART_SYMBOLS.filter((symbol) => !(symbol in pointRecord));

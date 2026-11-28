@@ -121,6 +121,26 @@ describe("computeDepegResolver", () => {
     };
   }
 
+  /** One healthy quarter-hour run; `overrides` names only what a case varies (`ddrRunId: undefined` allocates one). */
+  function runResolver(db: D1Database, storeContracts: DdrV2StoreContracts, overrides: Partial<Parameters<typeof computeDepegResolver>[0] & object> = {}) {
+    return computeDepegResolver({
+      db, ddrRunId: "ddr:quarter-hour:1779984600:test", runAt: NOW_SEC, slot: "quarter-hour",
+      stablecoinsCacheSafe: true, depegPipelineHealthy: true, storeContracts, ...overrides,
+    });
+  }
+
+  /** The active-event read pair plus healthy DEWS, empty assessments and a writable cache. */
+  function activeEventDb(event: DdrEventDbRow & Record<string, unknown>, extra: MockTableConfig[] = []): MockD1Database {
+    return resolverDb([
+      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
+      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
+      ...healthyDewsPublicationTables(),
+      { match: "FROM depeg_resolver_assessments", rows: [] },
+      ...extra,
+      { match: "INSERT INTO cache", rows: [] },
+    ]);
+  }
+
   function resolverDb(tables: MockTableConfig[]): MockD1Database {
     return mockD1([
       ...tables,
@@ -280,11 +300,7 @@ describe("computeDepegResolver", () => {
       ...healthyDewsPublicationTables(),
       { match: "FROM depeg_resolver_assessments", rows: [] },
     ]);
-    const result = await computeDepegResolver({
-      db, ddrRunId: "ddr:quarter-hour:1779984600:test", runAt: NOW_SEC, slot: "quarter-hour",
-      stablecoinsCacheSafe: primarySafe, depegPipelineHealthy: true,
-      storeContracts: stores, signal: controller.signal,
-    });
+    const result = await runResolver(db, stores, { stablecoinsCacheSafe: primarySafe, signal: controller.signal });
     return {
       result,
       metadata: JSON.parse(result.metadata ?? "{}"),
@@ -388,15 +404,7 @@ describe("computeDepegResolver", () => {
     const { stores } = storesFor();
     const db = resolverDb([]);
 
-    const result = await computeDepegResolver({
-      db,
-      ddrRunId: "ddr:quarter-hour:1779984600:empty-board",
-      runAt: NOW_SEC,
-      slot: "quarter-hour",
-      stablecoinsCacheSafe: true,
-      depegPipelineHealthy: true,
-      storeContracts: stores,
-    });
+    const result = await runResolver(db, stores, { ddrRunId: "ddr:quarter-hour:1779984600:empty-board" });
     const payload = readDdrSnapshotPayload(db);
 
     expect(result.status ?? "ok").toBe("ok");
@@ -429,14 +437,7 @@ describe("computeDepegResolver", () => {
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
     ]);
 
-    const result = await computeDepegResolver({
-      db,
-      runAt: NOW_SEC,
-      slot: "quarter-hour",
-      stablecoinsCacheSafe: cacheSafe,
-      depegPipelineHealthy: pipelineHealthy,
-      storeContracts: stores,
-    });
+    const result = await runResolver(db, stores, { ddrRunId: undefined, stablecoinsCacheSafe: cacheSafe, depegPipelineHealthy: pipelineHealthy });
     const metadata = JSON.parse(result.metadata ?? "{}");
 
     expect(result.status).toBe("degraded");
@@ -507,14 +508,7 @@ describe("computeDepegResolver", () => {
       { match: "INSERT INTO cache", rows: [] },
     ]);
 
-    await computeDepegResolver({
-      db,
-      runAt: NOW_SEC,
-      slot: "quarter-hour",
-      stablecoinsCacheSafe: false,
-      depegPipelineHealthy: true,
-      storeContracts: stores,
-    });
+    await runResolver(db, stores, { ddrRunId: undefined, stablecoinsCacheSafe: false });
 
     const payload = readDdrSnapshotPayload(db);
     expect(payload._meta.degraded).toBe(true);
@@ -542,14 +536,7 @@ describe("computeDepegResolver", () => {
       { match: "INSERT INTO cache", rows: [] },
     ]);
 
-    const result = await computeDepegResolver({
-      db,
-      runAt: NOW_SEC,
-      slot: "quarter-hour",
-      stablecoinsCacheSafe: true,
-      depegPipelineHealthy: true,
-      storeContracts: stores,
-    });
+    const result = await runResolver(db, stores, { ddrRunId: undefined });
     const metadata = JSON.parse(result.metadata ?? "{}");
 
     expect(result.status).toBe("degraded");
@@ -576,14 +563,7 @@ describe("computeDepegResolver", () => {
       { match: "INSERT INTO cache", rows: [] },
     ]);
 
-    await computeDepegResolver({
-      db,
-      runAt: NOW_SEC,
-      slot: "quarter-hour",
-      stablecoinsCacheSafe: false,
-      depegPipelineHealthy: true,
-      storeContracts: stores,
-    });
+    await runResolver(db, stores, { ddrRunId: undefined, stablecoinsCacheSafe: false });
 
     const payload = readDdrSnapshotPayload(db);
     expect(payload._meta.degraded).toBe(true);
@@ -597,23 +577,9 @@ describe("computeDepegResolver", () => {
     vi.setSystemTime(NOW_SEC * 1000);
     const event = activeEvent({ started_at: NOW_SEC - 72 * 3600 });
     const { stores, sealed } = storesFor();
-    const db = resolverDb([
-      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
-      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
-      ...healthyDewsPublicationTables(),
-      { match: "FROM depeg_resolver_assessments", rows: [] },
-      { match: "INSERT INTO cache", rows: [] },
-    ]);
+    const db = activeEventDb(event);
 
-    const result = await computeDepegResolver({
-      db,
-      ddrRunId: "ddr:quarter-hour:1779984600:test",
-      runAt: NOW_SEC,
-      slot: "quarter-hour",
-      stablecoinsCacheSafe: true,
-      depegPipelineHealthy: true,
-      storeContracts: stores,
-    });
+    const result = await runResolver(db, stores);
     const metadata = JSON.parse(result.metadata ?? "{}");
 
     expect(stores.sealPublicNoCall).toHaveBeenCalledTimes(1);
@@ -661,23 +627,9 @@ describe("computeDepegResolver", () => {
       manifestBasePayload = input.basePayload;
       return makeDdrPublicationManifest({ publishedAt: NOW_SEC });
     });
-    const db = resolverDb([
-      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
-      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
-      ...healthyDewsPublicationTables(),
-      { match: "FROM depeg_resolver_assessments", rows: [] },
-      { match: "INSERT INTO cache", rows: [] },
-    ]);
+    const db = activeEventDb(event);
 
-    await computeDepegResolver({
-      db,
-      ddrRunId: "ddr:quarter-hour:1779984600:test",
-      runAt: NOW_SEC,
-      slot: "quarter-hour",
-      stablecoinsCacheSafe: true,
-      depegPipelineHealthy: true,
-      storeContracts: stores,
-    });
+    await runResolver(db, stores);
 
     const publishedRow = (manifestBasePayload as { rows?: Array<Record<string, unknown>> }).rows?.[0];
     const prediction = publishedRow?.prediction as Record<string, unknown> | undefined;
@@ -788,23 +740,9 @@ describe("computeDepegResolver", () => {
     stores.writePublicationManifest = vi.fn(async () => {
       throw new Error("D1 manifest write exhausted");
     });
-    const db = resolverDb([
-      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
-      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
-      ...healthyDewsPublicationTables(),
-      { match: "FROM depeg_resolver_assessments", rows: [] },
-      { match: "INSERT INTO cache", rows: [] },
-    ]);
+    const db = activeEventDb(event);
 
-    const result = await computeDepegResolver({
-      db,
-      ddrRunId: "ddr:quarter-hour:1779984600:test",
-      runAt: NOW_SEC,
-      slot: "quarter-hour",
-      stablecoinsCacheSafe: true,
-      depegPipelineHealthy: true,
-      storeContracts: stores,
-    });
+    const result = await runResolver(db, stores);
 
     const payload = readDdrSnapshotPayload(db);
     expect(payload._meta.degraded).toBe(true);
@@ -857,23 +795,9 @@ describe("computeDepegResolver", () => {
       manifestBasePayload = input.basePayload;
       return makeDdrPublicationManifest({ publishedAt: NOW_SEC });
     });
-    const db = resolverDb([
-      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
-      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
-      ...healthyDewsPublicationTables(),
-      { match: "FROM depeg_resolver_assessments", rows: [] },
-      { match: "INSERT INTO cache", rows: [] },
-    ]);
+    const db = activeEventDb(event);
 
-    await computeDepegResolver({
-      db,
-      ddrRunId: "ddr:quarter-hour:1779984600:test",
-      runAt: NOW_SEC,
-      slot: "quarter-hour",
-      stablecoinsCacheSafe: true,
-      depegPipelineHealthy: true,
-      storeContracts: stores,
-    });
+    await runResolver(db, stores);
     const payload = readDdrSnapshotPayload(db);
 
     expect(payload.rows[0]).toMatchObject({
@@ -916,23 +840,9 @@ describe("computeDepegResolver", () => {
     stores.loadPredictionErrata = vi.fn(async () => {
       throw new Error("D1 errata read failed");
     });
-    const db = resolverDb([
-      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
-      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
-      ...healthyDewsPublicationTables(),
-      { match: "FROM depeg_resolver_assessments", rows: [] },
-      { match: "INSERT INTO cache", rows: [] },
-    ]);
+    const db = activeEventDb(event);
 
-    const result = await computeDepegResolver({
-      db,
-      ddrRunId: "ddr:quarter-hour:1779984600:test",
-      runAt: NOW_SEC,
-      slot: "quarter-hour",
-      stablecoinsCacheSafe: true,
-      depegPipelineHealthy: true,
-      storeContracts: stores,
-    });
+    const result = await runResolver(db, stores);
 
     const payload = readDdrSnapshotPayload(db);
     expect(payload._meta.degraded).toBe(true);
@@ -979,15 +889,7 @@ describe("computeDepegResolver", () => {
       { match: "INSERT INTO cache", rows: [] },
     ]);
 
-    await computeDepegResolver({
-      db,
-      ddrRunId: "ddr:quarter-hour:1779984600:test",
-      runAt: NOW_SEC,
-      slot: "quarter-hour",
-      stablecoinsCacheSafe: true,
-      depegPipelineHealthy: true,
-      storeContracts: stores,
-    });
+    await runResolver(db, stores);
 
     expect(stores.recordLockDeferral).toHaveBeenCalledWith(
       db,
@@ -1047,15 +949,7 @@ describe("computeDepegResolver", () => {
       { match: "INSERT INTO cache", rows: [] },
     ]);
 
-    const result = await computeDepegResolver({
-      db,
-      ddrRunId: "ddr:quarter-hour:1779984600:test",
-      runAt: NOW_SEC,
-      slot: "quarter-hour",
-      stablecoinsCacheSafe: true,
-      depegPipelineHealthy: true,
-      storeContracts: stores,
-    });
+    const result = await runResolver(db, stores);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.v2ConfirmationTimingError).toContain("D1_ERROR");

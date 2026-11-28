@@ -207,6 +207,10 @@ function modeledSharedProfiles() {
   return { sourceProfile, profile, sharedBookRef, sourceMeta, targetFields: nativeRegistryFields(targetAddress), sourceDeployment, targetDeployment };
 }
 
+/** Mint posture for a reviewed control under the V1 candidate policy semantics. */
+const reviewedMintPosture = (control: NonNullable<Parameters<typeof deriveV9MintPosture>[0]>, issuanceFacts: Parameters<typeof deriveV9MintPosture>[4]) =>
+  deriveV9MintPosture(control, makeReviewedMintInput(control.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, issuanceFacts);
+
 describe("v10.05 source-bound operational and voting compilation", () => {
   it("reuses only strictly admitted frozen asset identities and rejects an altered external clone", () => {
     const { extension, asset } = compile(), original = extension.assets[0]!;
@@ -402,8 +406,7 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     const custodyOnly = subject === "key-custody-independence";
     expect(governance.diagnostics.some(row => row.code === "scoped-question-open")).toBe(!custodyOnly);
     expect(process?.diagnostics.some(row => row.code === "scoped-question-open")).toBe(!custodyOnly);
-    expect(deriveV9MintPosture(rows[0]!, makeReviewedMintInput(rows[0]!.controlKey), false,
-      V9_CANDIDATE_POLICY_V1.policy.semantic, asset.issuanceFacts)).toBe(custodyOnly ? "unbounded-operationally-governed" : "unbounded-adverse");
+    expect(reviewedMintPosture(rows[0]!, asset.issuanceFacts)).toBe(custodyOnly ? "unbounded-operationally-governed" : "unbounded-adverse");
     if (custodyOnly) expect(rows.find(row => row.scopedQuestionFresh)).toMatchObject({
       scopedQuestionSubject: "key-custody-independence", keyCustody: "unknown" });
   });
@@ -411,8 +414,7 @@ describe("v10.05 source-bound operational and voting compilation", () => {
   it("retains operational qualification with a custody marker on the evaluated row", () => {
     const { rows, asset } = compile();
     const row = { ...rows[0]!, scopedQuestionFresh: true, scopedQuestionSubject: "key-custody-independence" as const, keyCustody: "unknown" as const };
-    expect(deriveV9MintPosture(row, makeReviewedMintInput(row.controlKey), false,
-      V9_CANDIDATE_POLICY_V1.policy.semantic, asset.issuanceFacts)).toBe("unbounded-operationally-governed");
+    expect(reviewedMintPosture(row, asset.issuanceFacts)).toBe("unbounded-operationally-governed");
     expect(deriveV9MintPosture({ ...row, scopedQuestionSubject: "authority-semantics" }, makeReviewedMintInput(row.controlKey), false,
       V9_CANDIDATE_POLICY_V1.policy.semantic, asset.issuanceFacts)).toBe("unbounded-adverse");
   });
@@ -436,7 +438,7 @@ describe("v10.05 source-bound operational and voting compilation", () => {
       memberCount: 2, matchedMemberCount: 2, unknownMemberCount: 0 });
     expect(rows.every((row) => row.issuanceFactsRef === asset.issuanceFacts!.ref)).toBe(true);
     expect(rows.every((row) => row.issuanceProcess === undefined && row.issuanceGovernance === undefined && row.processDiagnostics === undefined)).toBe(true);
-    expect(deriveV9MintPosture(rows[0]!, makeReviewedMintInput(rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, asset.issuanceFacts)).toBe("unbounded-operationally-governed");
+    expect(reviewedMintPosture(rows[0]!, asset.issuanceFacts)).toBe("unbounded-operationally-governed");
   });
 
   it.each(["affiliated", "other-holder", "omitted-holder", "unknown-ownership", "privilege"] as const)("denies the single D32 %s gate without erasing known unbounded facts", (failure) => {
@@ -481,7 +483,7 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     }
     const positive = compile(profile), control = positive.rows.find((row) => row.capSemantics.kind === "unbounded" && row.capabilities.includes("mint"))!;
     expect(positive.governance.votingControl.qualified).toBe(true);
-    expect(deriveV9MintPosture(control, makeReviewedMintInput(control.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, positive.asset.issuanceFacts))
+    expect(reviewedMintPosture(control, positive.asset.issuanceFacts))
       .toBe(family === "D29" ? "unbounded-governed" : family === "D30" ? "unbounded-veto-guarded" : "unbounded-operationally-governed");
     const voting = profile.governedIssuance!.votingControl;
     voting.controllers[0]!.affiliation = "team"; voting.routes[0]!.affiliatedControllerIds = ["dominant-own-holder"]; voting.routes[0]!.affiliatedAggregatePowerRaw = "60";
@@ -519,7 +521,7 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     profile.controls![1]!.executionScope!.paths[0]!.unavoidableDelaySec = 60;
     const short = compile(profile);
     expect(short.governance).toMatchObject({ coverage: "complete", minUnavoidableDelaySec: 60, votingPower: "live-balance" });
-    expect(deriveV9MintPosture(short.rows[0]!, makeReviewedMintInput(short.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, short.asset.issuanceFacts)).toBe("unbounded-adverse");
+    expect(reviewedMintPosture(short.rows[0]!, short.asset.issuanceFacts)).toBe("unbounded-adverse");
     profile.controls![1]!.executionScope!.paths[0]!.unavoidableDelaySec = null;
     expect(compile(profile).governance.minUnavoidableDelaySec).toBeNull();
     profile.controls![1]!.executionScope!.inventory = "partial";
@@ -545,7 +547,7 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     const compiled = compile(profile);
     expect(compiled.governance).toMatchObject({ coverage: "complete", minUnavoidableDelaySec: 0 });
     const minter = compiled.rows.find((row) => row.capabilities.includes("mint"))!;
-    expect(deriveV9MintPosture(minter, makeReviewedMintInput(minter.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, compiled.asset.issuanceFacts)).toBe("unbounded-adverse");
+    expect(reviewedMintPosture(minter, compiled.asset.issuanceFacts)).toBe("unbounded-adverse");
   });
 
   it.each(["unlisted", "short-change", "unknown-rule", "unbounded"] as const)("requires the single D30-S %s rate-path gate", (failure) => {
@@ -633,7 +635,7 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     const { process, rows, asset } = compile(profile);
     expect(process).toMatchObject({ coverage: "incomplete", authorityCoverage: "incomplete" });
     expect(process?.diagnostics).toContainEqual(expect.objectContaining({ code: "governor-not-governance", controlRef: SCOPE_CONTROLLER }));
-    expect(deriveV9MintPosture(rows[0]!, makeReviewedMintInput(rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, asset.issuanceFacts)).not.toBe("unbounded-operationally-governed");
+    expect(reviewedMintPosture(rows[0]!, asset.issuanceFacts)).not.toBe("unbounded-operationally-governed");
   });
 
   it("does not silently omit an authorized zero-current or stopped member", () => {
@@ -733,7 +735,7 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     member.pathBindings.find((binding) => binding.templateId === "raise")!.unavoidableDelaySec = 0;
     const { process, rows, asset } = compile(profile);
     expect(process).toMatchObject({ coverage: "complete", minEnvelopeRaisePublicDelaySec: 0 });
-    expect(deriveV9MintPosture(rows[0]!, makeReviewedMintInput(rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, asset.issuanceFacts)).not.toBe("unbounded-operationally-governed");
+    expect(reviewedMintPosture(rows[0]!, asset.issuanceFacts)).not.toBe("unbounded-operationally-governed");
   });
 
   it("accepts equal-strength member runtime joins without descriptor-free graph closure", () => {
@@ -857,7 +859,7 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     const { process, rows, asset } = compile(profile);
     expect(process?.coverage).toBe("complete");
     const control = rows.find((row) => row.capabilities.includes("mint"))!;
-    expect(deriveV9MintPosture(control, makeReviewedMintInput(control.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, asset.issuanceFacts)).not.toBe("unbounded-operationally-governed");
+    expect(reviewedMintPosture(control, asset.issuanceFacts)).not.toBe("unbounded-operationally-governed");
   });
 
   it("requires affirmative native evidence for either an H block or annotation", () => {
@@ -922,7 +924,7 @@ describe("governance public-clock and replacement-approval admission", () => {
 
   function posture(asset: V9AssetFactsV3) {
     const control = asset.controls.find((row) => row.capSemantics.kind === "unbounded" && row.capabilities.includes("mint"))!;
-    return deriveV9MintPosture(control, makeReviewedMintInput(control.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, asset.issuanceFacts);
+    return reviewedMintPosture(control, asset.issuanceFacts);
   }
 
   describe.each(["D29", "D30"] as const)("%s public-clock admission", (family) => {
@@ -1008,7 +1010,7 @@ describe("authority clock, cycle, and compact runtime admission", () => {
     expect(authority(profile, "raise")).toMatchObject({ closed: true, governorRooted: true, publicDelaySec: 172800 });
     const positive = compile(profile);
     expect(positive.process?.coverage).toBe("complete");
-    expect(deriveV9MintPosture(positive.rows[0]!, makeReviewedMintInput(positive.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, positive.asset.issuanceFacts)).toBe("unbounded-operationally-governed");
+    expect(reviewedMintPosture(positive.rows[0]!, positive.asset.issuanceFacts)).toBe("unbounded-operationally-governed");
     const inner = graph.edges.find((edge) => edge.id === "inner-clock")!;
     if (failure === "null-delay") inner.publicDelaySec = null;
     else inner.calldataBound = false;
@@ -1017,7 +1019,7 @@ describe("authority clock, cycle, and compact runtime admission", () => {
     const denied = compile(profile);
     expect(denied.process).toMatchObject({ coverage: "incomplete", minDiscretionaryPublicDelaySec: null });
     expect(denied.process?.diagnostics).toContainEqual(expect.objectContaining({ code: "delay-unproved", gate: "H1", controlRef: PROGRAM, pathId: "raise" }));
-    expect(deriveV9MintPosture(denied.rows[0]!, makeReviewedMintInput(denied.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, denied.asset.issuanceFacts)).toBe("unbounded-adverse");
+    expect(reviewedMintPosture(denied.rows[0]!, denied.asset.issuanceFacts)).toBe("unbounded-adverse");
   });
 
   it.each(["self-loop", "two-node-cycle"] as const)("denies a terminal fixed-program %s without a certified governor component", (cycle) => {
@@ -1032,7 +1034,7 @@ describe("authority clock, cycle, and compact runtime admission", () => {
     expect(authority(profile, "interest")).toMatchObject({ closed: true, governorRooted: false, publicDelaySec: 0 });
     const positive = compile(profile);
     expect(positive.process?.coverage).toBe("complete");
-    expect(deriveV9MintPosture(positive.rows[0]!, makeReviewedMintInput(positive.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, positive.asset.issuanceFacts)).toBe("unbounded-operationally-governed");
+    expect(reviewedMintPosture(positive.rows[0]!, positive.asset.issuanceFacts)).toBe("unbounded-operationally-governed");
     graph.edges.push({ ...edge, id: "fixed-back-edge", from: cycle === "self-loop" ? "operational-program" : "fixed-leaf", to: "operational-program" });
     restamp(profile);
     expect(authority(profile, "interest")?.closed).toBe(false);
@@ -1041,7 +1043,7 @@ describe("authority clock, cycle, and compact runtime admission", () => {
     expect(denied.process?.diagnostics).toContainEqual(expect.objectContaining({
       code: "graph-cycle-unclosed", controlRef: PROGRAM, pathId: "interest", field: "authorityGraph.nodes.operational-program",
     }));
-    expect(deriveV9MintPosture(denied.rows[0]!, makeReviewedMintInput(denied.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, denied.asset.issuanceFacts)).toBe("unbounded-adverse");
+    expect(reviewedMintPosture(denied.rows[0]!, denied.asset.issuanceFacts)).toBe("unbounded-adverse");
   });
 
   it("requires a compact clone's observed hash to match its variant even when the original exemplar is unchanged", () => {
@@ -1062,7 +1064,7 @@ describe("authority clock, cycle, and compact runtime admission", () => {
     certificates.censuses[0]!.observations.push({ memberRef: clone, authorized: true, evidenceRefIds: ["clone-code"] });
     const positive = compile(profile);
     expect(positive.process?.diagnostics).toEqual([]);
-    expect(deriveV9MintPosture(positive.rows[0]!, makeReviewedMintInput(positive.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, positive.asset.issuanceFacts)).toBe("unbounded-operationally-governed");
+    expect(reviewedMintPosture(positive.rows[0]!, positive.asset.issuanceFacts)).toBe("unbounded-operationally-governed");
     klass.compactMembers[0]!.codeHash = HASH; codeRead.codeHash = HASH;
     expect(klass.compactMembers[0]!.immutables.original).toBe(klass.runtimeVariants[0]!.deployment);
     const denied = compile(profile);
@@ -1070,7 +1072,7 @@ describe("authority clock, cycle, and compact runtime admission", () => {
     expect(denied.process?.diagnostics).toContainEqual(expect.objectContaining({
       code: "runtime-unmatched", field: "compactMembers.codeHash", controlRef: PROGRAM, pathId: "interest", memberRef: clone,
     }));
-    expect(deriveV9MintPosture(denied.rows[0]!, makeReviewedMintInput(denied.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, denied.asset.issuanceFacts)).toBe("unbounded-adverse");
+    expect(reviewedMintPosture(denied.rows[0]!, denied.asset.issuanceFacts)).toBe("unbounded-adverse");
   });
 
   it.each(["wrong-clone-hash", "unreviewed-implementation", "wrong-implementation", "unproved-clone-template"] as const)("admits an exact reviewed EIP-1167 clone but denies the single %s gate", (failure) => {
@@ -1098,7 +1100,7 @@ describe("authority clock, cycle, and compact runtime admission", () => {
     expect(MintAuthorityProfileSchema.safeParse(profile).success).toBe(true);
     const positive = compile(profile);
     expect(positive.process?.diagnostics).toEqual([]);
-    expect(deriveV9MintPosture(positive.rows[0]!, makeReviewedMintInput(positive.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, positive.asset.issuanceFacts)).toBe("unbounded-operationally-governed");
+    expect(reviewedMintPosture(positive.rows[0]!, positive.asset.issuanceFacts)).toBe("unbounded-operationally-governed");
     if (failure === "wrong-clone-hash") {
       const wrongHash: `0x${string}` = `0x${"ef".repeat(32)}`;
       klass.compactMembers[0]!.codeHash = wrongHash;
@@ -1113,7 +1115,7 @@ describe("authority clock, cycle, and compact runtime admission", () => {
       field: failure === "unreviewed-implementation" ? "compactMembers.implementation" : "compactMembers.codeHash",
       controlRef: PROGRAM, pathId: "interest", memberRef: clone,
     }));
-    expect(deriveV9MintPosture(denied.rows[0]!, makeReviewedMintInput(denied.rows[0]!.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, denied.asset.issuanceFacts)).toBe("unbounded-adverse");
+    expect(reviewedMintPosture(denied.rows[0]!, denied.asset.issuanceFacts)).toBe("unbounded-adverse");
   });
 });
 
@@ -1139,7 +1141,7 @@ describe("D32 vote-caster and replacement authority traversal", () => {
 
   function posture(asset: V9AssetFactsV3) {
     const control = asset.controls.find((row) => row.capSemantics.kind === "unbounded" && row.capabilities.includes("mint"))!;
-    return deriveV9MintPosture(control, makeReviewedMintInput(control.controlKey), false, V9_CANDIDATE_POLICY_V1.policy.semantic, asset.issuanceFacts);
+    return reviewedMintPosture(control, asset.issuanceFacts);
   }
 
   describe.each(["D29", "D30", "H"] as const)("%s other-holder authority", (family) => {

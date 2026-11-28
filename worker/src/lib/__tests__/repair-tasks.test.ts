@@ -61,6 +61,8 @@ function seedNaturalPredecessorFixture(
   `);
 }
 
+const runRepairs = (db: D1Database) => runWorkerRepairTaskRunner(db, { nowSec: NOW });
+
 describe("repair tasks", () => {
   it("surfaces a missing mandatory repair-task table from the runner", async () => {
     const db = mockRepairD1([
@@ -72,7 +74,7 @@ describe("repair tasks", () => {
     ]);
 
     await expect(
-      runWorkerRepairTaskRunner(db, { nowSec: NOW }),
+      runRepairs(db),
     ).rejects.toThrow("D1_ERROR: no such table: worker_repair_tasks");
   });
 
@@ -283,7 +285,7 @@ describe("repair tasks", () => {
       },
     ]);
 
-    const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+    const result = await runRepairs(db);
 
     expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
@@ -333,7 +335,7 @@ describe("repair tasks", () => {
            '{"eventId":3}', ${NOW - 100}, ${NOW - 100});
       `);
 
-      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      const result = await runRepairs(db);
 
       expect(result.status).toBe("ok");
       expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
@@ -397,7 +399,7 @@ describe("repair tasks", () => {
       db.sqlite.prepare("UPDATE worker_repair_tasks SET next_attempt_at = ? WHERE task_id = 'not-due'")
         .run(NOW + 2 * 86400);
 
-      const first = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      const first = await runRepairs(db);
       expect(JSON.parse(first.metadata ?? "{}")).toMatchObject({
         claimed: 5, deferred: 5, closed: 0, batchLimit: DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
       });
@@ -435,7 +437,7 @@ describe("repair tasks", () => {
       for (let id = 1; id <= 6; id++) {
         insert.run(`task:${id}`, String(id), 7 - id, JSON.stringify({ eventId: id }), NOW - id, NOW - id);
       }
-      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      const result = await runRepairs(db);
       expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
         claimed: 5, deferred: 5, failed: 0, autoRepairCount: 0,
         batchLimit: DDR_REPAIR_RUNNER_BATCH_LIMIT_V1,
@@ -477,7 +479,7 @@ describe("repair tasks", () => {
 
         const daily = await runCronSentinelSources(db, "daily", [{
           source: "repair-debt",
-          run: () => runWorkerRepairTaskRunner(db, { nowSec: NOW }),
+          run: () => runRepairs(db),
         }], NOW);
         expect(daily.status).toBe("degraded");
         expect(JSON.parse(daily.metadata!).sources["repair-debt"]).toMatchObject({
@@ -578,7 +580,7 @@ describe("repair tasks", () => {
            '{"eventId":42,"reason":"explicit repair required"}', ${NOW - 600}, ${NOW - 600});
       `);
 
-      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      const result = await runRepairs(db);
 
       expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
         claimed: 1,
@@ -622,7 +624,7 @@ describe("repair tasks", () => {
       db.sqlite.exec(`INSERT INTO depeg_resolver_lock_opportunity_audit
         (incident_key, event_id, run_at, eligible_at, health_status, action, created_at)
         VALUES ('ddr2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 41, ${NOW}, ${NOW}, 'healthy', 'pending', ${NOW})`);
-      await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      await runRepairs(db);
       expect(db.sqlite.prepare(
         "SELECT state, last_error FROM worker_repair_tasks WHERE subject_id = '42'",
       ).get()).toEqual({ state: "deferred", last_error: "safe-class-not-proven" });
@@ -642,7 +644,7 @@ describe("repair tasks", () => {
     try {
       seedNaturalPredecessorFixture(db);
 
-      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      const result = await runRepairs(db);
 
       expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
         claimed: 1,
@@ -683,7 +685,7 @@ describe("repair tasks", () => {
         END;
       `);
 
-      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      const result = await runRepairs(db);
 
       expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
         claimed: 1,
@@ -720,7 +722,7 @@ describe("repair tasks", () => {
         END;
       `);
 
-      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      const result = await runRepairs(db);
 
       expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
         claimed: 1,
@@ -757,7 +759,7 @@ describe("repair tasks", () => {
         END;
       `);
 
-      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      const result = await runRepairs(db);
 
       expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
         claimed: 1,
@@ -797,7 +799,7 @@ describe("repair tasks", () => {
     try {
       seedNaturalPredecessorFixture(db, { includeRevision: false });
 
-      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      const result = await runRepairs(db);
 
       expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
         claimed: 1,
@@ -904,7 +906,7 @@ describe("repair tasks", () => {
     const db = makeSqliteD1();
     try {
       seedFlapCapBoundaryFixture(db, DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1 - 3);
-      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      const result = await runRepairs(db);
       const afterFirstRun = readFlapCapState(db);
       await runWorkerRepairTaskRunner(db, { nowSec: NOW + DDR_REPAIR_RUNNER_BACKOFF_SEC_V1 + 1 });
 

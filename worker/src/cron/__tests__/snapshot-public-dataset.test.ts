@@ -142,6 +142,11 @@ function publishedDewsPointer(rows = STRESS_ROWS) {
   };
 }
 
+const BASE_CACHE_ROWS = [
+  { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+  { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+] as const;
+
 function buildDb(
   dexRows: readonly Record<string, unknown>[] = DEX_ROWS,
   insertChanges = 1,
@@ -150,8 +155,7 @@ function buildDb(
   return mockD1([
     publishedDewsPointer(),
     snapshotCacheRows([
-      { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
-      { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+      ...BASE_CACHE_ROWS,
     ]),
     { match: "FROM stability_index", rows: [], first: PSI_ROW },
     { match: "FROM stress_signal_publication_rows", rows: STRESS_ROWS },
@@ -235,8 +239,7 @@ describe("snapshotPublicDataset", () => {
     const db = mockD1([
       publishedDewsPointer(),
       snapshotCacheRows([
-        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
-        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        ...BASE_CACHE_ROWS,
       ]),
       { match: "FROM stability_index", rows: [], first: {
         ...PSI_ROW, computed_at: slotDayStartedAtSec - 86_400,
@@ -596,8 +599,7 @@ describe("snapshotPublicDataset", () => {
   it("degrades instead of writing when the PSI daily snapshot is missing", async () => {
     const db = mockD1([
       snapshotCacheRows([
-        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
-        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        ...BASE_CACHE_ROWS,
       ]),
       { match: "FROM stability_index", rows: [], first: null },
     ]);
@@ -611,8 +613,7 @@ describe("snapshotPublicDataset", () => {
   it("degrades instead of writing when the PSI daily snapshot is stale", async () => {
     const db = mockD1([
       snapshotCacheRows([
-        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
-        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        ...BASE_CACHE_ROWS,
       ]),
       { match: "FROM stability_index", rows: [], first: { ...PSI_ROW, computed_at: EXPECTED_PSI_COMPUTED_AT - 86400 } },
     ]);
@@ -627,8 +628,7 @@ describe("snapshotPublicDataset", () => {
     const db = mockD1([
       publishedDewsPointer(),
       snapshotCacheRows([
-        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
-        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        ...BASE_CACHE_ROWS,
       ]),
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
       { match: "FROM stress_signal_publication_rows", rows: [] },
@@ -649,8 +649,7 @@ describe("snapshotPublicDataset", () => {
     const db = mockD1([
       publishedDewsPointer(),
       snapshotCacheRows([
-        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
-        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        ...BASE_CACHE_ROWS,
       ]),
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
       { match: "pharos:stress-signals:published-exact", rows: [STRESS_ROWS[1]!] },
@@ -677,8 +676,7 @@ describe("snapshotPublicDataset", () => {
     const db = mockD1([
       publishedDewsPointer(),
       snapshotCacheRows([
-        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
-        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        ...BASE_CACHE_ROWS,
       ]),
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
       { match: "FROM stress_signal_publication_rows", rows: [], throwError: new Error("D1 read failed") },
@@ -700,8 +698,7 @@ describe("snapshotPublicDataset", () => {
     const db = mockD1([
       publishedDewsPointer(),
       snapshotCacheRows([
-        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
-        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        ...BASE_CACHE_ROWS,
       ]),
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
       { match: "FROM stress_signal_publication_rows", rows: STRESS_ROWS },
@@ -737,8 +734,7 @@ describe("snapshotPublicDataset", () => {
     const db = mockD1([
       publishedDewsPointer(staleDewsRows),
       snapshotCacheRows([
-        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
-        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        ...BASE_CACHE_ROWS,
       ]),
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
       { match: "FROM stress_signal_publication_rows", rows: staleDewsRows },

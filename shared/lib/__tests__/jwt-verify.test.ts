@@ -110,6 +110,8 @@ const MOCK_JWKS = {
 };
 
 
+const expectRejected = async (token: string) => expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
+
 describe("verifyAccessJwt", () => {
   beforeEach(() => {
     _resetJwksCache();
@@ -144,12 +146,12 @@ describe("verifyAccessJwt", () => {
 
     it("rejects token with header missing kid", async () => {
       const { token } = makeJwtParts({ alg: "RS256" }, validClaims());
-      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
+      await expectRejected(token);
     });
 
     it("rejects token with header missing alg", async () => {
       const { token } = makeJwtParts({ kid: "k1" }, validClaims());
-      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
+      await expectRejected(token);
     });
   });
 
@@ -168,7 +170,7 @@ describe("verifyAccessJwt", () => {
       mockFetch([{ match: () => true, body: { keys: [control.jwk] } }]);
       expect(await verifyAccessJwt({ token: control.token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(true);
       const { token } = await makeSignedJwt(validHeader(), validClaims(overrides));
-      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
+      await expectRejected(token);
     });
 
     it("normalizes a full URL teamDomain before issuer comparison", async () => {
@@ -258,19 +260,19 @@ describe("verifyAccessJwt", () => {
     it("returns false when JWKS fetch fails", async () => {
       mockFetch([{ match: () => true, outcomes: [new Error("network error")] }]);
       const { token } = makeJwtParts(validHeader(), validClaims());
-      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
+      await expectRejected(token);
     });
 
     it("returns false when JWKS returns non-200", async () => {
       mockFetch([{ match: () => true, body: "not found", status: 404 }]);
       const { token } = makeJwtParts(validHeader(), validClaims());
-      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
+      await expectRejected(token);
     });
 
     it("returns false when JWKS has no matching kid", async () => {
       const { token, jwk } = await makeSignedJwt(validHeader(), validClaims());
       mockFetch([{ match: () => true, body: { keys: [{ ...jwk, kid: "other-kid" }] } }]);
-      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
+      await expectRejected(token);
     });
 
     it("retries with a fresh JWKS fetch when the cached key set misses the token kid", async () => {
@@ -306,7 +308,7 @@ describe("verifyAccessJwt", () => {
     it("returns false when JWKS response has no keys array", async () => {
       mockFetch([{ match: () => true, body: {} }]);
       const { token } = makeJwtParts(validHeader(), validClaims());
-      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
+      await expectRejected(token);
     });
   });
 
@@ -361,7 +363,7 @@ describe("verifyAccessJwt", () => {
         keys: [{ ...MOCK_JWKS.keys[0], kid: "test-kid-1", alg: "ES256" }],
       } }]);
       const { token } = makeJwtParts(validHeader({ alg: "ES256" }), validClaims());
-      expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
+      await expectRejected(token);
     });
 
     it("rejects a token whose header.alg disagrees with the JWKS key alg", async () => {

@@ -66,6 +66,8 @@ function makeStreamedAuthedPost(chunks: string[], headers: Record<string, string
   } as RequestInit & { duplex: "half" });
 }
 
+const requestAdminStatus = () => onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
+
 describe("ops admin proxy", () => {
   beforeEach(() => {
     verifyAccessJwtUserIdentity.mockReset();
@@ -105,7 +107,7 @@ describe("ops admin proxy", () => {
     const fetchSpy = mockFetch([], { requireMatch: true });
     verifyAccessJwtUserIdentity.mockResolvedValueOnce(null);
 
-    const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
+    const response = await requestAdminStatus();
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: "Unauthorized" });
@@ -464,7 +466,7 @@ describe("ops admin proxy", () => {
       }),
     );
 
-    const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
+    const response = await requestAdminStatus();
 
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "Operator API upstream auth failed" });
@@ -479,7 +481,7 @@ describe("ops admin proxy", () => {
       }),
     );
 
-    const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
+    const response = await requestAdminStatus();
 
     expect(response.status).toBe(302);
     expect(response.headers.get("Location")).toBeNull();
@@ -494,7 +496,7 @@ describe("ops admin proxy", () => {
       }),
     );
 
-    const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
+    const response = await requestAdminStatus();
 
     expect(response.status).toBe(302);
     expect(response.headers.get("Location")).toBeNull();
@@ -503,7 +505,7 @@ describe("ops admin proxy", () => {
   it("preserves upstream Retry-After headers on degraded admin responses", async () => {
     opsApi.json("/api/status", { error: "temporarily unavailable" }, 503, { "Retry-After": "60" });
 
-    const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
+    const response = await requestAdminStatus();
 
     expect(response.status).toBe(503);
     expect(response.headers.get("Retry-After")).toBe("60");
@@ -515,7 +517,7 @@ describe("ops admin proxy", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     opsApi.error("/api/status", new Error("network down"));
 
-    const response = await onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
+    const response = await requestAdminStatus();
 
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "Operator API upstream fetch failed" });
@@ -559,7 +561,7 @@ describe("ops admin proxy", () => {
       ),
     );
 
-    const responsePromise = onRequest(adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status")));
+    const responsePromise = requestAdminStatus();
 
     await vi.advanceTimersByTimeAsync(20_000);
 

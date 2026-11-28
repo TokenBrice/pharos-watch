@@ -41,6 +41,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+const postSignedSession = () => postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" });
+
 describe("Mini App versioned API client", () => {
   it("sends version capabilities and hydrates a compact snapshot from the bundled catalog", async () => {
     const fetchMock = mockFetch([{
@@ -48,7 +50,7 @@ describe("Mini App versioned API client", () => {
       body: createTelegramMiniAppSnapshot(mutableState, 1_800_000_000),
     }], { requireMatch: true });
 
-    const snapshot = await postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" });
+    const snapshot = await postSignedSession();
 
     const requestUrl = new URL(String(fetchMock.mock.calls[0]?.[0]), "https://pharos.watch");
     expect(requestUrl.searchParams.getAll(TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM)).toEqual([
@@ -84,7 +86,7 @@ describe("Mini App versioned API client", () => {
   it("keeps a new client compatible with an old Worker's full-catalog response", async () => {
     mockFetch([{ match: "/api/telegram-mini-app/session", body: legacyState }], { requireMatch: true });
 
-    const snapshot = await postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" });
+    const snapshot = await postSignedSession();
 
     expect(snapshot.state.catalog.searchableCoins).toEqual(legacyState.catalog.searchableCoins);
     expect(snapshot.state.subscriber).not.toHaveProperty("recap");
@@ -128,7 +130,7 @@ describe("Mini App versioned API client", () => {
       body: { ...createTelegramMiniAppSnapshot(mutableState), [field]: value },
     }], { requireMatch: true });
 
-    await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
+    await expect(postSignedSession())
       .rejects.toMatchObject({ status: 409, code });
   });
 
@@ -138,7 +140,7 @@ describe("Mini App versioned API client", () => {
       body: { state: "invalid" },
     }], { requireMatch: true });
 
-    await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
+    await expect(postSignedSession())
       .rejects.toBeInstanceOf(SchemaValidationError);
   });
 
@@ -149,7 +151,7 @@ describe("Mini App versioned API client", () => {
       body: { code: "rate-limited", retryAfterSec: 7_200.5 },
     }], { requireMatch: true });
 
-    await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
+    await expect(postSignedSession())
       .rejects.toMatchObject({ status: 429, code: "rate-limited", retryAfterSec: 3_600 });
   });
 
@@ -160,7 +162,7 @@ describe("Mini App versioned API client", () => {
       body: { code: "rate-limited", retryAfterSec: 120 },
       headers: { "Retry-After": "30" },
     }], { requireMatch: true });
-    await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
+    await expect(postSignedSession())
       .rejects.toMatchObject({ status: 429, code: "rate-limited", retryAfterSec: 120 });
 
     mockFetch([{
@@ -169,7 +171,7 @@ describe("Mini App versioned API client", () => {
       body: { code: "internal", retryAfterSec: 0 },
       headers: { "Retry-After": "30" },
     }], { requireMatch: true });
-    await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
+    await expect(postSignedSession())
       .rejects.toMatchObject({ status: 503, code: "internal", retryAfterSec: 30 });
   });
 
@@ -185,7 +187,7 @@ describe("Mini App versioned API client", () => {
       body: { code: "rate-limited", retryAfterSec },
     }], { requireMatch: true });
 
-    await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
+    await expect(postSignedSession())
       .rejects.toMatchObject({ status: 429, code: "rate-limited", retryAfterSec: expected });
   });
 
@@ -197,7 +199,7 @@ describe("Mini App versioned API client", () => {
       }),
     }], { requireMatch: true });
 
-    await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
+    await expect(postSignedSession())
       .rejects.toMatchObject({ status: 504, code: null, retryAfterSec: 45 });
   });
 

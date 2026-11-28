@@ -68,6 +68,8 @@ function warnRecords(spy: ReturnType<typeof vi.spyOn>): Array<Record<string, unk
   });
 }
 
+const silenceWarn = () => vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
 describe("fetchWithRetry", () => {
   beforeEach(() => {
     sleepWithSignalMock.mockClear();
@@ -104,7 +106,7 @@ describe("fetchWithRetry", () => {
   it("preserves genuine failed attempts when a retry is denied", async () => {
     const fetchSpy = mockFetch([{ match: () => true, outcomes: [new TypeError("connection reset")] }]);
     const beforeRequest = vi.fn().mockReturnValueOnce(true).mockReturnValue(false);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warnSpy = silenceWarn();
     try {
       const pending = fetchJsonWithRetry("https://example.com", undefined, 1, { beforeRequest });
       await expect(pending).rejects.toMatchObject({ reason: "admission-denied", attemptsStarted: 1 });
@@ -204,7 +206,7 @@ describe("fetchWithRetry", () => {
       match: () => true,
       outcomes: [new TypeError("network unavailable"), new TypeError("network unavailable")],
     }]);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warnSpy = silenceWarn();
 
     try {
       await expect(fetchTextWithRetry(
@@ -347,7 +349,7 @@ describe("fetchWithRetry", () => {
 
   it("uses an explicit safe URL in retry logs without changing the fetched URL", async () => {
     const fetchMock = mockFetch([{ match: () => true, body: "bad gateway", status: 520 }]);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warnSpy = silenceWarn();
 
     await fetchWithRetry(
       "https://example.com/secret-token/resource",
@@ -368,7 +370,7 @@ describe("fetchWithRetry", () => {
 
   it("redacts known provider URLs in retry logs by default", async () => {
     mockFetch([{ match: () => true, body: "bad gateway", status: 520 }]);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warnSpy = silenceWarn();
 
     await fetchWithRetry(
       "https://eth-mainnet.g.alchemy.com/v2/real-secret-key",
@@ -437,7 +439,7 @@ describe("fetchWithRetry", () => {
 
   it("keeps the per-attempt timeout active while reading text bodies", async () => {
     vi.useFakeTimers();
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warnSpy = silenceWarn();
     try {
       const fetchMock = mockFetch([{ match: () => true, respond: () => neverEndingResponse("partial") }]);
 
@@ -490,7 +492,7 @@ describe("fetchWithRetry", () => {
         return attempt.response;
       },
     }]);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warnSpy = silenceWarn();
 
     try {
       const result = await fetchBody(
@@ -523,7 +525,7 @@ describe("fetchWithRetry", () => {
         return attempt.response;
       },
     }]);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warnSpy = silenceWarn();
 
     try {
       const result = await fetchJsonWithRetry(
@@ -554,7 +556,7 @@ describe("fetchWithRetry", () => {
         return attempt.response;
       },
     }]);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warnSpy = silenceWarn();
 
     try {
       const result = await fetchTextWithRetry(
@@ -577,7 +579,7 @@ describe("fetchWithRetry", () => {
       match: () => true,
       respond: () => new Response("not json"),
     }]);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warnSpy = silenceWarn();
 
     try {
       const result = await fetchJsonWithRetry(
@@ -648,7 +650,7 @@ describe("fetchWithRetry", () => {
 
   it("enforces the limit after reading a genuine Response byte stream", async () => {
     const response = new Response("oversized");
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warnSpy = silenceWarn();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
 
     try {
@@ -676,7 +678,7 @@ describe("fetchWithRetry", () => {
       match: () => true,
       outcomes: [{ response: new Response(null, { status: 204 }) }, { body: { ok: true } }],
     }]);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warnSpy = silenceWarn();
     try {
       const result = await fetchJsonWithRetry("https://example.com/empty", undefined, 1, { onBodyRead: observe });
       expect(result?.body).toEqual({ ok: true });

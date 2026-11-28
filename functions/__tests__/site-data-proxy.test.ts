@@ -70,6 +70,9 @@ function expectAttribution(
   expect(rows.map((entry) => entry.binds.slice(1))).toEqual([[route, path, delivery, "site-api", inverseRate, 1]]);
 }
 
+/** Same-origin `GET /_site-data/stablecoins`. */
+const stablecoinsRequest = () => new Request("https://pharos.watch/_site-data/stablecoins", { headers: { Origin: "https://pharos.watch" } });
+
 describe("site-data proxy", () => {
   const cacheMatch = vi.fn();
   const cachePut = vi.fn(async () => undefined);
@@ -104,11 +107,7 @@ describe("site-data proxy", () => {
       "X-Robots-Tag": "index",
     });
 
-    const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      })),
-    );
+    const response = await onRequest(siteDataContext(stablecoinsRequest()));
     const observed = await observeHttpResponse(response, ["Cache-Control", "Content-Type", "X-Data-Age", "X-Data-Updated-At", "X-Robots-Tag"]);
     const expected: HttpResponseObservation = {
       status: 200,
@@ -187,9 +186,7 @@ describe("site-data proxy", () => {
       "Access-Control-Expose-Headers": exposed.join(", "),
       "X-Private-Upstream": "not-forwarded",
     });
-    const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-      headers: { Origin: "https://pharos.watch" },
-    })));
+    const response = await onRequest(siteDataContext(stablecoinsRequest()));
     expect(response.headers.get("Access-Control-Expose-Headers")).toBe(exposed.join(", "));
     for (const [name, value] of Object.entries(headers)) {
       expect(response.headers.get(name)).toBe(value);
@@ -275,9 +272,7 @@ describe("site-data proxy", () => {
     const networkFetch = mockFetch([], { requireMatch: true });
     const binding = { fetch: vi.fn(async (_request: Request): Promise<Response> => { throw new Error("binding unavailable"); }) };
     const db = makeTestD1Database();
-    const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-      headers: { Origin: "https://pharos.watch" },
-    }), makeEnv(db, { SITE_API: binding })));
+    const response = await onRequest(siteDataContext(stablecoinsRequest(), makeEnv(db, { SITE_API: binding })));
     expect(response.status).toBe(502);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expectNoindex(response);
@@ -377,11 +372,7 @@ describe("site-data proxy", () => {
       Date: "Mon, 15 Jun 2026 09:55:01 GMT",
     });
 
-    const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      })),
-    );
+    const response = await onRequest(siteDataContext(stablecoinsRequest()));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ ok: true });
@@ -455,11 +446,7 @@ describe("site-data proxy", () => {
       "Retry-After": "45",
     });
 
-    const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      })),
-    );
+    const response = await onRequest(siteDataContext(stablecoinsRequest()));
 
     expect(response.status).toBe(429);
     expect(response.headers.get("Retry-After")).toBe("45");
@@ -521,9 +508,7 @@ describe("site-data proxy", () => {
     const fetchSpy = mockFetch([], { requireMatch: true });
 
     const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      }), makeEnv(makeTestD1Database(), { SITE_API_ORIGIN: undefined })),
+      siteDataContext(stablecoinsRequest(), makeEnv(makeTestD1Database(), { SITE_API_ORIGIN: undefined })),
     );
 
     expect(response.status).toBe(500);
@@ -537,9 +522,7 @@ describe("site-data proxy", () => {
     const fetchSpy = mockFetch([], { requireMatch: true });
 
     const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      }), makeEnv(makeTestD1Database(), { SITE_API_ORIGIN: "not a url" })),
+      siteDataContext(stablecoinsRequest(), makeEnv(makeTestD1Database(), { SITE_API_ORIGIN: "not a url" })),
     );
 
     expect(response.status).toBe(500);
@@ -556,9 +539,7 @@ describe("site-data proxy", () => {
     const db = makeTestD1Database();
 
     const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      }), makeEnv(db)),
+      siteDataContext(stablecoinsRequest(), makeEnv(db)),
     );
 
     expect(response.status).toBe(502);
@@ -574,11 +555,7 @@ describe("site-data proxy", () => {
       headers: { "Content-Length": String(24 * 1024 * 1024 + 1) },
     }));
 
-    const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      })),
-    );
+    const response = await onRequest(siteDataContext(stablecoinsRequest()));
 
     expect(response.status).toBe(502);
     expectNoindex(response);
@@ -590,9 +567,7 @@ describe("site-data proxy", () => {
     siteApi.json("/api/stablecoins", { status }, status);
     const db = makeTestD1Database();
     const ctx = makeWaitUntil();
-    const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-      headers: { Origin: "https://pharos.watch" },
-    }), makeEnv(db), ctx.waitUntil));
+    const response = await onRequest(siteDataContext(stablecoinsRequest(), makeEnv(db), ctx.waitUntil));
     await ctx.flush();
     expect(response.status).toBe(status);
     expectNoindex(response);
@@ -603,9 +578,7 @@ describe("site-data proxy", () => {
   it("samples upstream HTTP errors as ordinary responses, not certain transport failures", async () => {
     siteApi.json("/api/stablecoins", { error: "upstream" }, 503);
     const db = makeTestD1Database();
-    const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-      headers: { Origin: "https://pharos.watch" },
-    }), makeEnv(db)));
+    const response = await onRequest(siteDataContext(stablecoinsRequest(), makeEnv(db)));
     expect(response.status).toBe(503);
     expectNoindex(response);
     expectAttribution(db, "stablecoins", "/api/stablecoins");
@@ -618,9 +591,7 @@ describe("site-data proxy", () => {
     siteApi.json("/api/stablecoins", { ok: true });
 
     const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      }), makeEnv(makeTestD1Database())),
+      siteDataContext(stablecoinsRequest(), makeEnv(makeTestD1Database())),
     );
 
     expect(response.status).toBe(200);
@@ -644,9 +615,7 @@ describe("site-data proxy", () => {
     const db = makeTestD1Database();
     const ctx = makeWaitUntil();
     let settled = false;
-    const pending = onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-      headers: { Origin: "https://pharos.watch" },
-    }), makeEnv(db, transport === "binding" ? { SITE_API: binding } : {}), ctx.waitUntil)).then((response) => {
+    const pending = onRequest(siteDataContext(stablecoinsRequest(), makeEnv(db, transport === "binding" ? { SITE_API: binding } : {}), ctx.waitUntil)).then((response) => {
       settled = true;
       return response;
     });
@@ -668,9 +637,7 @@ describe("site-data proxy", () => {
     const fetchSpy = mockFetch([], { requireMatch: true });
 
     const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      }), makeEnv(makeTestD1Database(), { SITE_API_SHARED_SECRET: " " })),
+      siteDataContext(stablecoinsRequest(), makeEnv(makeTestD1Database(), { SITE_API_SHARED_SECRET: " " })),
     );
 
     expect(response.status).toBe(500);

@@ -165,6 +165,8 @@ function cliffAnalysisDb(previousTvl: number, candidates: DexLiquidityDriftCandi
   ]);
 }
 
+const analyze = (overrides: Parameters<typeof makeAnalysisInput>[0]) => analyzeDexLiquidityPostScoring(makeAnalysisInput(overrides));
+
 describe("analyzeDexLiquidityPostScoring", () => {
   it.each([
     [null, true], ["{", true], ["{}", true], ["failed", true], ["partial", true],
@@ -183,13 +185,13 @@ describe("analyzeDexLiquidityPostScoring", () => {
       source_mix_json: id === "usdt-tether" ? source_mix_json : null,
     }));
     for (const run of [1, 2]) {
-      const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ db: mockAnalysisDb([
+      const analysis = await analyze({ db: mockAnalysisDb([
         { match: "FROM cron_runs", rows: [{ status: "ok", metadata: JSON.stringify(metadata) }] },
         { match: "FROM dex_liquidity_run_rows r", rows: source_mix_json === "partial" ? [] : rows,
           throwError: source_mix_json === "failed" ? new Error("read failed") : undefined },
       ]), scoreResults: new Map([["usdt-tether", { ...BASE_SCORE_RESULT, sourceMix: {
         cg_onchain: { poolCount: 21, tvlUsd: 1_000_000 },
-      } }]]) }));
+      } }]]) });
       expect(analysis.sourceCoverage.cohortDriftFlags).toEqual(unavailable && run === 2 ? [flag] : []);
       const candidates = analysis.sourceCoverage.qualityDriftCandidates;
       metadata.sourceCoverage.qualityDriftCandidates = candidates;
@@ -219,13 +221,13 @@ describe("analyzeDexLiquidityPostScoring", () => {
     });
     const pools = metrics.get("usdc-circle")!.pools;
     const rebuilt = rebuildMetricsFromPools(pools);
-    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+    const analysis = await analyze({
       scoreResults: new Map([["usdc-circle", {
         ...BASE_SCORE_RESULT, tvl: rebuilt.totalTvlUsd, effectiveTvl: rebuilt.effectiveTvl,
         balanceMeasuredTvlUsd: rebuilt.totalTvlForBalance,
       }]]),
       retainedPoolsByStablecoin: new Map([["usdc-circle", pools]]),
-    }));
+    });
     expect(pools[0]?.extra?.measurement?.balanceMeasured).toBe(true);
     expect(rebuilt.totalTvlForBalance).toBe(2_000_000);
     expect(analysis.sourceCoverage.measuredBalanceTvlBySourceFamily.dl).toBe(2_000_000);
@@ -249,16 +251,16 @@ describe("analyzeDexLiquidityPostScoring", () => {
       oldMetadata.sourceCoverage.retainedPoolCountBySourceFamily = { cg_tickers: 20, dl: 10 };
       sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-dex-liquidity', 1700000000, 100, 'ok', ?)")
         .run(JSON.stringify(oldMetadata));
-      const cutover = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      const cutover = await analyze({
         db, scoreResults: new Map(realIds.map((id) => [id, BASE_SCORE_RESULT])),
-      }));
+      });
       expect(cutover.previousCoverage).toBe(10);
       expect(cutover.currentCoverage).toBe(10);
       expect(cutover.nearCoverageGuard).toBe(false);
       expect(cutover.hardCoverageGuard).toBe(false);
-      const outage = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      const outage = await analyze({
         db, scoreResults: new Map(realIds.slice(0, 5).map((id) => [id, BASE_SCORE_RESULT])),
-      }));
+      });
       expect(outage.hardCoverageGuard).toBe(true);
     } finally {
       fixtures.closeAll();
@@ -284,7 +286,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
       insertRun.run("cdxusd-cod3x", 86_583_463);
       insertRun.run(activeIds[0], 10_000_000);
       const scores = new Map(activeIds.map((id) => [id, { ...BASE_SCORE_RESULT, tvl: 10_000_000, effectiveTvl: 10_000_000 }]));
-      const healthy = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ db, scoreResults: scores }));
+      const healthy = await analyze({ db, scoreResults: scores });
       expect(healthy.previousCoverage).toBe(10);
       expect(healthy.sourceCoverage.previousCoverageClasses?.primary).toBe(10);
       expect(healthy.previousTop10CoveredTvl).toBe(100_000_000);
@@ -292,7 +294,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
       expect(healthy.sourceCoverage.majorTvlCliffs).toEqual([]);
       expect(healthy.sourceCoverage.coinTvlStepMissingCurrent).toBe(0);
 
-      const missing = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ db, scoreResults: new Map() }));
+      const missing = await analyze({ db, scoreResults: new Map() });
       expect(missing.hardCoverageGuard).toBe(true);
       expect(missing.hardMajorCoverageGuard).toBe(true);
       expect(missing.sourceCoverage.coinTvlStepMissingCurrent).toBe(1);
@@ -318,9 +320,9 @@ describe("analyzeDexLiquidityPostScoring", () => {
           qualityDriftCandidates: candidates,
         }) }] },
       ]);
-      const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ db,
+      const analysis = await analyze({ db,
         scoreResults: new Map([["usds-sky", { ...BASE_SCORE_RESULT, tvl, effectiveTvl: tvl }]]),
-      }));
+      });
       candidates = analysis.sourceCoverage.qualityDriftCandidates;
       previousTvl = tvl;
       if (index === 6) expect(analysis.sourceCoverage.qualityDriftRebaselined).toHaveLength(1);
@@ -354,7 +356,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
           : coin.id === "crash" ? "malformed" : JSON.stringify({ curve: coin.previous }),
       })),
     }], { assertMatchesUsed: true });
-    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+    const analysis = await analyze({
       db,
       currentGenerationId: "current",
       scoreResults: new Map([
@@ -367,7 +369,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
           ? [makePool({ project: "curve", tvlUsd: 90 }), makePool({ project: "uniswap", tvlUsd: 310 })]
           : [makePool({ project: "curve", tvlUsd: coin.current })],
       ])),
-    }));
+    });
 
     expect(analysis.sourceCoverage.coinTvlStepCount150).toBe(3);
     expect(analysis.sourceCoverage.coinTvlStepCount25).toBe(7);
@@ -400,7 +402,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         { stablecoin_id: "current-zero", total_tvl_usd: 100, protocol_tvl_json: null },
       ],
     }]);
-    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+    const analysis = await analyze({
       db,
       scoreResults: new Map([
         ["new", { ...BASE_SCORE_RESULT }],
@@ -409,7 +411,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         ["invalid-current", { ...BASE_SCORE_RESULT, tvl: Number.NaN }],
         ["current-zero", { ...BASE_SCORE_RESULT, tvl: 0 }],
       ]),
-    }));
+    });
     expect(analysis.sourceCoverage).toMatchObject({
       coinTvlStepMissingBaseline: 3,
       coinTvlStepMissingCurrent: 1,
@@ -422,7 +424,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
 
   it("reports missing baselines for a genuinely empty prior generation", async () => {
     const db = mockD1([{ match: "FROM dex_liquidity_run_rows r", rows: [] }], { assertMatchesUsed: true });
-    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ db }));
+    const analysis = await analyze({ db });
     expect(analysis.sourceCoverage).toMatchObject({
       coinTvlStepComparisons: 0,
       coinTvlStepMissingBaseline: 1,
@@ -444,9 +446,9 @@ describe("analyzeDexLiquidityPostScoring", () => {
     ["FROM dex_liquidity_run_rows r", "coin-tvl-read-failed", false],
   ] as const)("keeps %s failure distinct from an empty bootstrap", async (match, reason, required) => {
     const empty = await analyzeDexLiquidityPostScoring(makeAnalysisInput());
-    const failed = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+    const failed = await analyze({
       db: mockAnalysisDb([{ match, rows: [], throwError: new Error("baseline unavailable") }]),
-    }));
+    });
     expect(empty.requiredBaselineUnavailable).toBe(false);
     expect(empty.previousCoverage).toBe(0);
     expect(empty.previousCoverageBaselineAvailable).toBe(true);
@@ -513,10 +515,10 @@ describe("analyzeDexLiquidityPostScoring", () => {
       ],
     );
 
-    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+    const analysis = await analyze({
       db,
       globalAgg: { ...BASE_GLOBAL_AGG, totalTvl: 7_159_006_645 },
-    }));
+    });
 
     expect(analysis.previousGlobalTvl).toBe(7_025_252_002);
     expect(analysis.minExpectedGlobalTvl).toBeCloseTo(4_215_151_201.2);
@@ -575,13 +577,13 @@ describe("analyzeDexLiquidityPostScoring", () => {
       ],
     );
 
-    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+    const analysis = await analyze({
       db,
       stagedMergedCount: 2_614,
       stagedSkippedCount: 1_850,
       weakCoverageCoinsBeforeFallback: 301,
       globalAgg: { ...BASE_GLOBAL_AGG, totalTvl: 6_020_380_715 },
-    }));
+    });
 
     expect(analysis.sourceCoverage.qualityDriftMetrics.previousWeakCoverageCoins).toBe(300);
     expect(analysis.sourceCoverage.qualityDriftMetrics.weakCoverageDelta).toBe(1);
@@ -665,10 +667,10 @@ describe("analyzeDexLiquidityPostScoring", () => {
       ],
     );
 
-    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+    const analysis = await analyze({
       db,
       globalAgg: { ...BASE_GLOBAL_AGG, totalTvl: 5_000_000_000 },
-    }));
+    });
 
     expect(analysis.sourceCoverage.valueBaselineSource).toBe("dex_liquidity_global");
     expect(analysis.sourceCoverage.ignoredPersistedGlobalTvl).toBeNull();
@@ -723,12 +725,12 @@ describe("analyzeDexLiquidityPostScoring", () => {
       [],
     );
 
-    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+    const analysis = await analyze({
       db,
       dlYieldsAvailable: false,
       criticalSourceFailures: ["defillama-yields"],
       globalAgg: { ...BASE_GLOBAL_AGG, totalTvl: 2_000_000_000 },
-    }));
+    });
 
     // The critical failure keeps the run degraded and suppresses the hard
     // abort; it must not blank the guard evaluation that records what happened.
@@ -761,7 +763,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
       ],
     );
 
-    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+    const analysis = await analyze({
       db,
       scoreResults: new Map([
         ["xaum-matrixdock", { ...BASE_SCORE_RESULT, tvl: 400_000, effectiveTvl: 150_000 }],
@@ -770,7 +772,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         ["usdt-tether", { ...BASE_SCORE_RESULT, tvl: 2_650_000_000, effectiveTvl: 760_000_000 }],
       ]),
       globalAgg: { ...BASE_GLOBAL_AGG, totalTvl: 6_610_400_000 },
-    }));
+    });
 
     expect(analysis.previousTop10CoveredTvl).toBe(21_115_839_184);
     expect(analysis.previousTop10GuardTvl).toBe(8_209_498_735);
@@ -804,7 +806,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
     for (const mode of ["retained", "expired", "scoped"] as const) {
       const rows = [{ stablecoin_id: "usdt-tether", total_tvl_usd: 100_000, coverage_class: "primary" }];
       const clean = mode === "scoped";
-      const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ poolRejections: [rejection],
+      const analysis = await analyze({ poolRejections: [rejection],
         db: mockAnalysisDb([
           ...(clean ? [{ match: "FROM cron_runs", rows: [{ status: "ok", metadata: JSON.stringify({ rowsDropped: 67,
             poolRejectionMateriality: { candidateRejectedPoolCount: 0 }, sourceCoverage: {
@@ -812,7 +814,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
             } }) }] }] : [{ match: "g.started_at AS generation_started_at", rows: mode === "expired" ? [] : rows }]),
           { match: "FROM dex_liquidity_run_rows r", rows: [{ stablecoin_id: "usdt-tether", total_tvl_usd: clean ? 100_000 : 90_000, coverage_class: "primary" }] },
         ]), scoreResults: new Map([["usdt-tether", { ...BASE_SCORE_RESULT, tvl: 90_000 }]]),
-      }));
+      });
       expect(analysis.sourceCoverage.poolRejectionCoverage.reason)
         .toBe(mode === "expired" ? "pool-rejection-baseline-unavailable" : lost.reason);
       if (clean) expect(analysis.sourceCoverage.poolRejectionCoverage.baselineBeforeSec).toBeGreaterThan(1);
@@ -825,9 +827,9 @@ describe("analyzeDexLiquidityPostScoring", () => {
 
   it.each([true, false])("counts retained DL pools with decayed=%s", async (decayed) => {
     const pool = makePool({ source: "dl", extra: { measurement: { decayed } } });
-    const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+    const analysis = await analyze({
       retainedPoolsByStablecoin: new Map([["usdc-circle", [pool]]]),
-    }));
+    });
     expect(analysis.sourceCoverage.coinsCrawlerOnly).toBe(decayed ? 1 : 0);
     expect(analysis.sourceCoverage.retainedPoolCountBySourceFamily.dl).toBe(1);
   });
@@ -862,10 +864,10 @@ describe("analyzeDexLiquidityPostScoring", () => {
       const f1 = openTracker.open();
       seedGen(f1.sqlite, baseSec - 7200, [["usdt-tether", 3_000_000, "primary"], ["usdc-circle", 9_000_000, "primary"]]);
       seedGen(f1.sqlite, baseSec - 3600, [["usdt-tether", 0, "unobserved"], ["usdc-circle", 9_000_000, "primary"]]);
-      const r1 = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      const r1 = await analyze({
         db: f1.db, currentGenerationId: buildDexLiquidityPublicationGenerationId(baseSec),
         poolRejections: [rejection], scoreResults: new Map([["usdt-tether", { ...BASE_SCORE_RESULT, tvl: 2_579_000 }]]),
-      }));
+      });
       expect(r1.sourceCoverage.poolRejectionCoverage).toMatchObject({
         reason: "material-pool-rejections", material: true, baselineTvlUsdByCoin: { "usdt-tether": 3_000_000 },
       });
@@ -875,10 +877,10 @@ describe("analyzeDexLiquidityPostScoring", () => {
       seedGen(f2.sqlite, baseSec - 10_800, [["usdt-tether", 3_000_000, "primary"]], 0);
       seedGen(f2.sqlite, baseSec - 7200, [["usdt-tether", 0, "unobserved"], ["usdc-circle", 9_000_000, "primary"]], 0);
       seedGen(f2.sqlite, baseSec - 3600, [["usdt-tether", 2_579_000, "primary"]], 1);
-      const r2 = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      const r2 = await analyze({
         db: f2.db, currentGenerationId: buildDexLiquidityPublicationGenerationId(baseSec),
         poolRejections: [rejection], scoreResults: new Map([["usdt-tether", { ...BASE_SCORE_RESULT, tvl: 2_579_000 }]]),
-      }));
+      });
       expect(r2.sourceCoverage.poolRejectionCoverage).toMatchObject({
         reason: "material-pool-rejections", baselineTvlUsdByCoin: { "usdt-tether": 3_000_000 },
       });
@@ -886,10 +888,10 @@ describe("analyzeDexLiquidityPostScoring", () => {
       // 3. Exhausted retention (only unobserved rows) fails closed, never 0
       const f3 = openTracker.open();
       seedGen(f3.sqlite, baseSec - 3600, [["usdt-tether", 0, "unobserved"]]);
-      const r3 = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      const r3 = await analyze({
         db: f3.db, currentGenerationId: buildDexLiquidityPublicationGenerationId(baseSec),
         poolRejections: [rejection], scoreResults: new Map([["usdt-tether", { ...BASE_SCORE_RESULT, tvl: 2_579_000 }]]),
-      }));
+      });
       expect(r3.sourceCoverage.poolRejectionCoverage.reason).toBe("pool-rejection-baseline-unavailable");
 
       // 4. Walk-back D1 read failure fails closed + clean run issues zero walk-back queries
@@ -902,16 +904,16 @@ describe("analyzeDexLiquidityPostScoring", () => {
         }
         return origPrepare(sql);
       });
-      const r4 = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      const r4 = await analyze({
         db: f1.db, currentGenerationId: buildDexLiquidityPublicationGenerationId(baseSec),
         poolRejections: [rejection], scoreResults: new Map([["usdt-tether", { ...BASE_SCORE_RESULT, tvl: 2_579_000 }]]),
-      }));
+      });
       expect(r4.sourceCoverage.poolRejectionCoverage.reason).toBe("pool-rejection-baseline-unavailable");
       sqlLog.length = 0;
-      await analyzeDexLiquidityPostScoring(makeAnalysisInput({
+      await analyze({
         db: f1.db, currentGenerationId: buildDexLiquidityPublicationGenerationId(baseSec),
         poolRejections: [], scoreResults: new Map([["usdt-tether", { ...BASE_SCORE_RESULT, tvl: 2_579_000 }]]),
-      }));
+      });
       expect(sqlLog.some((s) => s.includes("ROW_NUMBER()"))).toBe(false);
       prepareSpy.mockRestore();
     } finally {

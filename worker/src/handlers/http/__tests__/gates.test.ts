@@ -99,6 +99,8 @@ function makeEnv() {
   });
 }
 
+const gate = (request: Request) => evaluateAccessGate(request, new URL(request.url), makeEnv());
+
 describe("evaluateAccessGate", () => {
   beforeEach(() => {
     resetApiKeyStateForTests();
@@ -495,7 +497,7 @@ describe("evaluateAccessGate", () => {
       headers: { "Cf-Access-Jwt-Assertion": "valid-access-jwt" },
     });
 
-    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
+    const result = await gate(request);
 
     expect(result.response).toBeNull();
     expect(result.isAdmin).toBe(true);
@@ -530,7 +532,7 @@ describe("evaluateAccessGate", () => {
       headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
     });
 
-    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
+    const result = await gate(request);
 
     expect(result.response?.status).toBe(404);
     expect(result.requestLane).toBe("site-api");
@@ -543,7 +545,7 @@ describe("evaluateAccessGate", () => {
       headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
     });
 
-    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
+    const result = await gate(request);
 
     expect(result.response?.status).toBe(404);
     expect(result.requestLane).toBe("site-api");
@@ -556,7 +558,7 @@ describe("evaluateAccessGate", () => {
       headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
     });
 
-    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
+    const result = await gate(request);
 
     expect(result.response?.status).toBe(405);
     expect(result.response?.headers.get("Allow")).toBe("GET");
@@ -570,7 +572,7 @@ describe("evaluateAccessGate", () => {
       headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
     });
 
-    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
+    const result = await gate(request);
 
     expect(result.response?.status).toBe(404);
     expect(result.isSiteProxy).toBe(false);
@@ -579,7 +581,7 @@ describe("evaluateAccessGate", () => {
   it("rejects site-api requests without the site-proxy credential", async () => {
     const request = new Request("https://site-api.pharos.watch/api/stablecoins");
 
-    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
+    const result = await gate(request);
 
     expect(result.response?.status).toBe(401);
     expect(result.requestLane).toBe("site-api");
@@ -591,7 +593,7 @@ describe("evaluateAccessGate", () => {
       headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
     });
 
-    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
+    const result = await gate(request);
 
     expect(result.response).toBeNull();
     expect(result.isSiteProxy).toBe(true);
@@ -603,7 +605,7 @@ describe("evaluateAccessGate", () => {
       headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
     });
 
-    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
+    const result = await gate(request);
 
     expect(result.isSiteProxy).toBe(true);
     expect(result.requestLane).toBe("site-api");

@@ -331,6 +331,7 @@ describe("Mento Broker anchored inventory", () => {
     pools: [{ selfTokenAddress: self, counterAsset: { address: pools[0].counterAsset.address } }],
   };
   const exchangeId = `0x${"11".repeat(32)}` as const;
+  const fetchBroker = () => fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined);
   function poolExchange(capacity: bigint) {
     return encodeAbiParameters(MENTO_POOL_EXCHANGE_ABI_PARAMETERS, [{
       asset0: self as `0x${string}`, asset1: pools[0].counterAsset.address as `0x${string}`,
@@ -364,7 +365,7 @@ describe("Mento Broker anchored inventory", () => {
   }
   it.each([0n, 100n * 10n ** 18n])("uses guarded quotes instead of virtual inventory (%s) at one pin", async (capacity) => {
     setupBroker(capacity);
-    const result = await fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined);
+    const result = await fetchBroker();
     expect(result.redemption).toMatchObject({
       capacityUsd: 100, feeBps: 5, routeStatus: "open",
       blockNumber: observedBlock.number, sourceTimestamp: observedBlock.timestamp,
@@ -378,12 +379,12 @@ describe("Mento Broker anchored inventory", () => {
   });
   it("does not equate an unreadable matching pool with observed zero", async () => {
     setupBroker(null);
-    await expect(fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined)).rejects.toThrow();
+    await expect(fetchBroker()).rejects.toThrow();
   });
 
   it("reads the deployed Celo Broker reserve getter and withholds an unreadable reserve", async () => {
     setupBroker(100n * 10n ** 18n, { reserve: null });
-    await expect(fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined))
+    await expect(fetchBroker())
       .rejects.toThrow("observation failed: reserve");
     const reserveCall = vi.mocked(fetchOnchainMulticall3).mock.calls[0][0].calls.find(({ label }) => label === "reserve");
     expect(reserveCall?.data).toBe(toFunctionSelector("reserve()"));
@@ -392,20 +393,20 @@ describe("Mento Broker anchored inventory", () => {
 
   it("retains measured breaker closure despite positive virtual buckets", async () => {
     setupBroker(100n * 10n ** 18n, { mode: uint(1n) });
-    const result = await fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined);
+    const result = await fetchBroker();
     expect(result.redemption).toMatchObject({ capacityUsd: 0, routeStatus: "degraded", routeStatusSource: "onchain" });
     expect(fetchOnchainUint256).not.toHaveBeenCalled();
   });
 
   it.each([{ oracleTime: null }, { oracleTime: "0x01" }, { inputConfig: null }] as const)("withholds incomplete Broker guards %s", async (change) => {
     setupBroker(100n * 10n ** 18n, change);
-    await expect(fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined)).rejects.toThrow();
+    await expect(fetchBroker()).rejects.toThrow();
   });
 
   it("withholds an unsuccessful execution quote instead of using buckets", async () => {
     setupBroker(100n * 10n ** 18n);
     vi.mocked(fetchOnchainUint256).mockResolvedValue(null);
-    await expect(fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined)).rejects.toThrow();
+    await expect(fetchBroker()).rejects.toThrow();
   });
 
   const measuredOutputConfig = encodeAbiParameters(
@@ -432,7 +433,7 @@ describe("Mento Broker anchored inventory", () => {
       oracleTime: uint(BigInt(observedBlock.timestamp - 7_200)),
       outputConfig: measuredOutputConfig,
     });
-    const result = await fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined);
+    const result = await fetchBroker();
     expect(result.redemption).toMatchObject({
       capacityUsd: 0, routeStatus: "degraded", routeStatusReason: "Broker reference rate is not executable",
     });
@@ -442,14 +443,14 @@ describe("Mento Broker anchored inventory", () => {
   it("retains a successful zero quote separately from guard closure", async () => {
     setupBroker(100n * 10n ** 18n);
     vi.mocked(fetchOnchainUint256).mockResolvedValue(0n);
-    const result = await fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined);
+    const result = await fetchBroker();
     expect(result.redemption).toMatchObject({ capacityUsd: 0, routeStatus: "open" });
     expect(vi.mocked(fetchOnchainUint256).mock.calls[0][0].data).not.toMatch(/0{64}$/);
   });
 
   it.each([0n, 40n * 10n ** 6n])("bounds collateral output by spendable inventory %s", async (inventory) => {
     setupBroker(100n * 10n ** 18n, { outputStable: uint(0n), outputCollateral: uint(1n), inventory: uint(inventory) });
-    const result = await fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined);
+    const result = await fetchBroker();
     expect(result.redemption).toMatchObject({ capacityUsd: Number(inventory) / 1e6, routeStatus: inventory === 0n ? "degraded" : "open" });
   });
 
@@ -458,7 +459,7 @@ describe("Mento Broker anchored inventory", () => {
       inputState: encodeAbiParameters([{ type: "uint32" }, { type: "uint32" }, { type: "int48" }, { type: "int48" }, { type: "int48" }], [0, 0, 0, 0, 70]),
       outputConfig: encodeAbiParameters([{ type: "uint32" }, { type: "uint32" }, { type: "int48" }, { type: "int48" }, { type: "int48" }, { type: "uint8" }], [0, 0, 0, 0, 20, 4]),
     });
-    const result = await fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined);
+    const result = await fetchBroker();
     expect(result.redemption).toMatchObject({ capacityUsd: 20, routeStatus: "open" });
   });
 
@@ -467,7 +468,7 @@ describe("Mento Broker anchored inventory", () => {
       inputConfig: encodeAbiParameters([{ type: "uint32" }, { type: "uint32" }, { type: "int48" }, { type: "int48" }, { type: "int48" }, { type: "uint8" }], [60, 0, 100, 0, 0, 1]),
       inputState: encodeAbiParameters([{ type: "uint32" }, { type: "uint32" }, { type: "int48" }, { type: "int48" }, { type: "int48" }], [observedBlock.timestamp - 60 - elapsed, 0, 100, 0, 0]),
     });
-    const result = await fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined);
+    const result = await fetchBroker();
     expect(result.redemption).toMatchObject({ capacityUsd: elapsed ? 100 : 0, routeStatus: elapsed ? "open" : "degraded" });
   });
   it("withholds a partial configured output scope instead of publishing its readable subset", async () => {

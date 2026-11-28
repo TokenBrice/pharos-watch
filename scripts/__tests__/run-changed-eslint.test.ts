@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -16,9 +16,14 @@ function fixture() {
   git("config", "user.email", "fixture@example.invalid");
   git("config", "user.name", "Fixture");
   writeFileSync(join(cwd, ".gitignore"), "node_modules\n.cache\n");
-  writeFileSync(join(cwd, "eslint.config.mjs"), 'export default [{ files: ["**/*.js"], rules: { "no-debugger": "error" } }];\n');
+  const config = (files: string) => `export default [{ files: ["${files}"], rules: { "no-debugger": "error" } }];\n`;
+  writeFileSync(join(cwd, "eslint.config.mjs"), config("**/*.js"));
   writeFileSync(join(cwd, "unchanged invalid.js"), "debugger;\n");
   writeFileSync(join(cwd, "good.js"), "export const good = true;\n");
+  writeFileSync(join(cwd, "eslint.typed.config.mjs"), config("**/*.ts"));
+  mkdirSync(join(cwd, "shared/lib"), { recursive: true });
+  writeFileSync(join(cwd, "shared/lib/bad.ts"), "debugger;\n");
+  writeFileSync(join(cwd, "bad.ts"), "debugger;\n");
   git("add", ".");
   git("commit", "-qm", "baseline");
   const base = git("rev-parse", "HEAD").trim();
@@ -36,6 +41,14 @@ describe("lint:changed CLI selection", () => {
     const result = run(["--file", "good.js", "--file", "unchanged invalid.js"], { PR_BASE_SHA: base, PR_HEAD_SHA: base });
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("no-debugger");
+  });
+
+  it("applies the typed config only inside the lint:typed globs", () => {
+    const { run, cwd } = fixture();
+    for (const spelling of ["shared/lib/bad.ts", "./shared/lib/bad.ts", join(cwd, "shared/lib/bad.ts")]) {
+      const result = run(["--typed", "--file", spelling, "--file", "bad.ts"]);
+      expect([result.status, result.stdout], spelling).toEqual([1, expect.stringMatching(/1 file\(s\)[^]*no-debugger/)]);
+    }
   });
 
   it("includes untracked and staged invalid files in bare local selection", () => {

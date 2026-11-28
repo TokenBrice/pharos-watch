@@ -139,6 +139,8 @@ async function buildSnapshotRow(
   };
 }
 
+const snapshotRowDb = (row: Record<string, unknown> | null | undefined) => mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+
 describe("handleSnapshotsIndex", () => {
   it("returns parsed entries sorted by snapshot_date desc", async () => {
     const db = mockD1([
@@ -246,7 +248,7 @@ describe("handleSnapshotsIndex", () => {
 
     expect(indexBody.snapshots[0]?.safetyScoreIdentity).toEqual(V9_SAFETY_SCORE_IDENTITY);
 
-    const coinDb = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+    const coinDb = snapshotRowDb(row);
     const coinResponse = await handleSnapshotCoin(coinDb, ISO_DATE, "usdc-circle");
     const coinBody = (await coinResponse.json()) as { safetyScoreIdentity: unknown };
 
@@ -266,7 +268,7 @@ describe("handleSnapshotsIndex", () => {
       const row = await buildSnapshotRow(transitionalEnvelope, {
         includeMetadataIdentity: false,
       });
-      const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+      const db = snapshotRowDb(row);
 
       const response = await handleSnapshotCoin(db, transitionDate, "usdc-circle");
       const body = (await readJsonResponse(response, 200)) as {
@@ -302,7 +304,7 @@ describe("handleSnapshotDay", () => {
       })) },
     };
     const row = await buildSnapshotRow(envelope);
-    const db = () => mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+    const db = () => snapshotRowDb(row);
     const day = await handleSnapshotDay(db(), ISO_DATE);
     expect(day.status).toBe(status);
     const coin = await handleSnapshotCoin(db(), ISO_DATE, "usdc-circle");
@@ -328,7 +330,7 @@ describe("handleSnapshotDay", () => {
 
   it("returns the decompressed JSON envelope with the immutable cache header", async () => {
     const row = await buildSnapshotRow();
-    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+    const db = snapshotRowDb(row);
     const res = await handleSnapshotDay(db, ISO_DATE);
     expect(res.headers.get("cache-control")).toBe(
       "public, s-maxage=31536000, max-age=31536000, immutable",
@@ -351,7 +353,7 @@ describe("handleSnapshotDay", () => {
       })),
     };
     const row = await buildSnapshotRow(envelope);
-    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+    const db = snapshotRowDb(row);
 
     const response = await handleSnapshotDay(db, ISO_DATE);
 
@@ -365,7 +367,7 @@ describe("handleSnapshotDay", () => {
       version: 2,
       generatedAt: "not-a-timestamp",
     } as unknown as SnapshotEnvelope);
-    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+    const db = snapshotRowDb(row);
 
     const response = await handleSnapshotDay(db, ISO_DATE);
 
@@ -388,7 +390,7 @@ describe("handleSnapshotDay", () => {
         },
       },
     });
-    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+    const db = snapshotRowDb(row);
 
     const response = await handleSnapshotDay(db, ISO_DATE);
     expect(response.status).toBe(500);
@@ -408,7 +410,7 @@ describe("handleSnapshotDay", () => {
         },
       },
     });
-    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+    const db = snapshotRowDb(row);
 
     const response = await handleSnapshotDay(db, ISO_DATE);
     expect(response.status).toBe(500);
@@ -430,7 +432,7 @@ describe("handleSnapshotDay", () => {
     const row = await buildSnapshotRow(identityLessEnvelope, {
       includeMetadataIdentity: false,
     });
-    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+    const db = snapshotRowDb(row);
 
     const response = await handleSnapshotDay(db, snapshotDate);
     expect(response.status).toBe(500);
@@ -463,7 +465,7 @@ describe("handleSnapshotDay", () => {
         },
       },
     });
-    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+    const db = snapshotRowDb(row);
 
     const response = await handleSnapshotDay(db, ISO_DATE);
     expect(response.status).toBe(500);
@@ -473,14 +475,14 @@ describe("handleSnapshotDay", () => {
 describe("handleSnapshotCoin", () => {
   it("returns 404 when the snapshot exists but the coin is absent", async () => {
     const row = await buildSnapshotRow();
-    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+    const db = snapshotRowDb(row);
     const res = await handleSnapshotCoin(db, ISO_DATE, "nonexistent-coin");
     expect(res.status).toBe(404);
   });
 
   it("projects a single coin out of the snapshot with attached scores", async () => {
     const row = await buildSnapshotRow();
-    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+    const db = snapshotRowDb(row);
     const res = await handleSnapshotCoin(db, ISO_DATE, "usdc-circle");
     expect(res.headers.get("cache-control")).toBe(
       "public, s-maxage=31536000, max-age=31536000, immutable",
@@ -511,7 +513,7 @@ describe("handleSnapshotCoin", () => {
 
   it("returns null score fields for a coin without per-coin score rows in the envelope", async () => {
     const row = await buildSnapshotRow();
-    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+    const db = snapshotRowDb(row);
     const res = await handleSnapshotCoin(db, ISO_DATE, "usdt-tether");
     const body = (await readJsonResponse(res, 200)) as {
       stablecoinId: string;

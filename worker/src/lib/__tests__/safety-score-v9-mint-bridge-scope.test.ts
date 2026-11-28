@@ -354,6 +354,11 @@ function overlayEntry(
   };
 }
 
+/** Economic-control evaluation of a compiled asset against its own review under the V1 policy. */
+type EconomicControlArgs = Parameters<typeof evaluateV9EconomicControl>[0];
+const evaluateOwnReview = (asset: EconomicControlArgs["facts"] & { economicControlReview: Omit<EconomicControlArgs, "facts" | "policy"> }) =>
+  evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
+
 describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
   it.each(["mpc", "hsm"] as const)("admits %s custody only with a current complete control review", (kind) => {
     for (const state of ["current", "stale", "incomplete"] as const) {
@@ -581,7 +586,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       economicLossScope: "global-claim",
       materialSupplyShare: null,
     });
-    const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
+    const result = evaluateOwnReview(asset);
     expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
       binding: true, posture: "unbounded-adverse", score: AUTHORITY_LADDER.opaqueController,
     });
@@ -607,7 +612,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       const asset = compileFixture(input).compiled.assets[0]!;
       expect(asset.controls.filter((control) => control.capabilities.includes("mint")).map((control) => control.capSemantics.kind).sort())
         .toEqual(["raiseable", "unbounded"]);
-      const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
+      const result = evaluateOwnReview(asset);
       expect(result.components.find((component) => component.kind === "mint")).toMatchObject({
         binding: true, posture: "unbounded-adverse", score: AUTHORITY_LADDER.opaqueController,
       });
@@ -637,7 +642,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       const input = structuredClone(metadata);
       if (reverse) input.mintAuthority!.controls!.reverse();
       const asset = compileFixture(input, { chainSupplyByChain: partition }).compiled.assets[0]!;
-      const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
+      const result = evaluateOwnReview(asset);
       const nativeMintKeys = asset.controls.filter((control) => control.capabilities.includes("mint"))
         .map((control) => control.controlKey);
       const mintComponent = result.components.find((component) => component.kind === "mint")!;
@@ -789,7 +794,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     for (const key of ["base:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "arbitrum:0xcccccccccccccccccccccccccccccccccccccccc", "arbitrum:0xdddddddddddddddddddddddddddddddddddddddd"]) {
       expect(byAuthority(key)).toMatchObject({ deploymentKey: `asset:${metadata.id}`, scope: "global", economicLossScope: "global-claim", materialSupplyShare: null });
     }
-    const evaluated = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
+    const evaluated = evaluateOwnReview(asset);
     expect(evaluated.reasons.map((r) => r.code)).toContain("runtime-bridge-materiality-unavailable");
     expect(asset.supply.unknownRouteSupplyShare).toBeCloseTo(0.2, 6);
     expect(asset.supply.unreviewedRouteSupplyShare).toBeCloseTo(0.05, 6);
@@ -1664,7 +1669,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       status: { observationState: "bounded-unknown" }, economicLossScope: "unknown",
       capSemantics: { kind: "bounded" }, claimImpairment: "bounded",
     });
-    const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
+    const result = evaluateOwnReview(asset);
     expect(result.components.find((component) => component.kind === "mint")?.posture).toBe("unknown");
     expect(result.structuralFailures.some((failure) => failure.kind === "centralized-mint")).toBe(false);
     expect(result.reasons.map((reason) => reason.code)).toContain("unresolved-mint-authority");
@@ -1681,7 +1686,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     });
     expect(asset.controlStatus.observationState).toBe("bounded-unknown");
     expect(asset.gaps.find((gap) => gap.gapId === control.status.gapIds[0])?.reasonCode).toBe("scoped-control-question");
-    const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
+    const result = evaluateOwnReview(asset);
     expect(result.reasons.map((reason) => reason.code)).toContain("scoped-control-question");
     expect(result.reasons.map((reason) => reason.code)).not.toContain("unresolved-control-identity");
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.scoreInput.pillars.control.evidenceLevel).toBe("limited");
@@ -2057,7 +2062,7 @@ describe("native external-validation transfer tiers", () => {
     expect(control).toMatchObject({ materialSupplyShare: null, authority: { model: "unknown" }, claimImpairment: "unknown" });
     expect(asset.gaps.some((gap) => gap.reasonCode === "unresolved-control-identity")).toBe(true);
     expect(metadata.bridgeRouteRisk!.routes![0]!.issuanceModel).toBe("native-issuance");
-    const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
+    const result = evaluateOwnReview(asset);
     expect(result.components).toContainEqual(expect.objectContaining({
       kind: "bridge", posture: "external-validated-network",
     }));
@@ -2184,7 +2189,7 @@ describe("independent bridge incident evidence", () => {
       try {
         const asset = compileFixture(metadata, { clockSec }).compiled.assets[0]!;
         expect(asset.controls.find(control => control.controlKey === target.controlKey)?.incidentState).toBe("active");
-        const result = evaluateV9EconomicControl({ facts: asset, ...asset.economicControlReview, policy: V9_CANDIDATE_POLICY_V1 });
+        const result = evaluateOwnReview(asset);
         expect(result.structuralFailures).toContainEqual(expect.objectContaining({
           kind: "active-control-incident", controlKeys: [target.controlKey],
         }));

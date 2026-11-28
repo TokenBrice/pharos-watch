@@ -214,6 +214,8 @@ function mockCacheStatus(ages: Record<string, number | null>) {
   });
 }
 
+const runWatchdog = (db: D1Database, opts: Parameters<typeof runCronStalenessWatchdog>[2] = options) => runCronStalenessWatchdog(db, undefined, opts);
+
 describe("cron staleness watchdog", () => {
   beforeEach(() => {
     buildCacheStatusesMock.mockReset();
@@ -232,13 +234,13 @@ describe("cron staleness watchdog", () => {
     }];
     const db = fakeDb(failureRows);
     mockCacheStatus({});
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Detail cache write failures</b>: usdt-tether (value-too-large)");
 
     failureRows.splice(0);
     vi.setSystemTime(new Date("2026-08-22T01:00:00Z"));
-    const recovery = await runCronStalenessWatchdog(db, undefined, options);
+    const recovery = await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(2);
     expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Detail cache writes recovered</b>: usdt-tether");
     expect(JSON.parse(recovery.metadata ?? "{}").alertTransitions).toMatchObject({
@@ -257,7 +259,7 @@ describe("cron staleness watchdog", () => {
     const db = fakeDb([], undefined, {}, states);
     mockCacheStatus({});
 
-    const raised = await runCronStalenessWatchdog(db, undefined, options);
+    const raised = await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Stale blacklist configs");
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain(config.stablecoin);
@@ -267,7 +269,7 @@ describe("cron staleness watchdog", () => {
     vi.setSystemTime(new Date("2026-08-22T01:00:00Z"));
     const recoveredAt = Math.floor(Date.now() / 1000);
     for (const state of states) state.last_succeeded_at = recoveredAt - 60;
-    const recovered = await runCronStalenessWatchdog(db, undefined, options);
+    const recovered = await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(2);
     expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Blacklist configs recovered");
     expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions).toMatchObject({
@@ -288,12 +290,12 @@ describe("cron staleness watchdog", () => {
     const db = fakeDb([], undefined, operatorWatch, states);
     mockCacheStatus({});
 
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
 
     vi.setSystemTime(new Date("2026-08-22T01:00:00Z"));
     operatorWatch.blacklistReadError = true;
-    const blind = await runCronStalenessWatchdog(db, undefined, options);
+    const blind = await runWatchdog(db);
     const blindMetadata = JSON.parse(blind.metadata ?? "{}");
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
     expect(blindMetadata.alertTransitions.recovered).toEqual([]);
@@ -301,7 +303,7 @@ describe("cron staleness watchdog", () => {
 
     operatorWatch.blacklistReadError = false;
     for (const state of states) state.last_succeeded_at = Math.floor(Date.now() / 1000) - 60;
-    const recovered = await runCronStalenessWatchdog(db, undefined, options);
+    const recovered = await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(2);
     expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions).toMatchObject({
       recovered: [`blacklist-config:${config.configKey}`],
@@ -337,7 +339,7 @@ describe("cron staleness watchdog", () => {
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
       .run(stateKey, attemptState(2), Math.floor(Date.now() / 1000) - 60);
 
-    const raised = await runCronStalenessWatchdog(db, undefined, options);
+    const raised = await runWatchdog(db);
     expect(sendToChatMock.mock.calls[0]?.[1] ?? "").toContain("Stuck mint/burn configs");
     expect(JSON.parse(raised.metadata ?? "{}").alertTransitions.stale)
       .toContain(`mint-burn-config:${configKey}`);
@@ -345,7 +347,7 @@ describe("cron staleness watchdog", () => {
     vi.setSystemTime(new Date("2026-08-22T01:00:00Z"));
     sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?")
       .run(attemptState(0), Math.floor(Date.now() / 1000) - 60, stateKey);
-    const recovered = await runCronStalenessWatchdog(db, undefined, options);
+    const recovered = await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(2);
     expect(sendToChatMock.mock.calls[1]?.[1] ?? "").toContain("Mint/burn configs recovered");
     expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions.recovered)
@@ -357,18 +359,18 @@ describe("cron staleness watchdog", () => {
     const db = fakeDb();
     mockCacheStatus({});
     loadPublicationHealthMock.mockResolvedValue({ status: "held", reasons: [{ code: "coverage-below-floor" }] });
-    const held = await runCronStalenessWatchdog(db, undefined, options);
+    const held = await runWatchdog(db);
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Safety Score publication held</b>: v9 (coverage-below-floor)");
     expect(JSON.parse(held.metadata ?? "{}").firedRuleIds).toContain("safety-publication-held");
 
     vi.setSystemTime(new Date("2026-08-22T01:00:00Z"));
     loadPublicationHealthMock.mockRejectedValue(new Error("read failed"));
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
 
     vi.setSystemTime(new Date("2026-08-22T02:00:00Z"));
     loadPublicationHealthMock.mockResolvedValue({ status: "accepted", reasons: [] });
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(2);
     expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Safety Score publication released</b>: v9");
   });
@@ -412,7 +414,7 @@ describe("cron staleness watchdog", () => {
     };
     const db = fakeDb([], undefined, { psiDailyRow: dailyRow });
 
-    const raised = await runCronStalenessWatchdog(db, undefined, options);
+    const raised = await runWatchdog(db);
     const raisedMetadata = JSON.parse(raised.metadata ?? "{}");
     expect(raisedMetadata.psiDailyCoverage).toMatchObject({
       status: "shortfall",
@@ -425,12 +427,12 @@ describe("cron staleness watchdog", () => {
     expect(sendToChatMock.mock.calls[0]?.[1] ?? "")
       .toContain("Daily PSI sample coverage low</b>: daily PSI 10/48 samples (floor 39)");
 
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
 
     dailyRow.input_snapshot = JSON.stringify({ sampleCount: 48 });
     vi.setSystemTime(new Date(Date.now() + CRON_STALENESS_ALERT_COOLDOWN_SEC * 1_000));
-    const recovered = await runCronStalenessWatchdog(db, undefined, options);
+    const recovered = await runWatchdog(db);
     expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions.recovered)
       .toContain("psi-daily-coverage:daily");
     expect(sendToChatMock.mock.calls[1]?.[1] ?? "")
@@ -549,7 +551,7 @@ describe("cron staleness watchdog", () => {
       warnings: [], failures: [], diagnostics: [],
     });
 
-    const raised = await runCronStalenessWatchdog(db, undefined, options);
+    const raised = await runWatchdog(db);
     const text = String(sendToChatMock.mock.calls[0]?.[1] ?? "");
     expect(text).toContain("FX rate publication degraded");
     expect(text).toContain("peggedEUR business-daily reference is 2 publishes behind");
@@ -580,7 +582,7 @@ describe("cron staleness watchdog", () => {
       },
       warnings: [], failures: [], diagnostics: [],
     });
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db);
     const recoveryText = String(sendToChatMock.mock.calls[1]?.[1] ?? "");
     expect(recoveryText).toContain("FX rate publication recovered");
     expect(recoveryText).toContain("Daily pricing lanes complete");
@@ -598,7 +600,7 @@ describe("cron staleness watchdog", () => {
     const db = fakeDb();
 
     mockCacheStatus({ "dex-liquidity": 120, dews: 4_000 });
-    const raised = await runCronStalenessWatchdog(db, undefined, options);
+    const raised = await runWatchdog(db);
     expect(JSON.parse(raised.metadata ?? "{}").alertTransitions).toMatchObject({
       stale: expect.arrayContaining(["dependency:dex-liquidity->dews"]),
       sent: true,
@@ -606,7 +608,7 @@ describe("cron staleness watchdog", () => {
 
     vi.setSystemTime(new Date(Date.now() + CRON_STALENESS_ALERT_COOLDOWN_SEC * 1_000));
     mockCacheStatus({ "dex-liquidity": 9_000, dews: 4_000 });
-    const regressed = await runCronStalenessWatchdog(db, undefined, options);
+    const regressed = await runWatchdog(db);
     const metadata = JSON.parse(regressed.metadata ?? "{}") as {
       dependencyRecoveryChecks?: Array<{ state: string }>;
       alertTransitions: { recovered: string[] };
@@ -656,7 +658,7 @@ describe("cron staleness watchdog", () => {
     insert.run("detail:usdt-tether", JSON.stringify({ price: 1 }), startSec - 600);
     insert.run("detail-write-failure:usdt-tether", JSON.stringify({ reason: "value-too-large", bytes: 21_000_000 }), startSec);
 
-    const raised = await runCronStalenessWatchdog(db, undefined, options);
+    const raised = await runWatchdog(db);
     expect(JSON.parse(raised.metadata ?? "{}").alertTransitions.stale).toContain("detail-write:usdt-tether");
     expect(sendToChatMock.mock.calls[0]?.[1] ?? "").toContain("Detail cache write failures");
 
@@ -664,7 +666,7 @@ describe("cron staleness watchdog", () => {
     // Past seven days, neither marker expiry nor a missing detail row proves recovery.
     vi.setSystemTime(new Date((startSec + 8 * 86_400) * 1_000));
     sqlite.prepare("DELETE FROM cache WHERE key = ?").run("detail:usdt-tether");
-    const second = await runCronStalenessWatchdog(db, undefined, options);
+    const second = await runWatchdog(db);
     const transitions = JSON.parse(second.metadata ?? "{}").alertTransitions as { recovered: string[] };
 
     expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").all("detail-write-failure:usdt-tether"))
@@ -674,7 +676,7 @@ describe("cron staleness watchdog", () => {
       .not.toContain("Detail cache writes recovered");
     for (const offset of [0, 1]) {
       insert.run("detail:usdt-tether", "{}", startSec + offset);
-      const recovery = await runCronStalenessWatchdog(db, undefined, options);
+      const recovery = await runWatchdog(db);
       expect(JSON.parse(recovery.metadata ?? "{}").alertTransitions.recovered.includes("detail-write:usdt-tether"))
         .toBe(offset > 0);
       sqlite.prepare("DELETE FROM cache WHERE key = ?").run("detail:usdt-tether");
@@ -746,10 +748,10 @@ describe("cron staleness watchdog", () => {
     }
     runs.run("sync-stablecoin-charts", nowSec - 600, JSON.stringify({ reason: "published" }));
 
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db);
     expect(sendToChatMock).not.toHaveBeenCalled();
 
-    const confirmed = await runCronStalenessWatchdog(db, undefined, options);
+    const confirmed = await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Supply integrity findings");
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain("snapshot overdue");
@@ -772,7 +774,7 @@ describe("cron staleness watchdog", () => {
       .run(JSON.stringify(currentMarker), nowSec + 60, "snapshot-supply:last-write");
     for (const id of ids) history.run(id, today, 101, null);
     vi.setSystemTime((nowSec + 3_600) * 1_000);
-    const recovered = await runCronStalenessWatchdog(db, undefined, options);
+    const recovered = await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(2);
     expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Supply integrity recovered");
     expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions.recovered).toContain("supply:snapshot-overdue");
@@ -826,15 +828,15 @@ describe("cron staleness watchdog", () => {
     }
     runs.run("sync-stablecoin-charts", nowSec - 600, JSON.stringify({ reason: "published" }));
 
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db);
     expect(sendToChatMock).not.toHaveBeenCalled();
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
     expect(String(sendToChatMock.mock.calls[0]?.[1] ?? "")).toContain("carried supply");
 
     sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'stablecoins'")
       .run(cachePayload(new Set([ids[0], ids[1], ids[2], ids[3], ids[5]])));
-    const unchanged = await runCronStalenessWatchdog(db, undefined, options);
+    const unchanged = await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
     expect(JSON.parse(unchanged.metadata ?? "{}").alertTransitions).toMatchObject({
       stale: [], recovered: [],
@@ -843,7 +845,7 @@ describe("cron staleness watchdog", () => {
     sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'stablecoins'")
       .run(cachePayload(new Set()));
     vi.setSystemTime((nowSec + CRON_STALENESS_ALERT_COOLDOWN_SEC) * 1_000);
-    const recovered = await runCronStalenessWatchdog(db, undefined, options);
+    const recovered = await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(2);
     expect(String(sendToChatMock.mock.calls[1]?.[1] ?? "")).toContain("Supply integrity recovered");
     expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions.recovered).toContain("supply:carry");
@@ -882,9 +884,9 @@ describe("cron staleness watchdog", () => {
       quality: { codes: ["point-count-collapse", "history-start-truncated"] },
     }));
 
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db);
     expect(sendToChatMock).not.toHaveBeenCalled();
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db);
 
     const text = String(sendToChatMock.mock.calls[0]?.[1] ?? "");
     expect(text).toContain("Supply integrity findings");
@@ -948,17 +950,17 @@ describe("cron staleness watchdog", () => {
     startClock();
     const db = fakeDb();
     mockCacheStatus({ stablecoins: 2_000 });
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db);
 
     vi.setSystemTime(new Date(Date.now() + 60_000));
     mockCacheStatus({ stablecoins: 2_000, "dex-liquidity": 15_000 });
-    const during = await runCronStalenessWatchdog(db, undefined, options);
+    const during = await runWatchdog(db);
     expect(JSON.parse(during.metadata ?? "{}").alertTransitions).toMatchObject({
       stale: ["sync-dex-liquidity"], cooldown: true, sent: false,
     });
 
     vi.setSystemTime(new Date(Date.now() + CRON_STALENESS_ALERT_COOLDOWN_SEC * 1_000));
-    const after = await runCronStalenessWatchdog(db, undefined, options);
+    const after = await runWatchdog(db);
     expect(JSON.parse(after.metadata ?? "{}").alertTransitions).toMatchObject({
       stale: ["sync-dex-liquidity"], cooldown: false, sent: true,
     });
@@ -972,13 +974,13 @@ describe("cron staleness watchdog", () => {
     const db = fakeDb();
     mockCacheStatus({ stablecoins: 2_000 });
 
-    const first = await runCronStalenessWatchdog(db, undefined, options);
+    const first = await runWatchdog(db);
     expect(first.status).toBe("degraded");
     expect(JSON.parse(first.metadata ?? "{}").reason).toBe("operator-alert-delivery-failed");
     expect(JSON.parse(first.metadata ?? "{}").alertTransitions).toMatchObject({
       stale: ["sync-stablecoins"], sent: false,
     });
-    const retry = await runCronStalenessWatchdog(db, undefined, options);
+    const retry = await runWatchdog(db);
     expect(retry.status).toBe("ok");
     expect(JSON.parse(retry.metadata ?? "{}").alertTransitions).toMatchObject({
       stale: ["sync-stablecoins"], sent: true,
@@ -1054,7 +1056,7 @@ describe("cron staleness watchdog", () => {
       }
     } });
 
-    const result = await runCronStalenessWatchdog(db, undefined, options);
+    const result = await runWatchdog(db);
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(metadata.alertTransitions.recovered).not.toContain("detail-write:usdt-tether");
     expect(metadata.detailWriteFailures).toEqual([{
@@ -1123,56 +1125,56 @@ describe("cron staleness watchdog", () => {
     const options = canaryOptions;
 
     if (kind.includes("-")) {
-      await runCronStalenessWatchdog(db, undefined, options);
+      await runWatchdog(db, options);
       expect(sendToChatMock).toHaveBeenCalledTimes(1);
       expect(sendToChatMock.mock.calls[0]?.[1]).toContain(kind === "notice-first" ? "Unresolved depeg notice" : "Canary findings raised");
       vi.setSystemTime((now + (kind === "same-run" ? 0 : 900)) * 1000);
       watch.canaryRows = canaryRows(kind === "notice-first" ? null : id, true);
-      await runCronStalenessWatchdog(db, undefined, options);
+      await runWatchdog(db, options);
       expect(sendToChatMock).toHaveBeenCalledTimes(2);
       expect(sendToChatMock.mock.calls[1]?.[1]).toContain(kind === "notice-first" ? "Canary findings raised" : "Unresolved depeg notice");
       if (kind === "notice-first") {
         vi.setSystemTime((now + 1800) * 1000);
         watch.canaryRows = canaryRows(null);
-        await runCronStalenessWatchdog(db, undefined, options);
+        await runWatchdog(db, options);
         expect(sendToChatMock).toHaveBeenCalledTimes(2);
       }
       return;
     }
-    const raised = await runCronStalenessWatchdog(db, undefined, options);
+    const raised = await runWatchdog(db, options);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain(notice ? "Unresolved depeg notice" : "Canary findings raised");
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain(notice ? "neither confirmed nor recovered" : id);
     expect(JSON.parse(raised.metadata ?? "{}").firedRuleIds.includes("canary-finding")).toBe(!notice);
     expect(JSON.parse(raised.metadata ?? "{}").canaryWatch).toMatchObject({ active: notice ? 0 : 1, unknown: false });
 
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db, options);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
 
     if (notice) {
       watch.canaryRows = canaryRows(null);
       watch.canaryRows[0].status = "error";
-      await runCronStalenessWatchdog(db, undefined, options);
+      await runWatchdog(db, options);
       expect(sendToChatMock).toHaveBeenCalledTimes(2);
       const state = await db.prepare("SELECT value, updated_at FROM cache WHERE key = ?").bind("cron-staleness-watchdog:depeg-notice-state:v1").first<{ value: string }>();
       expect(state?.value).not.toContain("usdt-tether");
       watch.canaryRows = canaryRows(id);
-      await runCronStalenessWatchdog(db, undefined, options);
+      await runWatchdog(db, options);
       expect(sendToChatMock).toHaveBeenCalledTimes(2);
     }
     watch.canaryRows = canaryRows(null);
     vi.setSystemTime(new Date((now + CRON_STALENESS_ALERT_COOLDOWN_SEC + 1) * 1_000));
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db, options);
     expect(sendToChatMock).toHaveBeenCalledTimes(notice ? 3 : 2);
     if (!notice) expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Canary findings recovered");
     if (notice) {
       for (const metadata of [{ actionableBlindEventCount: 1 }, { acknowledgedBlindReviewIds: [7] }]) {
         watch.canaryRows = canaryRows(null).map((row) => ({ ...row, metadata_json: JSON.stringify({ executionStatus: "completed", ...metadata }) }));
-        await runCronStalenessWatchdog(db, undefined, options);
+        await runWatchdog(db, options);
         expect(sendToChatMock).toHaveBeenCalledTimes(3);
       }
       watch.canaryRows = canaryRows(id);
-      await runCronStalenessWatchdog(db, undefined, options);
+      await runWatchdog(db, options);
       expect(sendToChatMock).toHaveBeenCalledTimes(4);
       for (const text of ["direct_api/direct_api: $0.992 (-80.00 bps)", "cg_onchain", "recovery band &lt;=50", "trigger &gt;=100", "aggregate $0.992"])
         expect(sendToChatMock.mock.calls[3]?.[1]).toContain(text);
@@ -1202,12 +1204,12 @@ describe("cron staleness watchdog", () => {
     mockCacheStatus({});
     const options = canaryOptions;
 
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db, options);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
 
     vi.setSystemTime(new Date((now + CRON_STALENESS_ALERT_COOLDOWN_SEC + 1) * 1_000));
     watch.canaryRows = canaryRows("failed");
-    const held = await runCronStalenessWatchdog(db, undefined, options);
+    const held = await runWatchdog(db, options);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
     expect(JSON.parse(held.metadata ?? "{}").canaryWatch).toMatchObject({ active: 0 });
     expect(JSON.parse(held.metadata ?? "{}").firedRuleIds).not.toContain("canary-finding");
@@ -1217,7 +1219,7 @@ describe("cron staleness watchdog", () => {
       metadata_json: JSON.stringify({ executionStatus: "completed" }), error: null,
     }));
     vi.setSystemTime(new Date((now + 2 * (CRON_STALENESS_ALERT_COOLDOWN_SEC + 1)) * 1_000));
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db, options);
     expect(sendToChatMock).toHaveBeenCalledTimes(2);
     expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Canary findings recovered");
   });
@@ -1240,14 +1242,14 @@ describe("cron staleness watchdog", () => {
     const db = fakeDb([], undefined, watch);
     mockCacheStatus({});
 
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Probe paths persistently failing");
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain("/api/mint-burn-flows");
 
     vi.setSystemTime(new Date((now + CRON_STALENESS_ALERT_COOLDOWN_SEC + 1) * 1_000));
     watch.probeRow = null;
-    const unknown = await runCronStalenessWatchdog(db, undefined, options);
+    const unknown = await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
     expect(JSON.parse(unknown.metadata ?? "{}").probeWatch).toMatchObject({ unknown: true });
   });
@@ -1277,7 +1279,7 @@ describe("cron staleness watchdog", () => {
 
     // Reserve/redemption findings are status-level only (ADR-42): they stay on
     // /status and never become an operator Telegram condition.
-    const quiet = await runCronStalenessWatchdog(db, undefined, options);
+    const quiet = await runWatchdog(db);
     expect(sendToChatMock).not.toHaveBeenCalled();
     const quietMetadata = JSON.parse(quiet.metadata ?? "{}");
     expect(quietMetadata.probeWatch).toEqual({ active: 0, unknown: false });
@@ -1290,7 +1292,7 @@ describe("cron staleness watchdog", () => {
         persistentProbeFailures: [persistentFailure("/api/mint-burn-flows")],
       }),
     };
-    await runCronStalenessWatchdog(db, undefined, options);
+    await runWatchdog(db);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain("/api/mint-burn-flows");
   });
@@ -1315,7 +1317,7 @@ describe("cron staleness watchdog", () => {
     const db = fakeDb([], undefined, watch);
     mockCacheStatus({});
 
-    const raised = await runCronStalenessWatchdog(db, undefined, canaryOptions);
+    const raised = await runWatchdog(db, canaryOptions);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
     const raisedText = String(sendToChatMock.mock.calls[0]?.[1] ?? "");
     expect(raisedText).toContain("Canary findings raised");
@@ -1330,13 +1332,13 @@ describe("cron staleness watchdog", () => {
     // Steady-state stale does not re-page on the next 15-minute run.
     vi.setSystemTime((now + 900) * 1_000);
     watch.canaryRows = canaryRows(`v9-publication-stale: age 8101s > budget 7200s; generation ${generationId}`, now + 900);
-    await runCronStalenessWatchdog(db, undefined, canaryOptions);
+    await runWatchdog(db, canaryOptions);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
 
     // Recovery after the shared 30-minute cooldown emits one recovery page.
     vi.setSystemTime((now + CRON_STALENESS_ALERT_COOLDOWN_SEC + 1) * 1_000);
     watch.canaryRows = canaryRows(null, now + CRON_STALENESS_ALERT_COOLDOWN_SEC + 1);
-    const recovered = await runCronStalenessWatchdog(db, undefined, canaryOptions);
+    const recovered = await runWatchdog(db, canaryOptions);
     expect(sendToChatMock).toHaveBeenCalledTimes(2);
     expect(String(sendToChatMock.mock.calls[1]?.[1] ?? "")).toContain("Canary findings recovered</b>: safety-score-v9-publication");
     expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions).toMatchObject({

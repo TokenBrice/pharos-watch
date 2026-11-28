@@ -37,6 +37,8 @@ import { getCache } from "../../lib/db-cache";
 
 const autoLendingPoolsById: Readonly<Partial<Record<string, string>>> = AUTO_LENDING_POOL_MAP;
 
+const usdtYieldHistory = (db: D1Database) => handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
   fixtures.closeAll();
@@ -219,7 +221,7 @@ describe("handleYieldHistory", () => {
 
   it("returns 200 with history envelope", async () => {
     const db = mockD1([{ match: "yield_history", rows: [row] }]);
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     const body = (await readJsonResponse(res, 200)) as {
       current: Record<string, unknown> | null;
       history: Array<Record<string, unknown>>;
@@ -247,7 +249,7 @@ describe("handleYieldHistory", () => {
     ]);
 
     await expect(
-      handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether")),
+      usdtYieldHistory(db),
     ).rejects.toThrow("D1_ERROR: no such column: pys_at_publish");
   });
 
@@ -256,7 +258,7 @@ describe("handleYieldHistory", () => {
     expect(YieldHistoryResponseSchema.parse(v748HistoryPayload).history[0]?.sourceRisk).toBeUndefined();
 
     const db = mockD1([{ match: "yield_history", rows: [row] }]);
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     const body = await readJsonResponse(res, 200);
 
     expect(() => YieldHistoryResponseSchema.parse(body)).not.toThrow();
@@ -311,7 +313,7 @@ describe("handleYieldHistory", () => {
 
   it("returns 200 with empty history when no data", async () => {
     const db = mockD1([{ match: "yield_history", rows: [] }]);
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     const body = (await readJsonResponse(res, 200)) as { current: null; history: unknown[] };
     expect(body.current).toBeNull();
     expect(body.history).toEqual([]);
@@ -327,7 +329,7 @@ describe("handleYieldHistory", () => {
 
   it("maps snake_case to camelCase", async () => {
     const db = mockD1([{ match: "yield_history", rows: [row] }]);
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     const body = (await res.json()) as { history: Array<Record<string, unknown>> };
     expect(body.history[0]).not.toHaveProperty("recorded_at");
     expect(body.history[0]).not.toHaveProperty("apy_base");
@@ -390,7 +392,7 @@ describe("handleYieldHistory", () => {
     });
     const db = mockD1([{ match: "yield_history", rows: [legacyRow, newRow] }]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     const body = (await readJsonResponse(res, 200)) as { history: Array<{ sourceKey: string; sourceSwitch: boolean }> };
     expect(body.history[0]).toMatchObject({ sourceKey: "legacy-best", sourceSwitch: false });
     expect(body.history[1]).toMatchObject({ sourceKey: "rate-derived", sourceSwitch: true });
@@ -531,7 +533,7 @@ describe("handleYieldHistory", () => {
       { match: "yield_history", rows: [historyRow] },
     ]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
 
     expect(res.status).toBe(200);
     expect(res.headers.get("Warning")).toBeNull();
@@ -557,7 +559,7 @@ describe("handleYieldHistory", () => {
       { match: "as started_at FROM cron_runs", rows: [], first: { started_at: updatedAt } },
       { match: "yield_history", rows: [makeYieldHistoryRow({ recorded_at: updatedAt })] },
     ]);
-    const response = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const response = await usdtYieldHistory(db);
     const body = await response.json() as YieldHistoryResponse;
     expect(body._meta).toMatchObject({ ageSeconds: age, status, reason: status === "fresh" ? null : "yield-publication-age" });
     expect(response.headers.get("X-Data-Age")).toBe(String(age));
@@ -595,7 +597,7 @@ describe("handleYieldHistory", () => {
       { match: "yield_history", rows: [row] },
     ]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     expect(res.status).toBe(200);
 
     const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history h"));
@@ -620,7 +622,7 @@ describe("handleYieldHistory", () => {
       { match: "yield_history", rows: [generatedRow] },
     ]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       publication?: { generationId?: string; status?: string };
@@ -706,7 +708,7 @@ describe("handleYieldHistory", () => {
       { match: "yield_history", rows: [generatedRow] },
     ]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
 
     const body = (await readJsonResponse(res, 200)) as YieldHistoryResponse;
     expect(body.current?.sourceRisk).toMatchObject({
@@ -795,7 +797,7 @@ describe("handleYieldHistory", () => {
       { match: "yield_history", rows: [generatedRow] },
     ]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
 
     const body = (await readJsonResponse(res, 200)) as YieldHistoryResponse;
     expect(body.current?.sourceRisk).toEqual({
@@ -830,7 +832,7 @@ describe("handleYieldHistory", () => {
       { match: "yield_history", rows: [generatedRow] },
     ]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
 
     const body = (await readJsonResponse(res, 200)) as YieldHistoryResponse;
     expect(body.current?.sourceRisk).toBeUndefined();
@@ -855,7 +857,7 @@ describe("handleYieldHistory", () => {
       { match: "yield_history", rows: [legacyRow] },
     ]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
 
     const body = (await readJsonResponse(res, 200)) as { publication?: unknown; history: unknown[] };
     expect(body.publication).toBeUndefined();
@@ -888,7 +890,7 @@ describe("handleYieldHistory", () => {
     });
     const db = mockD1([{ match: "yield_history", rows: [snapshotRow] }]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     const body = (await readJsonResponse(res, 200)) as {
       history: Array<{
         pysAtPublish?: number | null;
@@ -934,7 +936,7 @@ describe("handleYieldHistory", () => {
       },
     ]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     const body = (await readJsonResponse(res, 200)) as {
       history: Array<{ pysReproducibility?: string }>;
     };
@@ -970,7 +972,7 @@ describe("handleYieldHistory", () => {
       },
     ]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     const body = (await readJsonResponse(res, 200)) as {
       history: Array<{ pysReproducibility?: string }>;
     };
@@ -1007,7 +1009,7 @@ describe("handleYieldHistory", () => {
       },
     ]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     const body = (await readJsonResponse(res, 200)) as {
       history: Array<{ pysReproducibility?: string }>;
     };
@@ -1022,7 +1024,7 @@ describe("handleYieldHistory", () => {
     });
     const db = mockD1([{ match: "yield_history", rows: [legacyRow] }]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     const body = (await readJsonResponse(res, 200)) as {
       history: Array<{
         pysAtPublish?: number | null;
@@ -1050,7 +1052,7 @@ describe("handleYieldHistory", () => {
       { match: "yield_history", rows: [makeYieldHistoryRow({ recorded_at: nowSec - 120 })] },
     ]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
 
     const body = (await readJsonResponse(res, 200)) as YieldHistoryResponse;
     expect(body.warning).toContain("cutoff unavailable");
@@ -1083,7 +1085,7 @@ describe("handleYieldHistory", () => {
       { match: "yield_history", rows: [] },
     ]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     const body = YieldHistoryResponseSchema.parse(await readJsonResponse(res, 200));
 
     expect(body.history).toEqual([]);
@@ -1110,7 +1112,7 @@ describe("handleYieldHistory", () => {
       { match: "yield_history", rows: [row] },
     ]);
 
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
 
     const body = (await readJsonResponse(res, 200)) as YieldHistoryResponse;
     expect(body.warning).toContain("freshness lookup failed");
@@ -1127,7 +1129,7 @@ describe("handleYieldHistory", () => {
     const db = mockD1([{ match: "yield_history", rows: [
       makeYieldHistoryRow({ pys_inputs_at_publish: snapshot, pys_at_publish: 12 }),
     ] }]);
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     const body = await readJsonResponse(res, 200) as YieldHistoryResponse;
     expect(body.history[0]?.pysReproducibility).toBe("invalid");
     expect(body.history[0]?.pysInputsAtPublish).toBeNull();
@@ -1139,7 +1141,7 @@ describe("handleYieldHistory", () => {
     const db = mockD1([{ match: "yield_history", rows: [
       makeYieldHistoryRow({ warning_signals: warnings, apy: 4.25 }),
     ] }]);
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     const body = await readJsonResponse(res, 200) as YieldHistoryResponse;
     expect(body.history[0]).toMatchObject({ apy: 4.25, warningSignals: [], warningSignalsStatus: "unreadable" });
   });
@@ -1148,7 +1150,7 @@ describe("handleYieldHistory", () => {
     const db = mockD1([{ match: "yield_history", rows: [
       makeYieldHistoryRow({ warning_signals: '["yield-spike","tvl-outflow"]' }),
     ] }]);
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     const body = await readJsonResponse(res, 200) as YieldHistoryResponse;
     expect(body.history[0]?.warningSignals).toEqual(["yield-spike", "tvl-outflow"]);
     expect(body.history[0]).not.toHaveProperty("warningSignalsStatus");
@@ -1160,7 +1162,7 @@ describe("handleYieldHistory", () => {
       { match: "as started_at FROM cron_runs", rows: [], first: { started_at: nowSec } },
       { match: "yield_history", rows: [makeYieldHistoryRow({ warning_signals: warnings })] },
     ]);
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const res = await usdtYieldHistory(db);
     const body = await readJsonResponse(res, 200) as YieldHistoryResponse;
     expect(body.history[0]?.warningSignals).toEqual([]);
     expect(body.history[0]).not.toHaveProperty("warningSignalsStatus");

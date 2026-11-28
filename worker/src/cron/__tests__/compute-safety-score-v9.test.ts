@@ -106,6 +106,9 @@ vi.mock("../../lib/safety-score-v9/publication-health", async (importOriginal) =
 const { computeSafetyScoreV9, SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC } = await import("../compute-safety-score-v9");
 
 // Parsers/publication are mocked in gate cases; build the valid transport control only once.
+/** The cron entry point; every read below is mocked, so the D1 handle is inert. */
+const runCompute = () => computeSafetyScoreV9({} as D1Database);
+
 const validNativeInput = createNativeSafetyScoreV9FullRegistryInput();
 let fixedInput: NativeSafetyScoreV9Input;
 const fixtures = createLatestSchemaFixtureTracker();
@@ -223,7 +226,7 @@ describe("computeSafetyScoreV9", () => {
       acceptedAtSec: acceptedClockSec, attemptedAtSec: acceptedClockSec, heldSinceSec: null, reasons: [],
     });
 
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
 
     expect(result).toMatchObject({
       status: "skipped_neutral", itemCount: 0,
@@ -247,7 +250,7 @@ describe("computeSafetyScoreV9", () => {
     });
     mockPublishedPreparation();
 
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
 
     expect(result.status).toBe("ok");
     expect(mocks.runPublication).toHaveBeenCalledOnce();
@@ -259,7 +262,7 @@ describe("computeSafetyScoreV9", () => {
       status: "failed", attemptId: "attempt", stage: "compile", code: "fixture", message: "fixture",
     });
 
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
 
     expect(mocks.runPublication).toHaveBeenCalledOnce();
     expect(result.status).toBe("degraded");
@@ -274,7 +277,7 @@ describe("computeSafetyScoreV9", () => {
     });
     mockPublishedPreparation();
 
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
 
     expect(result.status).toBe("ok");
     expect(mocks.runPublication).toHaveBeenCalledOnce();
@@ -311,7 +314,7 @@ describe("computeSafetyScoreV9", () => {
     mocks.setCache.mockReset().mockRejectedValueOnce(new Error("d1 write failed"));
     mockPublishedPreparation();
 
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
 
     expect(mocks.applySupplyGeneration.mock.calls[0]![2]).toEqual(lastAdmitted);
     expect(mocks.setCache).toHaveBeenCalledWith(
@@ -328,7 +331,7 @@ describe("computeSafetyScoreV9", () => {
     mocks.runPublication.mockResolvedValue({
       status: "failed", attemptId: "attempt", stage: "compile", code: "fixture", message: "fixture",
     });
-    await computeSafetyScoreV9({} as D1Database);
+    await runCompute();
     expect(mocks.runPublication.mock.calls[0][0].fixedInputCacheValue).toBe("fixed-input");
   });
 
@@ -440,7 +443,7 @@ describe("computeSafetyScoreV9", () => {
       return { status: "published", attemptId: "attempt", publicationGenerationId: fixedInput.sourceGeneration,
         candidateId: "candidate", outcome: "full", quarantines: [], affectedAssetIds: [], bridgeJoinDiagnostics: [] };
     });
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
     expect(result.status).toBe("ok");
   });
 
@@ -462,7 +465,7 @@ describe("computeSafetyScoreV9", () => {
       fixedInput: { ...fixedInput, safetyScoreV9SupplyAttributionById: {} },
     });
     mockPublishedPreparation();
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
     expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata!)).toMatchObject({
       supplyAttributionGeneration: {
@@ -481,7 +484,7 @@ describe("computeSafetyScoreV9", () => {
     mocks.getCacheUpdatedAt.mockResolvedValueOnce(fixedInput.updatedAt + 3_600);
     mockPublishedPreparation();
 
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
 
     // One missed hourly prepare plus one stablecoins interval.
     expect(SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC).toBe(4_500);
@@ -505,7 +508,7 @@ describe("computeSafetyScoreV9", () => {
     vi.setSystemTime((fixedInput.updatedAt + SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC + 1) * 1_000);
     mocks.getCacheUpdatedAt.mockResolvedValueOnce(fixedInput.updatedAt + 900);
 
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
 
     expect(result).toMatchObject({
       status: "degraded",
@@ -535,7 +538,7 @@ describe("computeSafetyScoreV9", () => {
     vi.setSystemTime(fixedInput.updatedAt * 1_000);
     mocks.getCacheUpdatedAt.mockResolvedValueOnce(fixedInput.updatedAt - 900);
 
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
 
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       reason: "stablecoins-generation-mismatch",
@@ -583,7 +586,7 @@ describe("computeSafetyScoreV9", () => {
       ]),
     );
 
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
 
     expect(result.status).toBe("degraded");
     expect(result.productivity).toMatchObject({
@@ -626,7 +629,7 @@ describe("computeSafetyScoreV9", () => {
       ["report-cards:v9-peg-provenance-seed:exact", { value: "peg-seed" }],
       ["safety-score-v9:supply-attribution-generation:v1", { value: "supply-generation" }],
     ]));
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ stage: "input-load", reason: "exact-input-invalid" });
     expect(mocks.runPublication).not.toHaveBeenCalled();
@@ -655,7 +658,7 @@ describe("computeSafetyScoreV9", () => {
       };
     });
 
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
 
     expect(result.status).toBe("ok");
     expect(result.productivity?.reason).toBe(
@@ -716,7 +719,7 @@ describe("computeSafetyScoreV9", () => {
       };
     });
 
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
 
     expect(result.status).toBe("degraded");
     expect(result.productivity).toMatchObject({
@@ -776,7 +779,7 @@ describe("computeSafetyScoreV9", () => {
       };
     });
 
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
 
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
@@ -795,7 +798,7 @@ describe("computeSafetyScoreV9", () => {
     for (const unavailable of [false, true]) {
       if (unavailable) mocks.loadDexGeneration.mockRejectedValueOnce(new Error("DEX unavailable"));
       else mocks.loadDexGeneration.mockResolvedValueOnce({ generationId: "dex-newer" });
-      const result = await computeSafetyScoreV9({} as D1Database);
+      const result = await runCompute();
       expect(result.status).toBe("degraded");
       expect(JSON.parse(result.metadata!)).toMatchObject({
         reason: unavailable ? "latest-dex-generation-unavailable" : "dex-generation-advanced",
@@ -860,7 +863,7 @@ describe("computeSafetyScoreV9", () => {
           candidateId: "candidate", outcome: "full", quarantines: [], affectedAssetIds: [], bridgeJoinDiagnostics: [] };
       });
 
-      const result = await computeSafetyScoreV9({} as D1Database);
+      const result = await runCompute();
 
       expect(result.status).toBe("ok");
       expect(mocks.loadDexGeneration).toHaveBeenCalledTimes(2);
@@ -884,7 +887,7 @@ describe("computeSafetyScoreV9", () => {
       mocks.loadDexGeneration.mockReset().mockResolvedValue({ generationId: fixedInput.dexGenerationId });
       mockPublishedPreparation();
 
-      const result = await computeSafetyScoreV9({} as D1Database);
+      const result = await runCompute();
 
       expect(result.status).toBe("ok");
       expect(JSON.parse(result.metadata!).dexCapture).toMatchObject({ verdict: "current", admitted: true });
@@ -903,7 +906,7 @@ describe("computeSafetyScoreV9", () => {
       mocks.loadDexGeneration.mockReset().mockResolvedValue(live(fixedInput.updatedAt));
       mockPublishedPreparation();
 
-      const result = await computeSafetyScoreV9({} as D1Database);
+      const result = await runCompute();
       const metadata = JSON.parse(result.metadata!);
 
       expect(metadata.dexCapture).toMatchObject({
@@ -932,7 +935,7 @@ describe("computeSafetyScoreV9", () => {
       withCapturedDex(dexAgeBeforeUpdatedSec, generationId);
       mocks.loadDexGeneration.mockReset().mockResolvedValue(liveGeneration());
 
-      const result = await computeSafetyScoreV9({} as D1Database);
+      const result = await runCompute();
 
       expect(result.status).toBe("degraded");
       expect(JSON.parse(result.metadata!)).toMatchObject({
@@ -965,7 +968,7 @@ describe("computeSafetyScoreV9", () => {
           journal: { status: "skipped", reason: "publication-failed", rows: 0 }, captureArchive: { status: "skipped", reason: "publication-failed" } };
       });
 
-      const result = await computeSafetyScoreV9({} as D1Database);
+      const result = await runCompute();
 
       expect(preparation).not.toBeNull();
       expect(JSON.parse(result.metadata!).dexCapture).toMatchObject({ verdict: "out-of-budget", admitted: false });
@@ -983,7 +986,7 @@ describe("computeSafetyScoreV9", () => {
       sourceGeneration: fixedInput.sourceGeneration, clockSec: fixedInput.clockSec,
       safetyScoreIdentity: identity, pegProvenanceById: {},
     });
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
     expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "base-v9-exact-identity-mismatch" });
     expect(mocks.runPublication).not.toHaveBeenCalled();
   });
@@ -998,7 +1001,7 @@ describe("computeSafetyScoreV9", () => {
         ["report-cards:fixed-input:exact", { value: "fixed-input" }],
         ["report-cards:v9-peg-provenance-seed:exact", { value: "peg-seed" }],
       ]));
-      const result = await computeSafetyScoreV9({} as D1Database);
+      const result = await runCompute();
       expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "base-v9-exact-identity-mismatch" });
       expect(mocks.runPublication).not.toHaveBeenCalled();
     }
@@ -1015,7 +1018,7 @@ describe("computeSafetyScoreV9", () => {
         ["report-cards:fixed-input:exact", { value: "fixed-input" }],
         ["report-cards:v9-peg-provenance-seed:exact", { value: "peg-seed" }],
       ]));
-      const result = await computeSafetyScoreV9({} as D1Database);
+      const result = await runCompute();
       expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "v9-peg-provenance-incomplete",
         expectedCount: 1, presentCount: ids.length });
       expect(mocks.runPublication).not.toHaveBeenCalled();
@@ -1075,7 +1078,7 @@ describe("computeSafetyScoreV9", () => {
       fixedInput: { ...fixedInput, safetyScoreV9SupplyAttributionById: {} },
     });
     mockPublishedPreparation();
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata!).supplyAttributionGeneration.status).toBe(kind === "malformed" ? "incompatible" : "unavailable");
   });
@@ -1100,7 +1103,7 @@ describe("computeSafetyScoreV9", () => {
     fixedInput = { ...fixedInput, activeAssetIds: Array.from({ length: count }, (_, index) => `asset-${index}`) };
     mocks.parseFixedInput.mockResolvedValue({ input: fixedInput, safetyScoreIdentity: captureControlFixture().capture.safetyScoreIdentity });
     mockPublishedPreparation();
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
     expect(result.status).toBe(count === 397 ? "ok" : "degraded");
     const metadata = JSON.parse(result.metadata!);
     expect(metadata.resourcePressure).toMatchObject({ inputCapBytes: 8_000_000, catalogMaxAssets: 560, catalogAssets: TRACKED_SOURCE_COINS.length });
@@ -1115,7 +1118,7 @@ describe("computeSafetyScoreV9", () => {
       ["report-cards:fixed-input:exact", { value: '{"uncompressedBytes":8000001,"payload":"unparsed"}' }],
       ["report-cards:v9-peg-provenance-seed:exact", { value: "seed" }],
     ]));
-    const result = await computeSafetyScoreV9({} as D1Database);
+    const result = await runCompute();
     expect(JSON.parse(result.metadata!)).toMatchObject({
       reason: "resource-budget-exceeded", resourcePressure: { inputBytes: 8_000_001, inputCapBytes: 8_000_000 },
     });

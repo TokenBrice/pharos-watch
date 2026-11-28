@@ -112,6 +112,10 @@ function seededStressDb(ids: string[]) {
   };
   return { ...fixture, priorTime };
 }
+/** Answers every `getCache` read from its key alone. */
+const onCacheRead = (read: (key: Parameters<typeof getCache>[1]) => ReturnType<typeof getCache>) =>
+  vi.mocked(getCache).mockImplementation(async (_db, key) => read(key));
+
 describe("computeAndStoreDEWS", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -124,7 +128,7 @@ describe("computeAndStoreDEWS", () => {
     vi.mocked(derivePegRates).mockClear();
     vi.mocked(writeFreshnessSentinel).mockClear();
     vi.spyOn(publishedMintBurn, "readPublishedMintBurnGauge").mockResolvedValue({ kind: "unavailable", reason: "missing" });
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+    onCacheRead(async (key) => {
       if (key === "dews:bootstrap-complete") return null;
       if (key === "dews:published-generation") return null;
       return dewsCache([dewsCoin()], { fxFallbackRates: { peggedEUR: 1.08 } }) as never;
@@ -161,7 +165,7 @@ describe("computeAndStoreDEWS", () => {
   ] as const)("admits the stablecoins generation freshness for %s", async (_label, offset, reason) => {
     const nowSec = Math.floor(Date.now() / 1000);
     const updatedAt = offset === null ? null : nowSec + offset;
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+    onCacheRead(async (key) => {
       if (key !== "stablecoins") return null;
       return { ...dewsCache(), updatedAt } as never;
     });
@@ -221,7 +225,7 @@ describe("computeAndStoreDEWS", () => {
     const real = await vi.importActual<typeof DewsModule>("../../lib/dews");
     const previous = vi.mocked(computeDEWS).getMockImplementation()!;
     vi.mocked(computeDEWS).mockImplementation(real.computeDEWS);
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+    onCacheRead(async (key) => {
       if (key === "dews:bootstrap-complete" || key === "dews:published-generation") return null;
       return dewsCache([dewsCoin({ price: 1, priceSource, priceObservedAtMode })]) as never;
     });
@@ -263,7 +267,7 @@ describe("computeAndStoreDEWS", () => {
   });
 
   it("excludes delisted and quarantined cache rows from DEWS coverage", async () => {
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+    onCacheRead(async (key) => {
       if (key === "dews:bootstrap-complete" || key === "dews:published-generation") return null;
       return {
         value: JSON.stringify({
@@ -370,7 +374,7 @@ describe("computeAndStoreDEWS", () => {
 
   it("preserves explicit zero supply-history anchors for DEWS scoring", async () => {
     const now = Math.floor(Date.now() / 1000);
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+    onCacheRead(async (key) => {
       if (key === "dews:bootstrap-complete") return null;
       return dewsCache([dewsCoin({
         circulatingNative: 100_000_000,
@@ -408,7 +412,7 @@ describe("computeAndStoreDEWS", () => {
     // Undated non-USD lookbacks are dollar caps.
     [false, "eurc-euro-coin", null, null],
   ] as const)("uses legacy USD stock without native history (clock %s, %s)", async (hasClock, id, day, week) => {
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+    onCacheRead(async (key) => {
       if (key === "dews:bootstrap-complete") return null;
       return dewsCache([dewsCoin({
         id, pegType: id === "usdt-tether" ? "peggedUSD" : "peggedEUR", circulatingNative: 90_000_000,
@@ -570,7 +574,7 @@ describe("computeAndStoreDEWS", () => {
   it("quarantines malformed previous stress signals while publishing a healthy peer", async () => {
     const sqlSeen: string[] = [];
     const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+    onCacheRead(async (key) => {
       if (key === "dews:bootstrap-complete") return null;
       if (key === "dews:published-generation") return {
         value: JSON.stringify({ updatedAt: nowSec - 900, source: "compute-dews", publishStatus: "published" }),
@@ -882,7 +886,7 @@ describe("computeAndStoreDEWS", () => {
   });
 
   it("degrades on a missing mandatory source table", async () => {
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+    onCacheRead(async (key) => {
       if (key === "dews:bootstrap-complete") {
         return null;
       }
@@ -1048,7 +1052,7 @@ describe("computeAndStoreDEWS", () => {
   it("does not smooth with stale previous stress-signal rows", async () => {
     const sqlSeen: string[] = [];
     const nowSec = Math.floor(Date.now() / 1000);
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+    onCacheRead(async (key) => {
       if (key === "dews:bootstrap-complete") return null;
       if (key === "dews:published-generation") return {
         value: JSON.stringify({ updatedAt: nowSec - 3 * 3600, source: "compute-dews", publishStatus: "published" }),
@@ -1174,7 +1178,7 @@ describe("computeAndStoreDEWS", () => {
       cadence: "intraday", observedAtSec: nowSec - 60 };
     const generation = `stablecoins:${nowSec}`;
     const sessionOpenedAtSec = getReferenceSessionState("fx", nowSec).sessionOpenedAtSec;
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+    onCacheRead(async (key) => {
       if (key === "dews:bootstrap-complete") return null;
       return dewsCache([dewsCoin({
         id: "eurc-euro-coin", symbol: "EURC", pegType: "peggedEUR", price: 1.05,
@@ -1231,7 +1235,7 @@ describe("computeAndStoreDEWS", () => {
   });
 
   it("includes blacklist counts for PYUSD and USD1 when those tracker rows exist", async () => {
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+    onCacheRead(async (key) => {
       if (key === "dews:bootstrap-complete") return null;
       return {
         value: JSON.stringify({
@@ -1346,7 +1350,7 @@ describe("computeAndStoreDEWS", () => {
   });
 
   it("retires current stress rows for eligible assets with no current supply", async () => {
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+    onCacheRead(async (key) => {
       if (key === "dews:bootstrap-complete") return null;
       return {
         value: JSON.stringify({
@@ -1399,7 +1403,7 @@ describe("computeAndStoreDEWS", () => {
   });
 
   it("does not retire stress rows for an asset whose circulating buckets are absent", async () => {
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+    onCacheRead(async (key) => {
       if (key === "dews:bootstrap-complete") return null;
       return {
         value: JSON.stringify({

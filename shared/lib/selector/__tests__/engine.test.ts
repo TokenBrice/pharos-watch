@@ -88,6 +88,8 @@ function routeInputs(scope: "representative" | "full" = "representative"): Selec
 
 const SELECTOR_PROFILES_FOR_ROUTES = ["treasury", "yield", "trading"] as const;
 
+const runSingleRow = (input: Parameters<typeof runSelector>[0], row: MergedRow) => runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+
 describe("runSelector — Treasury happy path", () => {
   const input = makeInput({ profile: "treasury" });
 
@@ -272,7 +274,7 @@ describe("runSelector — selected yield rail evidence", () => {
 
   it("filters high-risk alternates on C-tier coins using the alternate risk tier", () => {
     const row = makeYieldRailRow({}, { safetyGrade: "C" });
-    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    const out = runSingleRow(input, row);
     const rec = out.recommended[0];
     expect(rec?.profile).toBe("yield");
     if (rec?.profile !== "yield") throw new Error("Expected yield recommendation");
@@ -282,7 +284,7 @@ describe("runSelector — selected yield rail evidence", () => {
 
   it("uses selected alternate evidence for scoring, explanations, watch context and chain hints", () => {
     const row = makeYieldRailRow();
-    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    const out = runSingleRow(input, row);
     const rec = out.recommended[0];
     expect(rec?.profile).toBe("yield");
     if (rec?.profile !== "yield") throw new Error("Expected yield recommendation");
@@ -310,7 +312,7 @@ describe("runSelector — selected yield rail evidence", () => {
   it("lets eligible alternates survive primary APY and warning failures", () => {
     const row = makeYieldRailRow({}, { apy30d: 1, warningSignals: ["unstable-apy", "thin-tvl"] });
     row.yieldSources = row.yieldSources!.map((source) => source.isPrimary ? { ...source, apy30d: 1 } : source);
-    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    const out = runSingleRow(input, row);
     expect(out.recommended[0]?.recommendedSource?.sourceKey).toBe("alternate-lending");
     expect(out.recommended[0]?.lowestSubDimension.contextKeys).not.toContain("unstable-apy");
     expect(out.recommended[0]?.lowestSubDimension.contextKeys).not.toContain("thin-tvl");
@@ -319,7 +321,7 @@ describe("runSelector — selected yield rail evidence", () => {
   it("uses alternate APY coverage when the primary APY is unavailable", () => {
     const row = makeYieldRailRow({}, { apy30d: null });
     row.yieldSources = row.yieldSources!.filter((source) => !source.isPrimary);
-    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    const out = runSingleRow(input, row);
     expect(out.recommended[0]?.recommendedSource?.sourceKey).toBe("alternate-lending");
     expect(out.coverageWarnings.skippedForCoverage).toEqual([]);
   });
@@ -328,7 +330,7 @@ describe("runSelector — selected yield rail evidence", () => {
     const row = makeYieldRailRow({ sourceRiskScore: 30, venueRiskTier: "mid", sourceTvlUsd: 1_000_000 }, {
       effectiveTvlUsd: 500_000_000,
     });
-    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    const out = runSingleRow(input, row);
     const rec = out.recommended[0]!;
     expect(rec.recommendedSource?.sourceTvlUsd).toBe(1_000_000);
     expect(rec.lowestSubDimension.key).toBe("sourceRisk");
@@ -342,7 +344,7 @@ describe("runSelector — selected yield rail evidence", () => {
 
   it("does not borrow missing alternate history or source risk from the primary", () => {
     const row = makeYieldRailRow({ observationCount30d: null, sourceRiskScore: null, venueRiskTier: "low" });
-    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    const out = runSingleRow(input, row);
     const rec = out.recommended[0]!;
     expect(rec.components.find((component) => component.key === "sourceRiskInverted")?.rawValue).toBeNull();
     expect(rec.confidenceReasons).toContain("source-risk-missing");
@@ -352,7 +354,7 @@ describe("runSelector — selected yield rail evidence", () => {
 
   it("does not relax source gates when filling a peg-floor fallback", () => {
     const row = makeYieldRailRow({ apy30d: 1 }, { pegScore: 50 });
-    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    const out = runSingleRow(input, row);
     expect(out.recommended[0]?.relaxedReason).toBe("peg-score-floor");
     expect(out.recommended[0]?.recommendedSource?.sourceKey).toBe("primary-wrapper");
   });
@@ -372,7 +374,7 @@ describe("runSelector — Yield happy path", () => {
     const row = makeMergedRowWithIdentity({ id: "yield", symbol: "Y", name: "Yield" }, {
       yieldProtocolSlug: "issuer", yieldVenueChain: "ethereum",
     });
-    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    const out = runSingleRow(input, row);
     expect(out.recommended.map((rec) => rec.id)).toEqual(["yield"]);
     for (const rec of out.recommended) {
       expect(rec.profile).toBe("yield");
@@ -538,7 +540,7 @@ describe("runSelector — Trading happy path", () => {
     const row = makeMergedRowWithIdentity({ id: "trading", symbol: "T", name: "Trading" }, {
       pegSummaryAgeSec: 10, dexTvlAgeSec: 20, dewsAgeSec: 30,
     });
-    const out = runSelector(input, { rows: new Map([[row.id, row]]) }, FIXTURE_DATASET);
+    const out = runSingleRow(input, row);
     expect(out.recommended.map((rec) => rec.id)).toEqual(["trading"]);
     for (const rec of out.recommended) {
       expect(rec.profile).toBe("trading");

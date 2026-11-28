@@ -57,6 +57,8 @@ function twoAssetCache(usdcPrice: number) {
 
 const completionMarker = buildSupplySnapshotCompletionMarker;
 
+const wroteSupplyHistory = (db: { getHistory(): Array<{ sql: string }> }) => db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"));
+
 describe("snapshotSupply", () => {
   const fixtures = createLatestSchemaFixtureTracker();
 
@@ -126,7 +128,7 @@ describe("snapshotSupply", () => {
     expect(result.itemCount).toBe(0);
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ reason: "cache_stale" });
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+    expect(wroteSupplyHistory(db)).toBe(false);
   });
 
   it("rejects a cache generation clock ahead of the snapshot clock instead of sealing the day", async () => {
@@ -144,7 +146,7 @@ describe("snapshotSupply", () => {
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       reason: "cache_stale", cacheAgeSec: null, cacheClockReason: "cache-clock-unusable",
     });
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+    expect(wroteSupplyHistory(db)).toBe(false);
     expect(db.getHistory().some((entry) =>
       entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "snapshot-supply:last-write")).toBe(false);
   });
@@ -169,7 +171,7 @@ describe("snapshotSupply", () => {
       requiredUpdatedAt: slotStartedAt,
       freshnessGateLabel: "daily0800Utc",
     }));
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+    expect(wroteSupplyHistory(db)).toBe(false);
     expect(db.getHistory().some((entry) =>
       entry.sql.includes("INSERT INTO cache") && entry.binds.includes("snapshot-supply:last-write")
     )).toBe(false);
@@ -204,7 +206,7 @@ describe("snapshotSupply", () => {
       requiredUpdatedAt: slotStartedAt,
       freshnessGateLabel: "daily0800Utc",
     }));
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+    expect(wroteSupplyHistory(db)).toBe(false);
   });
 
   it("does not let a v1 count-only marker bypass the daily freshness gate", async () => {
@@ -376,7 +378,7 @@ describe("snapshotSupply", () => {
 
     expect(result.itemCount).toBe(0);
     expect(JSON.parse(String(result.metadata))).toMatchObject({ reason: "already_written_today" });
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+    expect(wroteSupplyHistory(db)).toBe(false);
   });
 
   it("retries a same-count active-ID replacement and removes the prior owned row", async () => {
@@ -1089,7 +1091,7 @@ describe("snapshotSupply", () => {
       validRows: 1,
       expectedCount: 2,
     });
-    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+    expect(wroteSupplyHistory(db)).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("snapshot-supply:last-write"))).toBe(false);
   });
 

@@ -17,23 +17,23 @@ vi.mock("@/hooks/use-mint-burn-flows", () => ({
 
 const missing = { complete: false, unavailableReason: "scan-coverage-incomplete" } as const;
 
+const mockFlows = (data: unknown) =>
+  useMintBurnFlowsMock.mockReturnValue({ data, dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn() });
+
 describe("FlowSummaryCard", () => {
   it.each([false, true])("qualifies incomplete windows as partial (established leg=%s)", (established) => {
-    useMintBurnFlowsMock.mockReturnValue({
-      data: {
-        coins: [
-          makeMintBurnFlowCoin({
-            coverage: {
-              startBlock: 1, lastSyncedBlock: 2, lagBlocks: 0, historyStartAt: 1_700_000_000,
-              has24hWindow: !established, has7dWindow: !established, has30dWindow: false, has90dWindow: !established,
-              ...(established ? { windows: { window24h: missing, window7d: missing, window30d: missing, window90d: missing } } : {}),
-              isPartial: true,
-              status: "partial-history",
-            },
-          }),
-        ],
-      },
-      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
+    mockFlows({
+      coins: [
+        makeMintBurnFlowCoin({
+          coverage: {
+            startBlock: 1, lastSyncedBlock: 2, lagBlocks: 0, historyStartAt: 1_700_000_000,
+            has24hWindow: !established, has7dWindow: !established, has30dWindow: false, has90dWindow: !established,
+            ...(established ? { windows: { window24h: missing, window7d: missing, window30d: missing, window90d: missing } } : {}),
+            isPartial: true,
+            status: "partial-history",
+          },
+        }),
+      ],
     });
 
     render(<FlowSummaryCard stablecoinId="usdc-circle" />);
@@ -52,13 +52,10 @@ describe("FlowSummaryCard", () => {
     const classification = { completeness, mintCompleteness: "complete" as const, burnCompleteness: completeness,
       unresolvedMintEventCount: 0, unresolvedBurnEventCount: completeness === "partial" ? 1 : 0,
       unavailableReason: completeness === "partial" ? "classification-unresolved" as const : "classification-unknown" as const };
-    useMintBurnFlowsMock.mockReturnValue({
-      data: { coins: [makeMintBurnFlowCoin({ classification: {
-        window24h: classification, baseline: classification, netFlow7d: classification,
-        netFlow30d: classification, netFlow90d: classification,
-      } })] },
-      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
-    });
+    mockFlows({ coins: [makeMintBurnFlowCoin({ classification: {
+      window24h: classification, baseline: classification, netFlow7d: classification,
+      netFlow30d: classification, netFlow90d: classification,
+    } })] });
     const { container } = render(<FlowSummaryCard stablecoinId="usdc-circle" />);
     expect(screen.getByText("Direction unavailable")).toBeTruthy();
     expect(container.querySelector(`[data-reason-codes="${classification.unavailableReason}"]`)).toBeTruthy();
@@ -74,18 +71,15 @@ describe("FlowSummaryCard", () => {
   });
 
   it("renders a partial 24h window as unavailable instead of a burning net and pressure reading", () => {
-    useMintBurnFlowsMock.mockReturnValue({
-      data: {
-        coins: [
-          makeMintBurnFlowCoin({
-            valuation: makeMintBurnCoinValuation(
-              { completeness: "partial", mintCompleteness: "partial", unpricedMintEventCount: 4 },
-              { baseline: "partial" },
-            ),
-          }),
-        ],
-      },
-      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
+    mockFlows({
+      coins: [
+        makeMintBurnFlowCoin({
+          valuation: makeMintBurnCoinValuation(
+            { completeness: "partial", mintCompleteness: "partial", unpricedMintEventCount: 4 },
+            { baseline: "partial" },
+          ),
+        }),
+      ],
     });
 
     const { container } = render(<FlowSummaryCard stablecoinId="usdc-circle" />);
@@ -107,33 +101,30 @@ describe("FlowSummaryCard", () => {
   });
 
   it.each([null, true])("withholds a literal dial for an unavailable scan window (activity=%s)", (has24hActivity) => {
-    useMintBurnFlowsMock.mockReturnValue({
-      data: {
-        coins: [makeMintBurnFlowCoin({
-          has24hActivity,
-          netFlowDirection24h: null,
-          pressureShiftScore: null,
-          pressureShiftState: "nr",
-          netFlow24hUsd: null,
-          netFlow7dUsd: null,
-          netFlow30dUsd: null,
-          netFlow90dUsd: null,
-          mintVolume24hUsd: 100,
-          burnVolume24hUsd: 50,
-          mintCount24h: 0,
-          burnCount24h: 0,
-          valuation: makeMintBurnCoinValuation({ completeness: "partial", mintCompleteness: "partial", unpricedMintEventCount: 1 }),
-          coverage: { startBlock: 1, lastSyncedBlock: 2, lagBlocks: 0, historyStartAt: null,
-            has24hWindow: false, has30dWindow: false, has90dWindow: false, isPartial: true, status: "unknown",
-            windows: {
-              window24h: missing,
-              window7d: missing,
-              window30d: missing,
-              window90d: missing,
-            } },
-        })],
-      },
-      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
+    mockFlows({
+      coins: [makeMintBurnFlowCoin({
+        has24hActivity,
+        netFlowDirection24h: null,
+        pressureShiftScore: null,
+        pressureShiftState: "nr",
+        netFlow24hUsd: null,
+        netFlow7dUsd: null,
+        netFlow30dUsd: null,
+        netFlow90dUsd: null,
+        mintVolume24hUsd: 100,
+        burnVolume24hUsd: 50,
+        mintCount24h: 0,
+        burnCount24h: 0,
+        valuation: makeMintBurnCoinValuation({ completeness: "partial", mintCompleteness: "partial", unpricedMintEventCount: 1 }),
+        coverage: { startBlock: 1, lastSyncedBlock: 2, lagBlocks: 0, historyStartAt: null,
+          has24hWindow: false, has30dWindow: false, has90dWindow: false, isPartial: true, status: "unknown",
+          windows: {
+            window24h: missing,
+            window7d: missing,
+            window30d: missing,
+            window90d: missing,
+          } },
+      })],
     });
     const { container } = render(<FlowSummaryCard stablecoinId="usdc-circle" />);
     expect(screen.getByText("Direction unavailable")).toBeTruthy();
@@ -148,21 +139,18 @@ describe("FlowSummaryCard", () => {
     { score: -42, state: "worsening" as const, clause: "more burning than its 30\u2011day baseline", amber: true },
     { score: 4, state: "stable" as const, clause: "close to its 30\u2011day baseline", amber: false },
   ])("draws a neutral signed balance bar and a plain verdict ($state)", ({ score, state, clause, amber }) => {
-    useMintBurnFlowsMock.mockReturnValue({
-      data: { coins: [makeMintBurnFlowCoin({
-        pressureShiftScore: score,
-        pressureShiftState: state,
-        gaugeWeightUsd: 100_000_000,
-        windowStartSupplyUsd: {
-          window24h: 100_000_000,
-          window7d: 105_000_000,
-          window30d: 108_000_000,
-          window90d: null,
-        },
-        valuation: makeMintBurnCoinValuation({}, { netFlow90d: "unknown" }),
-      })] },
-      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
-    });
+    mockFlows({ coins: [makeMintBurnFlowCoin({
+      pressureShiftScore: score,
+      pressureShiftState: state,
+      gaugeWeightUsd: 100_000_000,
+      windowStartSupplyUsd: {
+        window24h: 100_000_000,
+        window7d: 105_000_000,
+        window30d: 108_000_000,
+        window90d: null,
+      },
+      valuation: makeMintBurnCoinValuation({}, { netFlow90d: "unknown" }),
+    })] });
     const { container } = render(<FlowSummaryCard stablecoinId="usdc-circle" />);
     const bar = screen.getByRole("img", { name: "24h mint and burn balance: 80% of volume burned, 20% minted" });
     expect(bar.querySelector(".bg-state-warn-solid") != null).toBe(amber);
@@ -186,30 +174,27 @@ describe("FlowSummaryCard", () => {
   });
 
   it("uses window-start tracked-chain supply for large contractions (USDS-like) and withholds 90d*", () => {
-    useMintBurnFlowsMock.mockReturnValue({
-      data: { coins: [makeMintBurnFlowCoin({
-        stablecoinId: "usds-sky",
-        symbol: "USDS",
-        pressureShiftScore: 26,
-        pressureShiftState: "improving",
-        netFlowDirection24h: "minting",
-        gaugeWeightUsd: 3_217_038_523,
-        windowStartSupplyUsd: {
-          window24h: 3_098_830_292,
-          window7d: 5_347_528_879,
-          window30d: 6_729_591_624,
-          window90d: null,
-        },
-        netFlow24hUsd: 9_014_020,
-        mintVolume24hUsd: 198_610_820,
-        burnVolume24hUsd: 189_596_800,
-        netFlow7dUsd: -2_005_233_746,
-        netFlow30dUsd: -3_610_299_466,
-        netFlow90dUsd: -3_424_521_682,
-        valuation: makeMintBurnCoinValuation({}, { netFlow90d: "unknown" }),
-      })] },
-      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
-    });
+    mockFlows({ coins: [makeMintBurnFlowCoin({
+      stablecoinId: "usds-sky",
+      symbol: "USDS",
+      pressureShiftScore: 26,
+      pressureShiftState: "improving",
+      netFlowDirection24h: "minting",
+      gaugeWeightUsd: 3_217_038_523,
+      windowStartSupplyUsd: {
+        window24h: 3_098_830_292,
+        window7d: 5_347_528_879,
+        window30d: 6_729_591_624,
+        window90d: null,
+      },
+      netFlow24hUsd: 9_014_020,
+      mintVolume24hUsd: 198_610_820,
+      burnVolume24hUsd: 189_596_800,
+      netFlow7dUsd: -2_005_233_746,
+      netFlow30dUsd: -3_610_299_466,
+      netFlow90dUsd: -3_424_521_682,
+      valuation: makeMintBurnCoinValuation({}, { netFlow90d: "unknown" }),
+    })] });
     const { container } = render(<FlowSummaryCard stablecoinId="usds-sky" />);
     expect(screen.getByText("+0.29% of supply")).toBeTruthy();
     expect(screen.getByText("−37.50% of supply")).toBeTruthy();
@@ -222,30 +207,27 @@ describe("FlowSummaryCard", () => {
   });
 
   it("uses window-start tracked-chain supply for growing coins (higher % than current-supply basis)", () => {
-    useMintBurnFlowsMock.mockReturnValue({
-      data: { coins: [makeMintBurnFlowCoin({
-        stablecoinId: "u-united-stables",
-        symbol: "U",
-        pressureShiftScore: 18,
-        pressureShiftState: "improving",
-        netFlowDirection24h: "minting",
-        gaugeWeightUsd: 511_621_104,
-        windowStartSupplyUsd: {
-          window24h: 506_621_398,
-          window7d: 498_121_897,
-          window30d: 447_624_768,
-          window90d: null,
-        },
-        netFlow24hUsd: 5_000_038,
-        mintVolume24hUsd: 5_000_038,
-        burnVolume24hUsd: 0,
-        netFlow7dUsd: 10_497_614,
-        netFlow30dUsd: 62_956_448,
-        netFlow90dUsd: 287_063_569,
-        valuation: makeMintBurnCoinValuation({}, { netFlow90d: "unknown" }),
-      })] },
-      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
-    });
+    mockFlows({ coins: [makeMintBurnFlowCoin({
+      stablecoinId: "u-united-stables",
+      symbol: "U",
+      pressureShiftScore: 18,
+      pressureShiftState: "improving",
+      netFlowDirection24h: "minting",
+      gaugeWeightUsd: 511_621_104,
+      windowStartSupplyUsd: {
+        window24h: 506_621_398,
+        window7d: 498_121_897,
+        window30d: 447_624_768,
+        window90d: null,
+      },
+      netFlow24hUsd: 5_000_038,
+      mintVolume24hUsd: 5_000_038,
+      burnVolume24hUsd: 0,
+      netFlow7dUsd: 10_497_614,
+      netFlow30dUsd: 62_956_448,
+      netFlow90dUsd: 287_063_569,
+      valuation: makeMintBurnCoinValuation({}, { netFlow90d: "unknown" }),
+    })] });
     render(<FlowSummaryCard stablecoinId="u-united-stables" />);
     expect(screen.getByText("+0.99% of supply")).toBeTruthy();
     expect(screen.getByText("+2.11% of supply")).toBeTruthy();
@@ -254,19 +236,16 @@ describe("FlowSummaryCard", () => {
   });
 
   it("renders unavailable shares (—) for missing history, zero start supply, and unknown valuation without falling back to current supply", () => {
-    useMintBurnFlowsMock.mockReturnValue({
-      data: { coins: [makeMintBurnFlowCoin({
-        gaugeWeightUsd: 100_000_000,
-        windowStartSupplyUsd: {
-          window24h: 0,
-          window7d: null,
-          window30d: 80_000_000,
-          window90d: null,
-        },
-        valuation: makeMintBurnCoinValuation({}, { netFlow30d: "unknown", netFlow90d: "complete" }),
-      })] },
-      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
-    });
+    mockFlows({ coins: [makeMintBurnFlowCoin({
+      gaugeWeightUsd: 100_000_000,
+      windowStartSupplyUsd: {
+        window24h: 0,
+        window7d: null,
+        window30d: 80_000_000,
+        window90d: null,
+      },
+      valuation: makeMintBurnCoinValuation({}, { netFlow30d: "unknown", netFlow90d: "complete" }),
+    })] });
     const { container } = render(<FlowSummaryCard stablecoinId="usdc-circle" />);
     expect(screen.getByTitle("Tracked-chain supply at the start of the 24-hour window was zero, so share is undefined.")).toBeTruthy();
     expect(screen.getByTitle("7-day window-start tracked-chain supply is unavailable.")).toBeTruthy();
@@ -277,23 +256,20 @@ describe("FlowSummaryCard", () => {
   });
 
   it("collapses a quiet coin to plain lines without zeros, NR or an illustration", () => {
-    useMintBurnFlowsMock.mockReturnValue({
-      data: { coins: [makeInactiveMintBurnFlowCoin({
-        baselineDailyNetUsd: 0,
-        baselineDataDays: 30,
-        netFlow30dUsd: 0,
-        netFlow90dUsd: 495_710_000,
-        gaugeWeightUsd: 3_111_000_000,
-        windowStartSupplyUsd: {
-          window24h: 3_111_000_000,
-          window7d: 3_111_000_000,
-          window30d: 3_111_000_000,
-          window90d: null,
-        },
-        valuation: makeMintBurnCoinValuation(),
-      })] },
-      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
-    });
+    mockFlows({ coins: [makeInactiveMintBurnFlowCoin({
+      baselineDailyNetUsd: 0,
+      baselineDataDays: 30,
+      netFlow30dUsd: 0,
+      netFlow90dUsd: 495_710_000,
+      gaugeWeightUsd: 3_111_000_000,
+      windowStartSupplyUsd: {
+        window24h: 3_111_000_000,
+        window7d: 3_111_000_000,
+        window30d: 3_111_000_000,
+        window90d: null,
+      },
+      valuation: makeMintBurnCoinValuation(),
+    })] });
     const { container } = render(<FlowSummaryCard stablecoinId="usdc-circle" />);
     expect(container.textContent).toContain("No mints or burns in the last 24 hours, and no net supply change over 30 days.");
     expect(container.textContent).toContain("90-day net: +$495.71M");

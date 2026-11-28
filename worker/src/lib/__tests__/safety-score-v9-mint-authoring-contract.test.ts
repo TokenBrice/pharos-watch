@@ -239,6 +239,9 @@ function mintReviewFor(profile: MintAuthorityProfile | undefined) {
   return { review, mintControl, controls };
 }
 
+const compileNormalized = (input: Parameters<typeof normalizeFixedInput>[0], extension: Parameters<typeof compileSafetyScoreV9FactSetFromNormalizedInput>[1]) =>
+  compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+
 describe("Safety Score v9 mint authoring contract (authoring-contract batch, owner rulings Batch 3)", () => {
   it("lets reviewed fields supersede the inferred / encoding behavior", () => {
     const { review, mintControl } = mintReviewFor(AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE);
@@ -350,7 +353,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
         proofOfReserves: { type: "attestation", url: "https://example.com/attestation", cadence },
       });
       const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
-      const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+      const compiled = compileNormalized(input, extension);
       const asset = compiled.assets[0]!;
       expect(asset.economicControlReview.mint.reconciliation).toBe(expected);
       const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
@@ -373,7 +376,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
         },
       }),
     });
-    const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+    const compiled = compileNormalized(input, extension);
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1);
     const asset = evaluated.assets.find((candidate) => candidate.assetId === ASSET_ID)!;
 
@@ -390,7 +393,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       capturedAt: REGISTRY_FIXTURE_CAPTURED_AT,
     });
     const extension = buildSafetyScoreV9BaselineExtension(input, { metaById: new Map([[assetId, meta]]) });
-    const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+    const compiled = compileNormalized(input, extension);
     const asset = compiled.assets.find((candidate) => candidate.assetId === assetId)!;
     const custodyQuestionRefs = new Set((meta.mintAuthority!.review.scopedQuestions ?? [])
       .filter((question) => question.subject === "key-custody-independence")
@@ -518,7 +521,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     expect(councilControl.capabilities).toEqual(["parameter-change"]);
     expect(councilControl.capabilities).not.toContain("mint");
 
-    const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+    const compiled = compileNormalized(input, extension);
     const compiledAsset = compiled.assets.find((candidate) => candidate.assetId === assetId)!;
     const compiledMintControls = compiledAsset.controls.filter((control) =>
       control.controlKey.startsWith(`mint-meta:${assetId}:`),
@@ -584,7 +587,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
           ],
         ]),
       });
-      const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+      const compiled = compileNormalized(input, extension);
       const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
 
       expect(extension.assets[0]!.economicControlReview?.mint).toMatchObject({
@@ -617,7 +620,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       omitLiveReserveIds: relationships.map(({ assetId }) => assetId),
     });
     const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
-    const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+    const compiled = compileNormalized(input, extension);
     const evaluatedById = new Map(
       evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets.map((asset) => [asset.assetId, asset]),
     );
@@ -805,7 +808,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     expect(selectedControl.controlKey).not.toBe(shareControl.controlKey);
     expect(selectedControl.capabilities).toContain("mint");
 
-    const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+    const compiled = compileNormalized(input, extension);
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets.find(
       (candidate) => candidate.assetId === assetId,
     )!;
@@ -897,7 +900,7 @@ function compileDusdTeamAnswerFixture() {
   const input = dusdFixedInput();
   const metaById = new Map(ACTIVE_ASSET_IDS.map((assetId) => [assetId, requireMeta(assetId)] as const));
   const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
-  const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+  const compiled = compileNormalized(input, extension);
   const compiledAsset = compiled.assets.find((candidate) => candidate.assetId === DUSD_ASSET_ID);
   if (!compiledAsset) throw new Error("expected compiled DUSD facts");
   const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1);

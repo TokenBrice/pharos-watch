@@ -117,6 +117,8 @@ function metricRow(html: string, label: string): string | undefined {
   return row ? `${row}</tr>` : undefined;
 }
 
+const renderSingleCoin = (coin: ComparisonCoinEntry) => renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
+
 describe("ComparisonTable", () => {
   it.each([
     ["usdu-usdu-finance", "Self-referential claim (Morpho USDU Core vault shares) 61% of scoped reserve report"],
@@ -131,7 +133,7 @@ describe("ComparisonTable", () => {
   ])("uses the reviewed reserve scope in the %s cell", async (id, label) => {
     const meta = (await loadClientStablecoinDetail(id))!;
     const coin = { ...makeCoin(meta.id, meta.symbol), meta };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
+    const html = renderSingleCoin(coin);
     expect(metricRow(html, "Largest reserve exposure")).toContain(label);
   });
 
@@ -165,7 +167,7 @@ describe("ComparisonTable", () => {
   it("keeps a pipeline-gap card out of the withheld top-driver chip", () => {
     const coin = makeCoin("xmd", "XMD");
     coin.safetyCard = makeReportCardsV9PipelineGapCard();
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
+    const html = renderSingleCoin(coin);
     expect(html).toContain("Pipeline gap");
     expect(html).toContain("No Safety Score published");
     expect(html).not.toContain("Score withheld");
@@ -180,7 +182,7 @@ describe("ComparisonTable", () => {
       ...coin.safetyCard!,
       evidence: { level: "limited", freshness: "unknown", reasons: [] },
     };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
+    const html = renderSingleCoin(coin);
     expect(html).toContain("Limited · Freshness not assessed");
     expect(html).toContain("Evidence age not assessed");
     expect(html).not.toContain("Evidence age unknown");
@@ -247,7 +249,7 @@ describe("ComparisonTable", () => {
     expect(recent).toMatchObject({ pegPct: 100, observedDays: 2, coverageLimited: true });
     const coin = makeCoin("usdt", "USDT");
     coin.pegDetails = { ...coin.pegDetails!, recent90d: recent };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
+    const html = renderSingleCoin(coin);
     const row = occupancyRow(html);
     expect(row).toContain("100.00%");
     expect(row).toContain('100.00%<span class="text-muted-foreground" title="Based on 2d · Partial 90-day coverage"> · 2d<span class="sr-only"> of partial 90-day coverage</span></span>');
@@ -266,7 +268,7 @@ describe("ComparisonTable", () => {
   ])("renders $label occupancy with a basis marker only for limited coverage", ({ recent, value, basis }) => {
     const coin = makeCoin("usdt", "USDT");
     coin.pegDetails = { ...coin.pegDetails!, recent90d: { ...coin.pegDetails!.recent90d!, ...recent } };
-    const row = occupancyRow(renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />));
+    const row = occupancyRow(renderSingleCoin(coin));
     expect(row).toContain(value);
     if (basis) expect(row).toContain(basis);
     else expect(row).not.toMatch(/Based on|Partial 90-day coverage/);
@@ -277,7 +279,7 @@ describe("ComparisonTable", () => {
   it("keeps missing recent stats a dash without a basis", () => {
     const coin = makeCoin("usdt", "USDT");
     coin.pegDetails = { ...coin.pegDetails!, recent90d: null };
-    const row = occupancyRow(renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />));
+    const row = occupancyRow(renderSingleCoin(coin));
     expect(row).toContain("—");
     expect(row).not.toContain("Based on");
   });
@@ -291,7 +293,7 @@ describe("ComparisonTable", () => {
     const coin = makeCoin("test", "TST");
     coin.meta = { ...coin.meta, flags: { ...coin.meta.flags, navToken: nav } };
     coin.pegDetails = { ...coin.pegDetails!, currentDeviationBps: deviation, activeDepeg: false, depegEventCoverageLimited: limited };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
+    const html = renderSingleCoin(coin);
     const row = html.match(/<tr[^>]*>(?:(?!<\/tr>)[\s\S])*Open recorded incident[\s\S]*?<\/tr>/)?.[0];
     expect(row).toContain(">No<");
     expect(row).not.toContain("At peg");
@@ -300,7 +302,7 @@ describe("ComparisonTable", () => {
   it.each([true, null])("distinguishes an open incident from missing event coverage (%s)", (active) => {
     const coin = makeCoin("test", "TST");
     coin.pegDetails = active === null ? null : { ...coin.pegDetails!, activeDepeg: active };
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
+    const html = renderSingleCoin(coin);
     const row = html.match(/<tr[^>]*>(?:(?!<\/tr>)[\s\S])*Open recorded incident[\s\S]*?<\/tr>/)?.[0];
     expect(row).toContain(active === null ? "—" : ">Yes<");
     expect(row).not.toContain(">No<");
@@ -405,7 +407,7 @@ describe("ComparisonTable", () => {
       },
     };
 
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />);
+    const html = renderSingleCoin(coin);
 
     const variantRow = metricRow(html, "Variant relationship");
     expect(variantRow).toContain("Savings variant of Tether (USDT)");
@@ -419,7 +421,7 @@ describe("ComparisonTable", () => {
     const coin = makeCoin("savings-unknown", "SUNK");
     coin.meta = { ...coin.meta, variantOf: "unknown-parent", variantKind: "savings-passthrough" };
     const row = metricRow(
-      renderToStaticMarkup(<ComparisonTable coins={[coin]} logos={{}} />),
+      renderSingleCoin(coin),
       "Variant relationship",
     );
     expect(row).toContain("Savings variant of an untracked asset");

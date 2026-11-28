@@ -99,6 +99,8 @@ async function flushMicrotasks() {
   for (let i = 0; i < 8; i += 1) await Promise.resolve();
 }
 
+const mockHealthyBeefy = () => vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+
 describe("syncYieldSupplemental", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -305,7 +307,7 @@ describe("syncYieldSupplemental", () => {
         [getYieldSupplementalFamilyCacheKey(family), familyRow(START_SEC - ageSec, [beefyCandidate()])],
         [getYieldSupplementalFamilyBackoffCacheKey(family), backoffRow(activeBackoffUntilSec, "retry-after", START_SEC, family)],
       ]));
-      vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+      mockHealthyBeefy();
       const { result, meta } = await runSync(opts);
       expect(fetcher(family)).not.toHaveBeenCalled();
       expect(meta).toMatchObject({
@@ -334,7 +336,7 @@ describe("syncYieldSupplemental", () => {
         [getYieldSupplementalFamilyCacheKey(family), familyRow(START_SEC - ageSec)],
         [getYieldSupplementalFamilyBackoffCacheKey(family), backoffRow(activeBackoffUntilSec, source, START_SEC, family)],
       ]));
-      vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+      mockHealthyBeefy();
       const { result, meta } = await runSync();
       expect(fetcher(family)).not.toHaveBeenCalled();
       expect(result.status).toBe("degraded");
@@ -409,7 +411,7 @@ describe("syncYieldSupplemental", () => {
   });
 
   it("retains the previous family snapshot when the fetch ends degraded", async () => {
-    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+    mockHealthyBeefy();
     vi.mocked(fetchMorphoVaultSources).mockResolvedValue(degradedFamilyFetch());
     const { result, meta } = await runSync();
 
@@ -463,7 +465,7 @@ describe("syncYieldSupplemental", () => {
   });
 
   it("does not claim output when candidate-bearing family writes lose the newer-cache fence", async () => {
-    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+    mockHealthyBeefy();
     vi.mocked(setCacheIfNewer).mockResolvedValue({ written: false, skippedBecauseNewer: true });
     const { result, meta } = await runSync();
     expect(result.productivity?.productive).toBe(false);
@@ -519,14 +521,14 @@ describe("syncYieldSupplemental", () => {
 
   it("retains the previous snapshot when a family callback fails outright", async () => {
     vi.mocked(fetchMorphoVaultSources).mockRejectedValue(new Error("morpho exploded"));
-    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+    mockHealthyBeefy();
     const { meta } = await runSync();
     expect(meta.familyCacheResults?.morpho).toBe("retained-previous");
     expect(meta.degradedFamilies).toEqual(["morpho"]);
   });
 
   it("publishes an empty family row when a successful fetch genuinely has no candidates", async () => {
-    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+    mockHealthyBeefy();
     const { meta } = await runSync();
     expect(JSON.parse(String(findNewerWrite("yield:supplemental-sources:v1:morpho")?.[2]))).toMatchObject({ sourceCount: 0, data: [] });
     expect(meta.familyCacheResults?.morpho).toBe("empty-published");
@@ -776,7 +778,7 @@ describe("syncYieldSupplemental", () => {
 
   it("keeps successful family results when another supplemental family throws", async () => {
     vi.mocked(fetchMorphoVaultSources).mockRejectedValue(new Error("morpho exploded"));
-    vi.mocked(fetchBeefySources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
+    mockHealthyBeefy();
     const { result } = await runSync();
 
     expect(result.status).toBe("degraded");

@@ -33,6 +33,13 @@ const publication = makeWorkerSafetyScoreV9Publication({
   publicationGenerationId: "report-cards:v9:accepted",
 });
 
+/** One screened OwnershipTransferred emitter with no material admin event. */
+const OWNERSHIP_SCREENING = {
+  emitters: [{ address: `0x${"e".repeat(40)}`, expectedRuntimeCodeSha256: "a".repeat(64), runtimeCodeSha256: "a".repeat(64), families: ["OwnershipTransferred"] }],
+  screenedTopics: [{ family: "OwnershipTransferred", topic0: `0x${"2".repeat(64)}`, signature: "OwnershipTransferred(address,address)" }],
+  eventCounts: { OwnershipTransferred: 0 }, finding: "no-material-admin-event",
+} as const;
+
 describe("Safety Score V9 accepted-publication replay capture", () => {
   const retainedRows = () => [
     { key: SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, value: "base", updated_at: base.clockSec },
@@ -79,9 +86,7 @@ describe("Safety Score V9 accepted-publication replay capture", () => {
       subjectDeploymentKey: subject, fromBlock: 100, toBlock: 200, toBlockHash: `0x${"1".repeat(64)}`,
       windowStartSec: enriched.clockSec - 86_400, windowEndSec: enriched.clockSec - 3_600, observedAtSec: enriched.clockSec - 1_800,
       screeningPolicyDigest: "c".repeat(64), logDigest: "d".repeat(64),
-      emitters: [{ address: `0x${"e".repeat(40)}`, expectedRuntimeCodeSha256: "a".repeat(64), runtimeCodeSha256: "a".repeat(64), families: ["OwnershipTransferred"] }],
-      screenedTopics: [{ family: "OwnershipTransferred", topic0: `0x${"2".repeat(64)}`, signature: "OwnershipTransferred(address,address)" }],
-      eventCounts: { OwnershipTransferred: 0 }, finding: "no-material-admin-event",
+      ...OWNERSHIP_SCREENING,
     });
     const descriptor = V9LaneEmitterDescriptorSchema.parse({
       schemaVersion: 1, subjectDeploymentKey: subject, assetId: "wm-m0", contributorControlIds: ["alpha"],
@@ -135,9 +140,7 @@ describe("Safety Score V9 accepted-publication replay capture", () => {
           subjectDeploymentKey: subject, fromBlock: 1, toBlock: 2, toBlockHash: `0x${"1".repeat(64)}`,
           windowStartSec: 10, windowEndSec: 20, observedAtSec: 30, screeningPolicyDigest: "c".repeat(64),
           logDigest: "d".repeat(64),
-          emitters: [{ address: `0x${"e".repeat(40)}`, expectedRuntimeCodeSha256: "a".repeat(64), runtimeCodeSha256: "a".repeat(64), families: ["OwnershipTransferred"] }],
-          screenedTopics: [{ family: "OwnershipTransferred", topic0: `0x${"2".repeat(64)}`, signature: "OwnershipTransferred(address,address)" }],
-          eventCounts: { OwnershipTransferred: 0 }, finding: "no-material-admin-event",
+          ...OWNERSHIP_SCREENING,
         }),
       }]]),
       descriptors: [],
@@ -188,9 +191,7 @@ describe("Safety Score V9 accepted-publication replay capture", () => {
       subjectDeploymentKey: "ethereum:0x1111111111111111111111111111111111111111", fromBlock: 1, toBlock: 2,
       toBlockHash: `0x${"1".repeat(64)}`, windowStartSec: 10, windowEndSec: 20, observedAtSec: 30,
       screeningPolicyDigest: "c".repeat(64), logDigest: "d".repeat(64),
-      emitters: [{ address: `0x${"e".repeat(40)}`, expectedRuntimeCodeSha256: "a".repeat(64), runtimeCodeSha256: "a".repeat(64), families: ["OwnershipTransferred"] }],
-      screenedTopics: [{ family: "OwnershipTransferred", topic0: `0x${"2".repeat(64)}`, signature: "OwnershipTransferred(address,address)" }],
-      eventCounts: { OwnershipTransferred: 0 }, finding: "no-material-admin-event",
+      ...OWNERSHIP_SCREENING,
     });
     const certificates = new Map<string, { screeningSetId: string; certificate: typeof template }>();
     for (let index = 0; index <= SAFETY_SCORE_V9_REPLAY_LANE_CERTIFICATE_MAX; index += 1) {
@@ -208,9 +209,7 @@ describe("Safety Score V9 accepted-publication replay capture", () => {
       subjectDeploymentKey: "base:0x2222222222222222222222222222222222222222", fromBlock: 1, toBlock: 2,
       toBlockHash: `0x${"1".repeat(64)}`, windowStartSec: 10, windowEndSec: 20, observedAtSec: 30,
       screeningPolicyDigest: "c".repeat(64), logDigest: "d".repeat(64),
-      emitters: [{ address: `0x${"e".repeat(40)}`, expectedRuntimeCodeSha256: "a".repeat(64), runtimeCodeSha256: "a".repeat(64), families: ["OwnershipTransferred"] }],
-      screenedTopics: [{ family: "OwnershipTransferred", topic0: `0x${"2".repeat(64)}`, signature: "OwnershipTransferred(address,address)" }],
-      eventCounts: { OwnershipTransferred: 0 }, finding: "no-material-admin-event",
+      ...OWNERSHIP_SCREENING,
     });
     expect(() => buildSafetyScoreV9ReplayLaneScreening({
       certificates: new Map([[subject, { screeningSetId: "set-1", certificate }]]),
@@ -225,9 +224,7 @@ describe("Safety Score V9 accepted-publication replay capture", () => {
       subjectDeploymentKey: subject, fromBlock: 1, toBlock: 2, toBlockHash: `0x${"1".repeat(64)}`,
       windowStartSec: 10, windowEndSec: 20, observedAtSec: 30, screeningPolicyDigest: "c".repeat(64),
       logDigest: "d".repeat(64),
-      emitters: [{ address: `0x${"e".repeat(40)}`, expectedRuntimeCodeSha256: "a".repeat(64), runtimeCodeSha256: "a".repeat(64), families: ["OwnershipTransferred"] }],
-      screenedTopics: [{ family: "OwnershipTransferred", topic0: `0x${"2".repeat(64)}`, signature: "OwnershipTransferred(address,address)" }],
-      eventCounts: { OwnershipTransferred: 0 }, finding: "no-material-admin-event",
+      ...OWNERSHIP_SCREENING,
     });
     expect(() => buildSafetyScoreV9ReplayLaneScreening({
       certificates: new Map([[subject, { screeningSetId: "set-1", certificate: oversized }]]),

@@ -1,12 +1,11 @@
-import { globSync, readFileSync } from "node:fs";
-import { matchesGlob, resolve } from "node:path";
+import { globSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, matchesGlob, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { readTypedLintPatterns } from "../ci/run-changed-eslint.ts";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
-const { scripts } = JSON.parse(readFileSync(resolve(REPO_ROOT, "package.json"), "utf8")) as {
-  scripts: Record<string, string>;
-};
-const patterns = Array.from(scripts["lint:typed"].matchAll(/(["'])(.*?)\1/g), (match) => match[2]);
+const patterns = readTypedLintPatterns();
 const intendedRoots = ["worker/src", "functions", "src/lib", "src/hooks"];
 
 describe("typed lint file scope", () => {
@@ -22,5 +21,12 @@ describe("typed lint file scope", () => {
     for (const path of globSync(`${root}/**/*.{ts,tsx}`, { cwd: REPO_ROOT })) {
       expect(patterns.some((pattern) => matchesGlob(path, pattern)), `Uncovered typed-lint file: ${path}`).toBe(true);
     }
+  });
+
+  it("fails closed without lint:typed globs", () => {
+    expect(() => readTypedLintPatterns(resolve(REPO_ROOT, "worker/package.json"))).toThrow(/No typed-lint globs/);
+    const quotedConfigOnly = join(mkdtempSync(join(tmpdir(), "pharos-typed-scope-")), "package.json");
+    writeFileSync(quotedConfigOnly, JSON.stringify({ scripts: { "lint:typed": "eslint --config \"eslint.typed.config.mjs\"" } }));
+    expect(() => readTypedLintPatterns(quotedConfigOnly)).toThrow(/No typed-lint globs/);
   });
 });

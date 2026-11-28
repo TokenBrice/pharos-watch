@@ -194,6 +194,7 @@ function createFixtureFetch(
 
 describe("Cloudflare account-state drift comparison", () => {
   const manifest = loadCloudflareAccountStateManifest();
+  const fetchState = (fetchImpl: (input: URL | RequestInfo, init?: RequestInit) => Promise<Response>) => fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl });
 
   it("reports fixture drift by resource and field without reporting values for secrets", () => {
     expect(compareCloudflareAccountState(manifest, readFixture("drifted-live-state.json"))).toEqual(
@@ -222,7 +223,7 @@ describe("Cloudflare account-state drift comparison", () => {
       path.endsWith(`/settings/${setting}`) ? Response.json({
         success: true, result: { ...(result as object), value },
       }) : undefined);
-    const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock });
+    const state = await fetchState(fetchMock);
     expect(compareCloudflareAccountState(manifest, state).some((entry: string) => entry.startsWith(`zone.${setting}:`))).toBe(true);
   });
 
@@ -237,14 +238,14 @@ describe("Cloudflare account-state drift comparison", () => {
   ])("does not interpret malformed %s as an observed setting: %j", async (setting, result) => {
     const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
       path.endsWith(`/settings/${setting}`) ? Response.json({ success: true, result }) : undefined);
-    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+    await expect(fetchState(fetchMock))
       .rejects.toThrow(`Cloudflare zone ${setting} lookup returned a malformed setting.`);
   });
 
   it.each([403, 404, 500])("does not interpret an unreadable zone setting (HTTP %s) as healthy", async (status) => {
     const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
       path.endsWith("/settings/browser_cache_ttl") ? Response.json({ success: false }, { status }) : undefined);
-    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+    await expect(fetchState(fetchMock))
       .rejects.toThrow(`Cloudflare zone browser_cache_ttl lookup failed (HTTP ${status})`);
   });
 
@@ -269,7 +270,7 @@ describe("Cloudflare account-state drift comparison", () => {
       settings.bindings.push({ type: "workflow", name: "SAFETY_SCORE_V9_WORKFLOW", workflow_name: "safety-score-v9-publication" });
       return Response.json({ success: true, result: settings });
     });
-    const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock });
+    const state = await fetchState(fetchMock);
     expect(compareCloudflareAccountState(manifest, state)).toEqual(expect.arrayContaining([
       "heavyWorker.customDomains: expected none", "heavyWorker.publicWorkflowBinding: expected false, found true",
     ]));
@@ -278,7 +279,7 @@ describe("Cloudflare account-state drift comparison", () => {
   it("never treats an unreadable route list as proof of no heavy routes", async () => {
     const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
       path.endsWith("/workers/routes") ? Response.json({ success: true, result: {} }) : undefined);
-    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+    await expect(fetchState(fetchMock))
       .rejects.toThrow("malformed route list");
   });
 
@@ -318,7 +319,7 @@ describe("Cloudflare account-state drift comparison", () => {
   ])("does not interpret unreadable Workflow response %s as absence", async (status, body) => {
     const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
       path.endsWith("/workflows/safety-score-v9-publication") ? new Response(body, { status }) : undefined);
-    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+    await expect(fetchState(fetchMock))
       .rejects.toThrow("Cloudflare Workflow lookup");
   });
 
@@ -327,7 +328,7 @@ describe("Cloudflare account-state drift comparison", () => {
       if (path.endsWith("/workflows/safety-score-v9-publication")) throw new Error("Workflow connection failed");
       return undefined;
     });
-    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+    await expect(fetchState(fetchMock))
       .rejects.toThrow("Workflow connection failed");
   });
 
@@ -377,7 +378,7 @@ describe("Cloudflare account-state drift comparison", () => {
       });
       return new Response(JSON.stringify({ success: true, result }));
     });
-    const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock });
+    const state = await fetchState(fetchMock);
     expect(state.pages.project.production).toEqual({
       environmentVariables: { COLLISION: { type: "plain_text", value: "unified" }, SECRET: { type: "secret_text" } },
       d1Bindings: ["DB", "EXTRA_DB"],
@@ -402,7 +403,7 @@ describe("Cloudflare account-state drift comparison", () => {
       Object.assign(project.deployment_configs.production, { r2_buckets: {}, bindings: [] }, configuration);
       return Response.json({ success: true, result });
     });
-    const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock });
+    const state = await fetchState(fetchMock);
     expect(compareCloudflareAccountState(manifest, state).some((entry: string) =>
       entry.startsWith("pages.production.r2Bindings.SOCIAL_PREVIEWS:"))).toBe(true);
   });
@@ -417,7 +418,7 @@ describe("Cloudflare account-state drift comparison", () => {
   ])("accepts valid non-expiring bucket lifecycle evidence %j", async (result) => {
     const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
       path.endsWith("/r2/buckets/pharos-social-previews/lifecycle") ? Response.json({ success: true, result }) : undefined);
-    const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock });
+    const state = await fetchState(fetchMock);
     expect(compareCloudflareAccountState(manifest, state)).toEqual([]);
     expect(state.r2BucketLifecycles).toEqual({ "pharos-social-previews": { enabledObjectDeletionRules: [] } });
   });
@@ -431,7 +432,7 @@ describe("Cloudflare account-state drift comparison", () => {
         path.endsWith("/r2/buckets/pharos-social-previews/lifecycle") ? Response.json({ success: true, result: {
           rules: [{ id: "unrelated-prefix-expiry", enabled: true, conditions, deleteObjectsTransition: { condition } }],
         } }) : undefined);
-      const state = await fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock });
+      const state = await fetchState(fetchMock);
       expect(compareCloudflareAccountState(manifest, state)).toContain(
         'r2.buckets.pharos-social-previews.lifecycle: enabled object deletion rule "unrelated-prefix-expiry" is forbidden');
     }
@@ -448,7 +449,7 @@ describe("Cloudflare account-state drift comparison", () => {
   ])("never treats malformed lifecycle evidence as no expiry: %j", async (result) => {
     const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
       path.endsWith("/r2/buckets/pharos-social-previews/lifecycle") ? Response.json({ success: true, result }) : undefined);
-    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+    await expect(fetchState(fetchMock))
       .rejects.toThrow("lifecycle lookup returned malformed lifecycle rules");
   });
 
@@ -458,7 +459,7 @@ describe("Cloudflare account-state drift comparison", () => {
   ])("fails closed on unreadable lifecycle response (HTTP %s, %s)", async (status, body) => {
     const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
       path.endsWith("/r2/buckets/pharos-social-previews/lifecycle") ? new Response(body, { status }) : undefined);
-    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+    await expect(fetchState(fetchMock))
       .rejects.toThrow("Cloudflare R2 bucket pharos-social-previews lifecycle lookup");
   });
 
@@ -467,7 +468,7 @@ describe("Cloudflare account-state drift comparison", () => {
       if (path.endsWith("/r2/buckets/pharos-social-previews/lifecycle")) throw new Error("Lifecycle connection failed");
       return undefined;
     });
-    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+    await expect(fetchState(fetchMock))
       .rejects.toThrow("Lifecycle connection failed");
   });
 
@@ -478,7 +479,7 @@ describe("Cloudflare account-state drift comparison", () => {
   ])("fails closed on unreadable lock evidence (HTTP %s, %j)", async (status, body) => {
     const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
       path.endsWith("/r2/buckets/pharos-social-previews/lock") ? Response.json(body, { status }) : undefined);
-    await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+    await expect(fetchState(fetchMock))
       .rejects.toThrow("Cloudflare R2 bucket pharos-social-previews lock lookup");
   });
 
@@ -489,7 +490,7 @@ describe("Cloudflare account-state drift comparison", () => {
         const [zone] = result as unknown[];
         return new Response(JSON.stringify({ success: true, result: Array(count).fill(zone) }));
       });
-      await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+      await expect(fetchState(fetchMock))
         .rejects.toThrow(`returned ${count} exact active matches`);
       expect(fetchMock.mock.calls.every(([request]) => new URL(String(request)).pathname === "/client/v4/zones")).toBe(true);
     }
@@ -507,7 +508,7 @@ describe("Cloudflare account-state drift comparison", () => {
     ] as const) {
       const fetchMock = createFixtureFetch(readFixture("healthy-live-state.json"), (path) =>
         path.endsWith(`/pages/projects/${manifest.pages.project}`) ? new Response(body, { status }) : undefined);
-      await expect(fetchCloudflareAccountState({ manifest, apiToken: "token", fetchImpl: fetchMock }))
+      await expect(fetchState(fetchMock))
         .rejects.toThrow(`Cloudflare Pages project lookup ${error}`);
     }
   });

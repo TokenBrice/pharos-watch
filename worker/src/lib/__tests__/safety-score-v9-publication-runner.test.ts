@@ -76,6 +76,8 @@ vi.mock("../safety-score-v9/accepted-projection-readers", async (importOriginal)
   loadSafetyScoreV9AcceptedBaselineState: mocks.loadBaseline,
 }));
 
+// The unmocked store: cases persist through it while asserting on the mocked wrappers.
+const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
 const fixedInput = makeV9FixedInput({ assetId: "usdc-circle" });
 // Building the production-scale registry snapshot is the expensive part of the
 // three full-registry cases; each takes a clone so no test observes another's
@@ -99,7 +101,6 @@ function acceptedBaseline(publication: SafetyScoreV9CurrentResponse, held = fals
 describe("Safety Score V9 publication runner", () => {
   it("retains exactly the compiled lane witnesses in the accepted replay capture", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const descriptors = loadReviewedLaneEmitterCatalog().descriptors;
     const descriptor = descriptors[0]!;
     const families = [...new Set(descriptor.emitters.flatMap((emitter) => emitter.families))];
@@ -136,7 +137,6 @@ describe("Safety Score V9 publication runner", () => {
 
   it("retries an unselected acceptance without changing canonical bytes", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const publication = makeWorkerSafetyScoreV9Publication();
     try {
       await store.persistSafetyScoreV9Publication(db, { ...currentInput(publication), deferPublicMaterialization: true });
@@ -158,7 +158,6 @@ describe("Safety Score V9 publication runner", () => {
 
   it("skips a generation with a recorded recovery failure when skipPriorFailedGeneration is enabled", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const publication = makeWorkerSafetyScoreV9Publication();
     try {
       await store.persistSafetyScoreV9Publication(db, { ...currentInput(publication), deferPublicMaterialization: true });
@@ -183,7 +182,6 @@ describe("Safety Score V9 publication runner", () => {
 
   it.each(["aborted", "ambiguous", "deadline"])("confirms committed selection after a late %s outcome", async mode => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const publication = makeWorkerSafetyScoreV9Publication();
     const controller = new AbortController();
     vi.useFakeTimers({ toFake: ["Date"] });
@@ -255,7 +253,6 @@ describe("Safety Score V9 publication runner", () => {
 
   it("does not roll back accepted cards when the journal D1 read throws", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     try {
       sqlite.exec("DROP TABLE safety_score_publication_journal");
       mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
@@ -267,7 +264,6 @@ describe("Safety Score V9 publication runner", () => {
   });
   it("publishes despite replay serialization failure and retains the previous generation pair", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const prior = makeWorkerSafetyScoreV9Publication({ publishedAtSec: fixedInput.clockSec - 100, publicationGenerationId: "report-cards:v9:prior" });
     const serialization = vi.spyOn(fixedInputCodec, "buildFixedInputCacheEntry").mockRejectedValueOnce(new Error("Replay delta exceeds byte ceiling"));
     const put = vi.fn().mockResolvedValue({ key: "stored" });
@@ -290,7 +286,6 @@ describe("Safety Score V9 publication runner", () => {
   });
   it.each(["upload", "index"] as const)("never rolls back accepted publication on archive %s failure", async failure => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const put = vi.fn().mockResolvedValue({ key: "stored" });
     try {
       if (failure === "upload") put.mockRejectedValue(new Error("R2 unavailable"));
@@ -311,7 +306,6 @@ describe("Safety Score V9 publication runner", () => {
 
   it.each(["held", "failed"] as const)("archives nothing when publication is %s", async outcome => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const put = vi.fn().mockResolvedValue({ key: "stored" });
     try {
       mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
@@ -332,7 +326,6 @@ describe("Safety Score V9 publication runner", () => {
   });
   it("archives the newly accepted cache transports even when the journal fails", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const put = vi.fn().mockResolvedValue({ key: "stored" });
     try {
       sqlite.exec("DROP TABLE safety_score_publication_journal");
@@ -382,7 +375,6 @@ describe("Safety Score V9 publication runner", () => {
 
   it("fails before compiling when the accepted publication is missing its baseline projection", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const prior = makeWorkerSafetyScoreV9Publication({ publishedAtSec: fixedInput.clockSec - 100 });
     try {
       await store.persistSafetyScoreV9Publication(db, currentInput(prior));
@@ -1054,7 +1046,6 @@ describe("Safety Score V9 publication runner", () => {
     const controller = new AbortController();
     controller.abort(new DOMException("cancelled", "AbortError"));
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     mocks.persistAttempt.mockImplementation(store.persistSafetyScoreV9PublicationAttempt);
     try {
       const result = await runSafetyScoreV9Publication({ db, fixedInput, signal: controller.signal });
@@ -1099,7 +1090,6 @@ describe("Safety Score V9 publication runner", () => {
     { latencyMs: 20_000, expected: "failed" },
   ] as const)("without deferral, keeps real 397-card staging $expected with $latencyMs ms D1 latency inside the inherited lane", async ({ latencyMs, expected }) => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const prior = makeWorkerSafetyScoreV9Publication({
       publishedAtSec: fixedInput.clockSec - 100, publicationGenerationId: "report-cards:v9:prior",
     });
@@ -1216,7 +1206,6 @@ describe("Safety Score V9 publication runner", () => {
     { latencyMs: 400, expected: "failed", buildMs: 119_599 },
   ] as const)("accepts before real 397-card staging, which is $expected with $latencyMs ms D1 latency after $buildMs ms", async ({ latencyMs, expected, buildMs }) => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const prior = makeWorkerSafetyScoreV9Publication({
       publishedAtSec: fixedInput.clockSec - 100, publicationGenerationId: "report-cards:v9:prior",
     });
@@ -1413,7 +1402,6 @@ describe("Safety Score V9 publication runner", () => {
 
   it("reports published with a warning when cancellation follows the canonical batch commit", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const caller = new AbortController();
     const batch = db.batch.bind(db);
     const batchSpy = vi.spyOn(db, "batch").mockImplementation(async (statements) => {
@@ -1438,7 +1426,6 @@ describe("Safety Score V9 publication runner", () => {
 
   it("keeps an accepted publication published when archive cancellation is non-fatal", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const caller = new AbortController();
     mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
     const put = vi.fn(async () => {
@@ -1463,7 +1450,6 @@ describe("Safety Score V9 publication runner", () => {
 
   it("recovers an exact committed identity after a non-abort lost batch response", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const batch = db.batch.bind(db);
     const batchSpy = vi.spyOn(db, "batch").mockImplementation(async (statements) => {
       const result = await batch(statements);
@@ -1492,7 +1478,6 @@ describe("Safety Score V9 publication runner", () => {
   });
 
   it("honors the independent signal before and after the compact identity read", async () => {
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const controller = new AbortController();
     const first = vi.fn(async () => {
       controller.abort(new DOMException("recovery budget expired", "TimeoutError"));
@@ -1510,7 +1495,6 @@ describe("Safety Score V9 publication runner", () => {
 
   it("retains acknowledged held state when cancellation interrupts the later journal", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const caller = new AbortController();
     mocks.assess.mockReturnValue({ decision: "hold", reasons: [{ code: "dex-stale" }], affectedAssetIds: [] });
     mocks.persist.mockImplementationOnce(async (database, input) => {
@@ -1532,7 +1516,6 @@ describe("Safety Score V9 publication runner", () => {
 
   it("does not treat an older accepted identity as a successful aborted write", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
-    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const caller = new AbortController();
     try {
       await store.persistSafetyScoreV9Publication(db, currentInput(makeWorkerSafetyScoreV9Publication({

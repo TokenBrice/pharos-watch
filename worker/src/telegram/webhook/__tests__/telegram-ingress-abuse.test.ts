@@ -63,6 +63,8 @@ function streamedPost(path: string, chunks: string[]): Request {
 }
 
 
+const evaluateGate = (request: Request, env: TelegramIngressAbuseEnv) => evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
+
 describe("Telegram ingress abuse gate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -100,7 +102,7 @@ describe("Telegram ingress abuse gate", () => {
     for (const policy of Object.values(TELEGRAM_INGRESS_POLICIES)) {
       vi.clearAllMocks();
       const request = post(policy.path, "{}", { "Content-Length": "2" });
-      const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
+      const result = await evaluateGate(request, env);
 
       expect(result.response).toBeNull();
       expect(result.request.headers.get("content-length")).toBeNull();
@@ -140,7 +142,7 @@ describe("Telegram ingress abuse gate", () => {
         method: "POST",
         body: "{}",
       });
-      const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
+      const result = await evaluateGate(request, env);
 
       expect(result.response).toBeNull();
       await expect(result.request.text()).resolves.toBe("{}");
@@ -164,7 +166,7 @@ describe("Telegram ingress abuse gate", () => {
         body: "{}",
       });
 
-      const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
+      const result = await evaluateGate(request, env);
 
       expect(result.response).toBeNull();
       await expect(result.request.text()).resolves.toBe("{}");
@@ -205,7 +207,7 @@ describe("Telegram ingress abuse gate", () => {
     const env = createEnv({ TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: limiter });
     const request = streamedPost(TELEGRAM_INGRESS_POLICIES.mini_app_session.path, ['{"initData":"invalid"}']);
 
-    const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
+    const result = await evaluateGate(request, env);
 
     expect(result.response?.status).toBe(429);
     expect(result.response?.headers.get("Retry-After")).toBe("60");
@@ -218,7 +220,7 @@ describe("Telegram ingress abuse gate", () => {
     const request = streamedPost(policy.path, ["x".repeat(policy.bodyLimitBytes), "x"]);
     const env = createEnv();
 
-    const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
+    const result = await evaluateGate(request, env);
 
     expect(env.TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT.limit).toHaveBeenCalledOnce();
     expect(result.response?.status).toBe(413);
@@ -239,7 +241,7 @@ describe("Telegram ingress abuse gate", () => {
     } as RequestInit & { duplex: "half" });
     const env = createEnv();
 
-    const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
+    const result = await evaluateGate(request, env);
 
     expect(result.response?.status).toBe(400);
     expect(mocks.logWorkerEvent).toHaveBeenLastCalledWith(
@@ -258,7 +260,7 @@ describe("Telegram ingress abuse gate", () => {
     const env = createEnv({ TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: limiter });
     const request = post(TELEGRAM_INGRESS_POLICIES.mini_app_session.path);
 
-    const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
+    const result = await evaluateGate(request, env);
 
     expect(result.response?.status).toBe(503);
     expect(result.response?.headers.get("Retry-After")).toBe("1");
@@ -286,7 +288,7 @@ describe("Telegram ingress abuse gate", () => {
 
     for (const status of [200, 200, 429]) {
       const request = post(policy.path, null);
-      const result = await evaluateTelegramIngressAbuseGate(request, new URL(request.url), env);
+      const result = await evaluateGate(request, env);
       expect(result.response?.status ?? 200).toBe(status);
     }
 

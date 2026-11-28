@@ -13,6 +13,10 @@ import {
   setSlotUpdatedAt,
 } from "./cron-leases.test-support";
 
+/** Owner A's hourly yield slot, started at `startedAt` and last heartbeating 30 minutes before `now`. */
+const staleYieldSlot = (startedAt: number, now: number) => makeRunningSlot("hourlyYieldSync", startedAt, "slot-owner-a", now - 1800);
+const sweepAt = (db: Parameters<typeof sweepStaleScheduledSlotExecutions>[0], now: number) => sweepStaleScheduledSlotExecutions(db, { nowSec: now });
+
 describe("runScheduledSlotWithFence", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -409,7 +413,7 @@ describe("runScheduledSlotWithFence", () => {
       },
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
+    const summary = await sweepAt(db, now);
 
     expect(summary).toMatchObject({ candidateSlots: 1, slotsReconciled: 0 });
     expect(db.getRuns()).toEqual([]);
@@ -470,7 +474,7 @@ describe("runScheduledSlotWithFence", () => {
       ],
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
+    const summary = await sweepAt(db, now);
 
     expect(summary).toMatchObject({ candidateSlots: 1, slotsReconciled: 1 });
     expect(db.getSlot("hourlyYieldSync", staleSlotStartedAt)).toMatchObject({
@@ -498,7 +502,7 @@ describe("runScheduledSlotWithFence", () => {
     expect(result.status).toBe("ok");
     expect(fn).toHaveBeenCalledTimes(1);
     expect(db.getSlot("halfHourlyOffset", staleSlotStartedAt)?.state).toBe("running");
-    const sweep = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
+    const sweep = await sweepAt(db, now);
     expect(sweep.slotsReconciled).toBe(1);
     expect(db.getSlot("halfHourlyOffset", staleSlotStartedAt)?.result_status).toBe("error");
   });
@@ -509,7 +513,7 @@ describe("runScheduledSlotWithFence", () => {
     const currentSlotStartedAt = now;
     const db = makeLeaseDb({
       slots: [
-        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
+        staleYieldSlot(staleSlotStartedAt, now),
       ],
       leases: [
         makeLeaseRow("sync-yield-data", "yield-owner-a", now - 60, now - 1800),
@@ -633,7 +637,7 @@ describe("runScheduledSlotWithFence", () => {
       failSlotProgressReads: 1,
     });
 
-    await expect(sweepStaleScheduledSlotExecutions(db, { nowSec: now })).rejects.toThrow(
+    await expect(sweepAt(db, now)).rejects.toThrow(
       "simulated reconciliation crash",
     );
 
@@ -665,11 +669,11 @@ describe("runScheduledSlotWithFence", () => {
     const staleSlotStartedAt = now - 3600;
     const db = makeLeaseDb({
       slots: [
-        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
+        staleYieldSlot(staleSlotStartedAt, now),
       ],
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
+    const summary = await sweepAt(db, now);
 
     expect(summary).toMatchObject({
       slotsReconciled: 1,
@@ -708,14 +712,14 @@ describe("runScheduledSlotWithFence", () => {
     const staleSlotStartedAt = now - 3600;
     const db = makeLeaseDb({
       slots: [
-        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
+        staleYieldSlot(staleSlotStartedAt, now),
       ],
       progress: [
         makeProgressRow("sync-yield-data", null, staleSlotStartedAt, staleSlotStartedAt + 5, now - 1790, "started"),
       ],
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
+    const summary = await sweepAt(db, now);
 
     expect(summary).toMatchObject({
       slotsReconciled: 1,
@@ -766,7 +770,7 @@ describe("runScheduledSlotWithFence", () => {
       ],
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
+    const summary = await sweepAt(db, now);
 
     expect(summary).toMatchObject({
       candidateSlots: 1,
@@ -796,7 +800,7 @@ describe("runScheduledSlotWithFence", () => {
     const staleSlotStartedAt = now - 3600;
     const missingLeaseDb = makeLeaseDb({
       slots: [
-        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
+        staleYieldSlot(staleSlotStartedAt, now),
       ],
       progress: [
         makeProgressRow("sync-yield-data", "yield-owner-a", staleSlotStartedAt, staleSlotStartedAt + 20, now - 1800, "publication"),
@@ -849,7 +853,7 @@ describe("runScheduledSlotWithFence", () => {
 
     const newerLeaseDb = makeLeaseDb({
       slots: [
-        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
+        staleYieldSlot(staleSlotStartedAt, now),
       ],
       leases: [
         makeLeaseRow("sync-yield-data", "yield-owner-new", now + 300, now - 60),
@@ -884,7 +888,7 @@ describe("runScheduledSlotWithFence", () => {
 
     const fenceLostDb = makeLeaseDb({
       slots: [
-        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
+        staleYieldSlot(staleSlotStartedAt, now),
       ],
       progress: [
         makeProgressRow("sync-yield-data", "yield-owner-a", staleSlotStartedAt, staleSlotStartedAt + 20, now - 1800, "publication"),
@@ -919,7 +923,7 @@ describe("runScheduledSlotWithFence", () => {
     const staleSlotStartedAt = now - 3600;
     const db = makeLeaseDb({
       slots: [
-        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
+        staleYieldSlot(staleSlotStartedAt, now),
       ],
       leases: [
         makeLeaseRow("sync-yield-data", "yield-owner-a", now + 300, now - 60),
@@ -929,7 +933,7 @@ describe("runScheduledSlotWithFence", () => {
       ],
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
+    const summary = await sweepAt(db, now);
 
     expect(summary).toMatchObject({ candidateSlots: 1, slotsReconciled: 0 });
     expect(db.getRuns()).toEqual([]);
@@ -944,7 +948,7 @@ describe("runScheduledSlotWithFence", () => {
     const staleSlotStartedAt = now - 3600;
     const db = makeLeaseDb({
       slots: [
-        makeRunningSlot("hourlyYieldSync", staleSlotStartedAt, "slot-owner-a", now - 1800),
+        staleYieldSlot(staleSlotStartedAt, now),
       ],
       leases: [
         makeLeaseRow("sync-yield-data", "yield-owner-a", now + 300, now - 400),
@@ -954,7 +958,7 @@ describe("runScheduledSlotWithFence", () => {
       ],
     });
 
-    const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now });
+    const summary = await sweepAt(db, now);
 
     expect(summary).toMatchObject({ candidateSlots: 1, slotsReconciled: 1 });
     expect(db.getSlot("hourlyYieldSync", staleSlotStartedAt)).toMatchObject({

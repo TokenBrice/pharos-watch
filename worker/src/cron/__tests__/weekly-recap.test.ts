@@ -161,6 +161,20 @@ function mockAnthropicStreamResponse(text: string): Response {
   return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
 }
 
+function mockWeeklyClaude(): void {
+  vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+}
+
+function digestInsert(db: { getHistory(): Array<{ sql: string; binds: unknown[] }> }) {
+  return db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+}
+
+/** Neither Telegram edition path (outbox enqueue or direct delivery) ran. */
+function expectNoTelegramEdition(): void {
+  expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+  expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+}
+
 function buildDailyRows() {
   // Start at Tuesday 2026-03-24 12:00 UTC so all 5 rows fall within the
   // "current week" window (weekBoundary = todayTs - 6d = Tue 00:00 UTC
@@ -266,7 +280,7 @@ describe("generateWeeklyRecap", () => {
 
   it("stores a weekly digest and posts to Telegram when generation succeeds", async () => {
     const db = mockD1(makeTables());
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+    mockWeeklyClaude();
 
     const result = await generateWeeklyRecap(
       db,
@@ -285,7 +299,7 @@ describe("generateWeeklyRecap", () => {
       editionKey: "weekly:2026-03-30",
     }));
 
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    const insert = digestInsert(db);
     expect(insert).toBeTruthy();
     const recentWeeklyQuery = db.getHistory().find((entry) =>
       entry.sql.includes("SELECT digest_title, digest_text, digest_meta"),
@@ -371,7 +385,7 @@ describe("generateWeeklyRecap", () => {
       degradedSources: ["safety-canonical-snapshot"],
     });
     const db = mockD1(makeTables({ dailyRows: rows }));
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+    mockWeeklyClaude();
 
     const result = await generateWeeklyRecap(
       db,
@@ -389,7 +403,7 @@ describe("generateWeeklyRecap", () => {
     const rows = buildDailyRows();
     for (const row of rows) row.input_data = JSON.stringify({ ...JSON.parse(row.input_data), degradedSources: chronic });
     const db = mockD1(makeTables({ dailyRows: rows }));
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+    mockWeeklyClaude();
 
     const result = await generateWeeklyRecap(db, "anthropic-key", null, { botToken: "bot", chatId: "chat" });
 
@@ -397,7 +411,7 @@ describe("generateWeeklyRecap", () => {
     // watchdog, never a standing cron condition (f8a6cdbee).
     expect(result.status).toBeUndefined();
     expect(JSON.parse(result.metadata ?? "{}").reason).toBeUndefined();
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    const insert = digestInsert(db);
     expect(JSON.parse(String(insert!.binds[3])).degradedSourcesThisWeek).toEqual(expect.arrayContaining(chronic));
   });
 
@@ -416,9 +430,8 @@ describe("generateWeeklyRecap", () => {
     );
 
     expect(fetchWithRetry).toHaveBeenCalledTimes(2);
-    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
-    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    expectNoTelegramEdition();
+    const insert = digestInsert(db);
     expect(String(insert?.binds[4])).toContain("—");
     expect(JSON.parse(String(insert?.binds[5]))).toMatchObject({
       qualityGate: "blocked",
@@ -446,10 +459,9 @@ describe("generateWeeklyRecap", () => {
     });
     await generateWeeklyRecap(db, "anthropic-key", null, { botToken: "bot", chatId: "chat" });
     expect(fetchWithRetry).toHaveBeenCalledTimes(1);
-    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
-    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    expectNoTelegramEdition();
     expect(postDigestTweet).not.toHaveBeenCalled();
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    const insert = digestInsert(db);
     expect(JSON.parse(String(insert?.binds[5]))).toMatchObject({
       qualityGate: "blocked",
       editorialStyleGate: { retry: { eligible: false, attempted: false, outcome: `skipped-${budget}-budget` } },
@@ -458,7 +470,7 @@ describe("generateWeeklyRecap", () => {
 
   it("posts the weekly recap to X with a carried-forward dated map", async () => {
     const db = mockD1(makeTables());
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+    mockWeeklyClaude();
     vi.mocked(resolveDigestSafetyMap).mockResolvedValueOnce({
       kind: "available",
       imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-03-29",
@@ -581,7 +593,7 @@ describe("generateWeeklyRecap", () => {
 
   it("uses the Monday scheduled slot when execution starts after midnight Tuesday", async () => {
     vi.setSystemTime(new Date("2026-03-31T00:01:00.000Z"));
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+    mockWeeklyClaude();
     const db = mockD1(makeTables());
     const mondaySlotSec = Math.floor(Date.parse("2026-03-30T08:10:00Z") / 1000);
 
@@ -600,7 +612,7 @@ describe("generateWeeklyRecap", () => {
       digestDate: "2026-03-30",
       scheduledAtSec: mondaySlotSec,
     });
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    const insert = digestInsert(db);
     const currentStart = mondaySlotSec - 7 * 86_400;
     expect(db.getHistory().filter(({ sql }) => sql.includes("FROM blacklist_events")).map(({ binds }) => binds)).toEqual([
       [currentStart, mondaySlotSec], [currentStart - 7 * 86_400, currentStart],
@@ -722,8 +734,7 @@ describe("generateWeeklyRecap", () => {
     expect(JSON.parse(String(result.metadata)).channels.telegram).toEqual({
       status: `outbox-${state}`, disposition: "terminal-unsent",
     });
-    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
-    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    expectNoTelegramEdition();
     expect(db.getHistory().some((entry) => entry.sql.includes("SET digest_meta = ?"))).toBe(false);
   });
 
@@ -742,10 +753,9 @@ describe("generateWeeklyRecap", () => {
 
     expect(result.status).toBe("degraded");
     expect(result.metadata).toContain("telegram: skipped: quality-gate");
-    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
-    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    expectNoTelegramEdition();
 
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    const insert = digestInsert(db);
     const insertedMeta = JSON.parse(String(insert?.binds[5])) as Record<string, unknown>;
     expect(insertedMeta.qualityGate).toBe("blocked");
 
@@ -762,7 +772,7 @@ describe("generateWeeklyRecap", () => {
       reason: "v9-snapshot-unavailable",
     });
     const db = mockD1(makeTables());
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+    mockWeeklyClaude();
 
     const result = await generateWeeklyRecap(
       db,
@@ -774,10 +784,9 @@ describe("generateWeeklyRecap", () => {
     expect(result.status).toBe("degraded");
     expect(result.metadata).toContain("unbound-safety-copy:hard");
     expect(fetchWithRetry).toHaveBeenCalledTimes(2);
-    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
-    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    expectNoTelegramEdition();
 
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    const insert = digestInsert(db);
     expect(JSON.parse(String(insert?.binds[5]))).toMatchObject({
       qualityGate: "blocked",
       safetyContext: {
@@ -818,7 +827,7 @@ describe("generateWeeklyRecap", () => {
     const result = await generateWeeklyRecap(db, "anthropic-key", null, null);
 
     expect(result.itemCount).toBe(1);
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    const insert = digestInsert(db);
     expect(insert).toBeDefined();
     const persisted = JSON.parse(String(insert!.binds[3]));
     expect(persisted.gradeTransitionCount).toBe(safetyAvailable ? 0 : null);
@@ -855,7 +864,7 @@ describe("generateWeeklyRecap", () => {
     expect(result.itemCount).toBe(1);
     expect(fetchWithRetry).toHaveBeenCalledTimes(2);
     expect(result.metadata).not.toContain("unbound-safety-copy");
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    const insert = digestInsert(db);
     expect(JSON.parse(String(insert?.binds[5]))).not.toMatchObject({ qualityGate: "blocked" });
     const firstRequest = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
       messages: Array<{ content: string }>;
@@ -866,7 +875,7 @@ describe("generateWeeklyRecap", () => {
 
   it("reports retryable Telegram outbox delivery without writing weekly shadows", async () => {
     const db = mockD1(makeTables());
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+    mockWeeklyClaude();
     vi.mocked(deliverTelegramDigestEdition).mockResolvedValueOnce({
       editionKey: "weekly:2026-03-30",
       state: "pending",
@@ -894,7 +903,7 @@ describe("generateWeeklyRecap", () => {
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
     expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
 
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    const insert = digestInsert(db);
     expect(JSON.parse(String(insert?.binds[5]))).not.toHaveProperty("telegramDelivered");
     expect(db.getHistory().some((entry) => entry.sql.includes("SET digest_meta = ?"))).toBe(false);
   });
@@ -941,8 +950,7 @@ describe("generateWeeklyRecap", () => {
     expect(fetchWithRetry).not.toHaveBeenCalled();
     expect(resolveDigestSafetyMap).not.toHaveBeenCalled();
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO daily_digest"))).toBe(false);
-    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
-    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    expectNoTelegramEdition();
     expect(db.getHistory().some((entry) => entry.sql.includes("SET digest_meta = ?"))).toBe(false);
   });
 
@@ -987,8 +995,7 @@ describe("generateWeeklyRecap", () => {
       status: "outbox-sent", disposition: "delivered",
     });
     expect(result.status).toBeUndefined();
-    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
-    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    expectNoTelegramEdition();
     expect(resolveDigestSafetyMap).not.toHaveBeenCalled();
   });
 
@@ -1005,8 +1012,7 @@ describe("generateWeeklyRecap", () => {
     expect(JSON.parse(String(result.metadata)).channels.telegram).toEqual({
       status: "outbox-execution_unknown", disposition: "terminal-unsent",
     });
-    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
-    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    expectNoTelegramEdition();
   });
 
   it("repairs non-JSON weekly output with a corrective retry", async () => {
@@ -1016,7 +1022,7 @@ describe("generateWeeklyRecap", () => {
         "USDT stayed at 1.00 all week, blacklist pressure faded, and weekly flows stayed calm.",
       ),
     );
-    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+    mockWeeklyClaude();
 
     const result = await generateWeeklyRecap(db, "anthropic-key", null, null);
 
@@ -1024,7 +1030,7 @@ describe("generateWeeklyRecap", () => {
     expect(result.status).toBeUndefined();
     expect(fetchWithRetry).toHaveBeenCalledTimes(2);
 
-    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    const insert = digestInsert(db);
     expect(insert).toBeTruthy();
     expect(insert?.binds[1]).toBe("PSI softened by 4 points while USDT stayed near peg and blacklist activity kept tapping the glass.");
     expect(insert?.binds[2]).toBe("Weekly Calm");
@@ -1042,7 +1048,7 @@ describe("generateWeeklyRecap", () => {
         input.totalMcapUsd *= 2;
         insert.run(row.generated_at + 60, row.digest_title, row.digest_text, JSON.stringify(input));
       }
-      vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+      mockWeeklyClaude();
       await generateWeeklyRecap(db, "anthropic-key", null, null);
       const persisted = sqlite.prepare("SELECT input_data FROM daily_digest WHERE json_extract(digest_meta, '$.type') = 'weekly'").get();
       expect(persisted).toBeDefined();
@@ -1068,7 +1074,7 @@ describe("generateWeeklyRecap", () => {
         input.activeDepegCount = index;
         insert.run(base + index * 86400, `Day ${index}`, template.digest_text, JSON.stringify(input));
       }
-      vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+      mockWeeklyClaude();
       await generateWeeklyRecap(db, "anthropic-key", null, null);
       const persisted = sqlite.prepare("SELECT input_data FROM daily_digest WHERE json_extract(digest_meta, '$.type') = 'weekly'").get();
       const input = JSON.parse(String(persisted!.input_data));
@@ -1106,7 +1112,7 @@ describe("generateWeeklyRecap", () => {
         "{}",
         JSON.stringify({ type: "weekly", internal: true }),
       );
-      vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+      mockWeeklyClaude();
 
       const result = await generateWeeklyRecap(
         db,

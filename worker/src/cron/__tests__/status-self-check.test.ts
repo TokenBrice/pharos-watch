@@ -157,6 +157,19 @@ const {
 } = await import("../status-self-check");
 const { STATUS_PROBE_THRESHOLDS } = await import("@shared/lib/status-thresholds");
 
+/** Status and probe agree at severity 1; the divergence streak passes through unchanged. */
+function mockNoDivergence(): void {
+  buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number | null) => ({
+    hasDivergence: false,
+    severityDelta: 0,
+    statusSeverity: 1,
+    probeSeverity: 1,
+    details: "no-divergence",
+    probeAgeSeconds: 0,
+    consecutiveDivergent: streak,
+  }));
+}
+
 describe("runStatusSelfCheck", () => {
   it("emits D1 costs without changing status SQL results", async () => {
     const rows = [{ id: "status-evidence" }];
@@ -583,15 +596,7 @@ describe("runStatusSelfCheck", () => {
     fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) =>
       buildProbeResponse(input, "degraded", init),
     );
-    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number | null) => ({
-      hasDivergence: false,
-      severityDelta: 0,
-      statusSeverity: 1,
-      probeSeverity: 1,
-      details: "no-divergence",
-      probeAgeSeconds: 0,
-      consecutiveDivergent: streak,
-    }));
+    mockNoDivergence();
     computeRawStatusMock.mockResolvedValueOnce(buildRawStatus("degraded"));
     reconcileStatusStateMock.mockResolvedValueOnce({
       effectiveStatus: "degraded",
@@ -797,15 +802,7 @@ describe("runStatusSelfCheck", () => {
     fetchMock
       .mockResolvedValueOnce(new Response("{}", { status: 503 }))
       .mockResolvedValueOnce(new Response("{}", { status: 200 }));
-    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number | null) => ({
-      hasDivergence: false,
-      severityDelta: 0,
-      statusSeverity: 1,
-      probeSeverity: 1,
-      details: "no-divergence",
-      probeAgeSeconds: 0,
-      consecutiveDivergent: streak,
-    }));
+    mockNoDivergence();
     updateDiscrepancyObservationMock.mockResolvedValueOnce({
       consecutiveDivergent: 0,
       consecutiveProbeFailures: 3,
@@ -994,15 +991,7 @@ describe("runStatusSelfCheck", () => {
     fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) =>
       buildProbeResponse(input, "healthy", init, { body: {}, status: 503 }),
     );
-    buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number | null) => ({
-      hasDivergence: false,
-      severityDelta: 0,
-      statusSeverity: 1,
-      probeSeverity: 1,
-      details: "no-divergence",
-      probeAgeSeconds: 0,
-      consecutiveDivergent: streak,
-    }));
+    mockNoDivergence();
     updateDiscrepancyObservationMock.mockResolvedValueOnce({
       consecutiveDivergent: 0,
       consecutiveProbeFailures: 3,
