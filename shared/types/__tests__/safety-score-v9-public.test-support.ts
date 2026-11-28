@@ -286,45 +286,35 @@ export function adjustedResponse() {
 
 export function boundedResponse() {
   const bounded = currentResponse();
-  bounded.cards[0]!.localCauseGaps = ["mechanism"];
-  bounded.cards[0]!.score = 45;
-  bounded.cards[0]!.grade = "D";
-  bounded.cards[0]!.qualityScore = 45;
-  bounded.cards[0]!.pegAdjustedScore = 45;
-  bounded.cards[0]!.pillars = {
+  const card = bounded.cards[0]!;
+  const trace = card.scoreTrace;
+  card.localCauseGaps = ["mechanism"];
+  card.score = 45;
+  card.grade = "D";
+  card.qualityScore = 45;
+  card.pegAdjustedScore = 45;
+  card.pillars = {
     backing: {
-      ...includedPillar(),
+      ...pillar(45),
       causeGapRefs: [0],
       limitedEvidenceCauses: ["U"],
-      score: 45,
       evidenceLevel: "limited",
-      freshness: "current",
-      components: [],
       reasons: [{
         code: "bounded-mechanism-review",
         path: "backing:mechanism",
         message: "A bounded backing review remains unresolved.",
       }],
     },
-    exit: { ...pillar(45), components: [], reasons: [] },
-    control: { ...pillar(45), components: [], reasons: [] },
+    exit: pillar(45),
+    control: pillar(45),
   };
-  bounded.cards[0]!.breakdowns = breakdowns(45, 45, 45);
-  bounded.cards[0]!.weakestPillar = { pillar: "backing", score: 45 };
-  bounded.cards[0]!.caps = bounded.cards[0]!.caps.map((cap) => ({ ...cap, binding: false }));
-  bounded.cards[0]!.bindingCap = null;
-  bounded.cards[0]!.reasonCodes = ["bounded-mechanism-review"];
-  bounded.cards[0]!.scoreTrace.aggregation = {
-    method: "smooth-bounded-headroom",
-    includedPillars: ["backing", "control", "exit"], excludedPillars: [],
-    effectiveScoringWeights: { backing: 0.4, exit: 0.35, control: 0.25 }, supportCeiling: 45,
-    score: 45,
-    weightedPillarMean: 45,
-    weakestPillar: "backing",
-    weakestScore: 45,
-    headroom: 45,
-  };
-  Object.assign(bounded.cards[0]!.scoreTrace.stages, {
+  card.breakdowns = breakdowns(45, 45, 45);
+  card.weakestPillar = { pillar: "backing", score: 45 };
+  card.caps = card.caps.map((cap) => ({ ...cap, binding: false }));
+  card.bindingCap = null;
+  card.reasonCodes = ["bounded-mechanism-review"];
+  Object.assign(trace.aggregation!, { score: 45, weightedPillarMean: 45, supportCeiling: 45, weakestScore: 45 });
+  Object.assign(trace.stages, {
     weightedPillarMean: 45,
     aggregatedQualityScore: 45,
     baseAssetScore: 45,
@@ -332,7 +322,7 @@ export function boundedResponse() {
     preCapScore: 45,
     publishedScore: 45,
   });
-  bounded.cards[0]!.scoreTrace.boundedUncertaintyAttribution.items = [{
+  trace.boundedUncertaintyAttribution.items = [{
     source: "reason",
     code: "bounded-mechanism-review",
     path: "backing:mechanism",
@@ -341,11 +331,11 @@ export function boundedResponse() {
     cause: "U",
     causeGapRefs: [0],
   }];
-  bounded.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount = 1;
-  bounded.cards[0]!.scoreTrace.evidenceResponsibility.facts = [[
+  trace.evidenceResponsibility.totalFactCount = 1;
+  trace.evidenceResponsibility.facts = [[
     "bounded-mechanism-review", "backing:mechanism", 0, "unresearched", false, "U", [0],
   ]];
-  bounded.cards[0]!.scoreTrace.evidenceResponsibility.summaries[7] = {
+  trace.evidenceResponsibility.summaries[7] = {
     responsibility: "unresearched",
     factCount: 1,
     criticalFactCount: 0,

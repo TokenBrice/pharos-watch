@@ -59,24 +59,6 @@ function makeDeferred(): { promise: Promise<void>; resolve: () => void } {
   return { promise, resolve };
 }
 
-function createMockDb(): D1Database {
-  return makeNoopD1({
-    prepare: () => ({
-      bind: () => ({
-        all: async () => ({ results: [] }),
-        first: async () => null,
-        run: async () => ({ success: true, meta: {} }),
-      }),
-      all: async () => ({ results: [] }),
-      first: async () => null,
-      run: async () => ({ success: true, meta: {} }),
-    }),
-    batch: async () => [],
-    exec: async () => ({ count: 0, duration: 0 }),
-    dump: async () => new ArrayBuffer(0),
-  });
-}
-
 // Generate 1000+ minimal pool entries to pass the DL threshold
 const FAKE_DL_POOLS = Array.from({ length: 1001 }, (_, i) => ({
   pool: `pool-${i}`,
@@ -122,36 +104,46 @@ function curveChainFromUrl(url: string): string | null {
   return CURVE_CHAINS.find((chain) => curvePoolsApiUrl(chain) === url) ?? null;
 }
 
-function mockDlYieldsSuccess(curveResponse: (() => Promise<{ response: Response; body: unknown } | null>) | null = async () => ({ response: new Response("", { status: 200 }), body: { data: { poolData: [] } } })) {
-  vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
-    const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
-    if (urlStr.includes("yields.llama.fi")) {
-      return {
-        response: new Response("", { status: 200 }),
-        body: { data: FAKE_DL_POOLS },
-      };
+const EMPTY_CURVE = { data: { poolData: [] } };
+
+function mockPrimaryFeeds({
+  yieldsBody = { data: FAKE_DL_POOLS },
+  protocols = [],
+  identities = {},
+  curve = () => EMPTY_CURVE,
+}: {
+  yieldsBody?: unknown;
+  protocols?: unknown;
+  identities?: Record<string, unknown>;
+  curve?: (chain: string) => typeof EMPTY_CURVE | null | Promise<typeof EMPTY_CURVE | null>;
+}) {
+  vi.mocked(fetchJsonWithRetry).mockImplementation(async (input) => {
+    const url = new URL(input);
+    const respond = (body: unknown) => ({ response: new Response(""), body });
+    if (url.pathname.endsWith("/poolsPro")) {
+      const body = identities[url.searchParams.get("project") ?? ""];
+      return body == null ? null : respond(body);
     }
-    if (urlStr.includes("api.llama.fi/protocols")) {
-      return {
-        response: new Response("", { status: 200 }),
-        body: [{ slug: "yearn-finance", category: "Yield Aggregator" }, { slug: "unknown", category: "" }],
-      };
-    }
-    if (curveChainFromUrl(urlStr) != null) {
-      return curveResponse ? curveResponse() : null;
-    }
-    return {
-      response: new Response("", { status: 200 }),
-      body: {},
-    };
+    if (url.hostname === "yields.llama.fi") return respond(yieldsBody);
+    if (url.href.includes("api.llama.fi/protocols")) return protocols === null ? null : respond(protocols);
+    const chain = curveChainFromUrl(url.href);
+    if (!chain) throw new Error(`Unexpected fetch ${url.href}`);
+    const body = await curve(chain);
+    return body === null ? null : respond(body);
   });
+}
+
+function fetchPrimary(lookups = PRIMARY_POOL_LOOKUPS) {
+  return fetchDataSources(null, makeNoopD1(), lookups);
 }
 
 describe("fetchDataSources", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
-    mockDlYieldsSuccess();
+    mockPrimaryFeeds({
+      protocols: [{ slug: "yearn-finance", category: "Yield Aggregator" }, { slug: "unknown", category: "" }],
+    });
   });
 
   afterEach(() => {
@@ -159,12 +151,9 @@ describe("fetchDataSources", () => {
   });
 
   it("skips Curve when circuit breaker is open", async () => {
-    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => {
-      if (source === "curve-liquidity-api") return false;
-      return true;
-    });
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source !== "curve-liquidity-api");
 
-    const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
+    const result = await fetchPrimary();
     expect(result?.nonDexProjects).toEqual(new Set(["yearn-finance"]));
     // Curve calls should not have been made
     const curveCalls = vi
@@ -180,16 +169,18 @@ describe("fetchDataSources", () => {
     let active = 0;
     let started = 0;
     let maxActive = 0;
-    mockDlYieldsSuccess(async () => {
-      started++;
-      active++;
-      maxActive = Math.max(maxActive, active);
-      if (started === 4) firstWave.resolve();
-      await release.promise;
-      active--;
-      return { response: new Response("", { status: 200 }), body: { data: { poolData: [] } } };
+    mockPrimaryFeeds({
+      curve: async () => {
+        started++;
+        active++;
+        maxActive = Math.max(maxActive, active);
+        if (started === 4) firstWave.resolve();
+        await release.promise;
+        active--;
+        return EMPTY_CURVE;
+      },
     });
-    const pending = fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
+    const pending = fetchPrimary();
     try {
       await firstWave.promise;
       expect(started).toBe(4);
@@ -206,31 +197,18 @@ describe("fetchDataSources", () => {
   });
 
   it("records Curve failure while retaining usable DL-only data", async () => {
-    mockDlYieldsSuccess(null);
+    mockPrimaryFeeds({ curve: () => null });
 
-    const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
+    const result = await fetchPrimary();
     expect(result).not.toBeNull(); // DL is still up
     expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(expect.anything(), "curve-liquidity-api", false);
     expect(result!.dlYieldsAvailable).toBe(true);
   });
 
   it("names the Curve chains whose per-chain read failed instead of claiming a complete fan-out", async () => {
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
-      const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
-      if (urlStr.includes("yields.llama.fi")) {
-        return { response: new Response("", { status: 200 }), body: { data: FAKE_DL_POOLS } };
-      }
-      if (urlStr.includes("api.llama.fi/protocols")) {
-        return { response: new Response("", { status: 200 }), body: [] };
-      }
-      const chain = curveChainFromUrl(urlStr);
-      if (chain === null) throw new Error(`unexpected fetch ${urlStr}`);
-      return chain === "ethereum"
-        ? { response: new Response("", { status: 200 }), body: { data: { poolData: [] } } }
-        : null;
-    });
+    mockPrimaryFeeds({ curve: (chain) => chain === "ethereum" ? EMPTY_CURVE : null });
 
-    const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
+    const result = await fetchPrimary();
 
     expect(result).not.toBeNull();
     expect(result!.curveFailedChains).toEqual(CURVE_CHAINS.filter((chain) => chain !== "ethereum"));
@@ -247,7 +225,7 @@ describe("fetchDataSources", () => {
   it("returns null when both DL and Curve fail (catastrophic)", async () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue(null);
 
-    const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
+    const result = await fetchPrimary();
     expect(result).toBeNull();
     // The shared breaker must learn the DL yields leg failed, not stay silent.
     expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(expect.anything(), "defillama-yields", false);
@@ -297,22 +275,15 @@ describe("fetchDataSources", () => {
     const chainAddressToId = new Map([[`ethereum:${trackedAddress}`, "tracked-coin"]]);
     const lookupGetSpy = vi.spyOn(chainAddressToId, "get");
 
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
-      const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
-      if (urlStr.includes("yields.llama.fi")) {
-        return { response: new Response("", { status: 200 }), body: { data: rawPools } };
-      }
-      if (urlStr.includes("api.llama.fi/protocols")) {
-        return { response: new Response("", { status: 200 }), body: [] };
-      }
-      if (curveChainFromUrl(urlStr) != null) {
+    mockPrimaryFeeds({
+      yieldsBody: { data: rawPools },
+      curve: () => {
         expect(lookupGetSpy).toHaveBeenCalled();
-        return { response: new Response("", { status: 200 }), body: { data: { poolData: [] } } };
-      }
-      return null;
+        return EMPTY_CURVE;
+      },
     });
 
-    const result = await fetchDataSources(null, createMockDb(), {
+    const result = await fetchPrimary({
       chainAddressToId,
       symbolToChainScopedIds: new Map(),
     });
@@ -335,15 +306,8 @@ describe("fetchDataSources", () => {
     const token1 = "0x754704bc059f8c67012fed69bc8a327a5aafb603";
     const row = { ...FAKE_DL_POOLS[0], pool: uuid, chain: "Monad", project: "uniswap-v3",
       symbol: "EURW-USDC", exposure: "multi", underlyingTokens: [token0, token1], poolMeta: "0.01%" };
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url) => {
-      const key = String(url);
-      if (key.includes("yields.llama.fi")) return { response: new Response(""), body: { data: [row, ...FAKE_DL_POOLS] } };
-      if (key.includes("api.llama.fi/protocols")) {
-        return protocols === null ? null : { response: new Response(""), body: protocols };
-      }
-      return { response: new Response(""), body: { data: { poolData: [] } } };
-    });
-    const result = await fetchDataSources(null, createMockDb(), {
+    mockPrimaryFeeds({ yieldsBody: { data: [row, ...FAKE_DL_POOLS] }, protocols });
+    const result = await fetchPrimary({
       chainAddressToId: new Map([[`monad:${token0}`, "eurw-newrails"], [`monad:${token1}`, "usdc-circle"]]),
       symbolToChainScopedIds: new Map(),
     });
@@ -372,16 +336,11 @@ describe("fetchDataSources", () => {
     const physicalId = "0xe63e32b2ae40601662f760d6bf5d771057324fbd97784fe1d3717069f7b75d45";
     const row = { ...FAKE_DL_POOLS[0], pool: uuid, chain: "Ethereum", project: "uniswap-v4",
       exposure: "multi", underlyingTokens: [token0, token1], poolMeta: "0.00%" };
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url) => {
-      const key = String(url);
-      if (key.includes("poolsPro?")) return succeeds
-        ? { response: new Response(""), body: { data: [{ ...row, pool_old: `${physicalId}-ethereum-uniswap-v4`, tvlUsd: 1 }] } }
-        : null;
-      if (key.includes("yields.llama.fi")) return { response: new Response(""), body: { data: [row, ...FAKE_DL_POOLS] } };
-      if (key.includes("api.llama.fi/protocols")) return { response: new Response(""), body: [] };
-      return { response: new Response(""), body: { data: { poolData: [] } } };
+    mockPrimaryFeeds({
+      yieldsBody: { data: [row, ...FAKE_DL_POOLS] },
+      identities: { "uniswap-v4": succeeds ? { data: [{ ...row, pool_old: `${physicalId}-ethereum-uniswap-v4`, tvlUsd: 1 }] } : null },
     });
-    const result = await fetchDataSources(null, createMockDb(), {
+    const result = await fetchPrimary({
       chainAddressToId: new Map([[`ethereum:${token0}`, "pyusd-paypal"]]),
       symbolToChainScopedIds: new Map(),
     });
@@ -409,26 +368,23 @@ describe("fetchDataSources", () => {
     expect([att(ps, { data: [pr("u2", `${a}-ethereum`, [t[1]!, t[0]!], E, a), pr("u8", `${b}-xdai`, t, "Gnosis"), pr("ub", `${x("f")}-ethereum`, t2, E, b), pr("ud", `${x("d")}-ethereum`), pr("ud", `${x("e")}-ethereum`), pr("i1", `${c}-ethereum`), pr("i2", `${c}-ethereum`, t3)] }), ...ps.map((p) => p.pool)]).toEqual([2, a, b, "ub", "ud", "i1", "i2"]);
     expect([att([ps[2]!], null), att([ps[2]!], { data: Array(2001).fill({}) })]).toEqual([0, 0]);
     for (const [st, n] of [["ok", 2], ["partial", 1], ["unavailable", 0]] as const) {
-      const r1 = mk("u1", t2, E, 123456), r2 = mk("u2", t3, E, 5e4), res = (body: unknown) => ({ response: new Response(""), body });
-      vi.mocked(fetchJsonWithRetry).mockImplementation(async (u) => {
-        const k = String(u);
-        if (k.includes("poolsPro?project=curve-dex")) return n ? res({ data: [{ ...r1, pool_old: `${a}-ethereum`, tvlUsd: 1 }, ...(n > 1 ? [{ ...r2, pool_old: `${b}-ethereum`, tvlUsd: 2 }] : [])] }) : null;
-        return res(k.includes("yields.llama.fi") ? { data: [r1, r2, ...FAKE_DL_POOLS] } : k.includes("protocols") ? [] : { data: { poolData: [] } });
+      const r1 = mk("u1", t2, E, 123456), r2 = mk("u2", t3, E, 5e4);
+      mockPrimaryFeeds({
+        yieldsBody: { data: [r1, r2, ...FAKE_DL_POOLS] },
+        identities: { "curve-dex": n ? { data: [
+          { ...r1, pool_old: `${a}-ethereum`, tvlUsd: 1 },
+          ...(n > 1 ? [{ ...r2, pool_old: `${b}-ethereum`, tvlUsd: 2 }] : []),
+        ] } : null },
       });
-      const r = await fetchDataSources(null, createMockDb(), { chainAddressToId: new Map([[`ethereum:${t[0]!}`, "usdc-circle"]]), symbolToChainScopedIds: new Map() });
+      const r = await fetchPrimary({ chainAddressToId: new Map([[`ethereum:${t[0]!}`, "usdc-circle"]]), symbolToChainScopedIds: new Map() });
       expect([Object.values(r!.curveIdentityAttachment!), r!.pools.map((p) => [p.pool, p.tvlUsd])]).toEqual([[2, n, 2 - n, st], [[n ? a : "u1", 123456], [n > 1 ? b : "u2", 5e4]]]);
       expect(vi.mocked(buildDlStablecoinPoolsCache)).not.toHaveBeenLastCalledWith(expect.arrayContaining([expect.objectContaining({ pool: a })]));
     }
   });
 
   it.each([null, { data: null }, { data: {} }])("keeps malformed transport envelopes source-wide (%j)", async (body) => {
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
-      const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
-      if (urlStr.includes("yields.llama.fi")) return { response: new Response("", { status: 200 }), body };
-      if (urlStr.includes("api.llama.fi/protocols")) return { response: new Response("", { status: 200 }), body: [] };
-      return null;
-    });
-    expect(await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS)).toBeNull();
+    mockPrimaryFeeds({ yieldsBody: body, curve: () => null });
+    expect(await fetchPrimary()).toBeNull();
     expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DL_YIELDS, false);
   });
 
@@ -438,24 +394,9 @@ describe("fetchDataSources", () => {
       ...(field === "symbol" ? { symbol: null } : { underlyingTokens: [42] }),
     }) as unknown as LlamaPool;
 
-    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
-      const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
-      if (urlStr.includes("yields.llama.fi")) {
-        return {
-          response: new Response("", { status: 200 }),
-          body: { data: [malformedPool, ...FAKE_DL_POOLS.slice(1)] },
-        };
-      }
-      if (urlStr.includes("api.llama.fi/protocols")) {
-        return { response: new Response("", { status: 200 }), body: [] };
-      }
-      if (curveChainFromUrl(urlStr) != null) {
-        return { response: new Response("", { status: 200 }), body: { data: { poolData: [] } } };
-      }
-      return null;
-    });
+    mockPrimaryFeeds({ yieldsBody: { data: [malformedPool, ...FAKE_DL_POOLS.slice(1)] } });
 
-    const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
+    const result = await fetchPrimary();
 
     expect(result).not.toBeNull();
     expect(result).toMatchObject({

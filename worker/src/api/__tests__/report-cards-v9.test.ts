@@ -104,6 +104,27 @@ async function seed() {
   return { sqlite, db, publication };
 }
 
+function setClockSec(sec: number) {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(sec * 1000);
+}
+
+function cacheRow(sqlite: DatabaseSync, key: string) {
+  return sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(key);
+}
+
+function cacheValue(sqlite: DatabaseSync, key: string = SAFETY_SCORE_V9_CACHE_KEYS.publication) {
+  return cacheRow(sqlite, key)!.value as string;
+}
+
+function corruptPublicationPayload(sqlite: DatabaseSync) {
+  const row = JSON.parse(cacheValue(sqlite));
+  row.payload = "not-base64";
+  sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(stableJsonStringifyV1(row), SAFETY_SCORE_V9_CACHE_KEYS.publication);
+}
+
+const spyOnPublicationDecode = () => vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+
 function readManifest(sqlite: DatabaseSync) {
   return JSON.parse(sqlite.prepare("SELECT manifest FROM safety_score_public_manifests WHERE retired_at IS NULL").get()!.manifest as string);
 }
@@ -123,14 +144,13 @@ async function assertServedEquivalent(db: D1Database) {
 describe("materialized V9 response", () => {
   it.each(["legacy", "dictionary"] as const)("serves identical warm bytes from %s storage and leaves cold reads pending", async encoding => {
     const { sqlite, db, publication } = await seed();
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(publication.publishedAtSec * 1000);
+    setClockSec(publication.publishedAtSec);
     const before = await handleReportCardsV9(db);
     const body = await before.text();
     const etag = before.headers.get("ETag");
     const stored = await serializeSafetyScoreV9PublicationWithEncoding(publication, encoding);
     sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(stored, SAFETY_SCORE_V9_CACHE_KEYS.publication);
-    const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+    const decode = spyOnPublicationDecode();
     const warm = await handleReportCardsV9(db);
     expect(warm.status).toBe(200);
     expect(await warm.text()).toBe(body);
@@ -158,9 +178,8 @@ describe("materialized V9 response", () => {
       card.evidence.freshness = "stale";
     }
     await persistAndMaterialize(db, currentInput(publication));
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(publication.publishedAtSec * 1000);
-    const stored = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value;
+    setClockSec(publication.publishedAtSec);
+    const stored = cacheValue(sqlite);
     const plain = await handleReportCardsV9(db);
     const marked = await handleReportCardsV9(db, new URL("https://example.com/api/report-cards/v9?freshness=operands"));
     expect(plain.status).toBe(200);
@@ -183,7 +202,7 @@ describe("materialized V9 response", () => {
     const oldDetail = await handleReportCardsV9Detail(db, new URL(`https://example.com/api/report-cards/v9-detail?stablecoin=${id}`));
     expect(await oldDetail.json()).not.toHaveProperty("pillarFreshness");
     expect(await (await handleReportCardsV9Table(db)).json()).not.toHaveProperty("pillarFreshness");
-    expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value).toBe(stored);
+    expect(cacheValue(sqlite)).toBe(stored);
   });
 
   it("preserves keyed Exit compatibility and the separate reserve diagnostics opt-in", async () => {
@@ -207,8 +226,7 @@ describe("materialized V9 response", () => {
     }];
     card.reserveCompositionAdmission = { reasons: ["no-review"] };
     await persistAndMaterialize(db, currentInput(publication));
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(publication.publishedAtSec * 1000);
+    setClockSec(publication.publishedAtSec);
     const active = await loadActiveSafetyScoreSource(db);
     expect(active.snapshot?.cards[0]).toBeDefined();
     expect(active.snapshot?.cards[0]).not.toHaveProperty("reserveCompositionAdmission");
@@ -243,8 +261,7 @@ describe("materialized V9 response", () => {
 
   it("bounds 397-card fragment round trips under D1 latency without changing bytes, identity or ETag", async () => {
     const { sqlite, db, publication } = await seedCohort();
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(publication.publishedAtSec * 1000);
+    setClockSec(publication.publishedAtSec);
     const manifest = readManifest(sqlite);
     expect(manifest.bytes).toBeGreaterThan(4 * 1024 * 1024);
     expect(manifest.fragments.length).toBeGreaterThan(16);
@@ -451,48 +468,45 @@ describe("materialized V9 response", () => {
       },
     }, publication.safetyScoreIdentity.publicationGenerationId);
 
+    const baseHeaders = {
+      "Content-Type": "application/json",
+      "X-Safety-Score-Generation": "generation-1",
+      "X-Safety-Score-Freshness-Budget": "7200",
+    };
+    const staleHeaders = {
+      ...baseHeaders,
+      "Cache-Control": "no-store",
+      "X-Safety-Score-Status": "stale",
+      "X-Data-Freshness": "stale",
+    };
     const pinnedHeaders = {
       "current": {
-        "Content-Type": "application/json",
+        ...baseHeaders,
         "Cache-Control": "public, s-maxage=300, max-age=60",
         "X-Safety-Score-Status": "current",
-        "X-Safety-Score-Generation": "generation-1",
-        "X-Safety-Score-Freshness-Budget": "7200",
         "X-Data-Age": "5",
         "X-Data-Updated-At": "1799999995",
         "Date": "Fri, 15 Jan 2027 08:00:00 GMT"
       },
       "held": {
-        "Content-Type": "application/json",
+        ...baseHeaders,
         "Cache-Control": "no-store",
         "X-Safety-Score-Status": "held",
-        "X-Safety-Score-Generation": "generation-1",
-        "X-Safety-Score-Freshness-Budget": "7200",
         "X-Data-Age": "5",
         "X-Data-Updated-At": "1799999995"
       },
       "stale": {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store",
-        "X-Safety-Score-Status": "stale",
-        "X-Safety-Score-Generation": "generation-1",
-        "X-Safety-Score-Freshness-Budget": "7200",
+        ...staleHeaders,
         "X-Data-Age": "7201",
         "X-Data-Updated-At": "1799992799",
         "Warning": "110 - \"Response is stale (7201s old, fresh budget 7200s)\"",
-        "X-Data-Freshness": "stale",
         "X-Data-Freshness-Reason": "safety-score-publication-age"
       },
       "future": {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store",
-        "X-Safety-Score-Status": "stale",
-        "X-Safety-Score-Generation": "generation-1",
-        "X-Safety-Score-Freshness-Budget": "7200",
+        ...staleHeaders,
         "X-Data-Age": "0",
         "X-Data-Updated-At": "1800000120",
         "Warning": "110 - \"Safety Score publication is future-dated (consumer budget 7200s)\"",
-        "X-Data-Freshness": "stale",
         "X-Data-Freshness-Reason": "future-timestamp"
       }
     } as const;
@@ -516,9 +530,7 @@ describe("materialized V9 response", () => {
   it("uses the admitted representation without decoding a mutated canonical payload on hits", async () => {
     const { db, sqlite } = await seed();
     const expected = await (await handleReportCardsV9(db)).json();
-    const row = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value as string);
-    row.payload = "not-base64";
-    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(stableJsonStringifyV1(row), SAFETY_SCORE_V9_CACHE_KEYS.publication);
+    corruptPublicationPayload(sqlite);
     expect(await (await handleReportCardsV9(db)).json()).toEqual(expected);
   });
 
@@ -562,7 +574,7 @@ describe("materialized V9 response", () => {
     const next = nextPublication();
     expect((await persistSafetyScoreV9Publication(db, currentInput(next))).acceptedMaterialization).toBeNull();
     expect(readManifest(sqlite).safetyScoreIdentity.publicationGenerationId).toBe(next.publicationGenerationId);
-    expect(JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)!.value as string))
+    expect(JSON.parse(cacheValue(sqlite, V9_PUBLIC_MATERIALIZATION_CACHE_KEY)))
       .toMatchObject({ publicationGenerationId: next.publicationGenerationId });
     expect(await (await handleReportCardsV9(db)).json()).toMatchObject({ updatedAt: next.publishedAtSec });
   });
@@ -571,16 +583,16 @@ describe("materialized V9 response", () => {
     const { db, sqlite, publication } = await seed();
     const expected = await (await handleReportCardsV9(db)).json() as object;
     const manifests = sqlite.prepare("SELECT * FROM safety_score_public_manifests").all();
-    const marker = sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY);
+    const marker = cacheRow(sqlite, V9_PUBLIC_MATERIALIZATION_CACHE_KEY);
     expect(JSON.parse(marker!.value as string)).toMatchObject({ publicationGenerationId: publication.publicationGenerationId });
     sqlite.exec("CREATE TRIGGER refuse_fragment BEFORE INSERT ON safety_score_public_fragments BEGIN SELECT RAISE(ABORT, 'fragment failed'); END");
     const next = nextPublication();
     const persisted = await persistDeferred(db, next);
     await expect(materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!)).rejects.toThrow();
-    expect(sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)).toEqual(marker);
+    expect(cacheRow(sqlite, V9_PUBLIC_MATERIALIZATION_CACHE_KEY)).toEqual(marker);
     expect(sqlite.prepare("SELECT * FROM safety_score_public_manifests").all()).toEqual(manifests);
     vi.useFakeTimers({ toFake: ["Date"] });
-    const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+    const decode = spyOnPublicationDecode();
     for (const age of [60, CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec, CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec + 1, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC + 1]) {
       vi.setSystemTime((next.publishedAtSec + age) * 1000);
       const withinLagBudget = age <= CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec;
@@ -606,7 +618,7 @@ describe("materialized V9 response", () => {
     expect(decode).not.toHaveBeenCalled();
     // Only the heavy materializer advances selection after writes recover.
     await materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!);
-    expect(JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)!.value as string))
+    expect(JSON.parse(cacheValue(sqlite, V9_PUBLIC_MATERIALIZATION_CACHE_KEY)))
       .toMatchObject({ publicationGenerationId: next.publicationGenerationId, publishedAtSec: next.publishedAtSec });
     expect(await (await handleReportCardsV9(db)).json()).toMatchObject({
       updatedAt: next.publishedAtSec, publicationHealth: currentInput(next).publicationHealth,
@@ -706,7 +718,7 @@ describe("materialized V9 response", () => {
   it("never imports the full parser or writes during concurrent cold reads", async () => {
     const { db, sqlite } = await seed();
     sqlite.exec("DELETE FROM safety_score_public_manifests; DELETE FROM safety_score_site_manifests");
-    const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+    const decode = spyOnPublicationDecode();
     const rows = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
     const otherIsolate = createSqliteD1(sqlite);
     for (const response of await Promise.all([
@@ -729,8 +741,7 @@ describe("materialized V9 response", () => {
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
       SAFETY_SCORE_V9_CACHE_KEYS.failedPublicationAttempt, '{"outcome":"failed"}', 999,
     );
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(publication.publishedAtSec * 1000);
+    setClockSec(publication.publishedAtSec);
     const response = await handleReportCardsV9(db);
     expect(response.headers.get("X-Safety-Score-Status")).toBe("current");
     expect(await response.json()).toMatchObject({ publicationHealth: { status: "current" } });
@@ -751,6 +762,15 @@ describe("generation-bound compact Safety Scores", () => {
     return { sqlite, db, publication };
   }
   const detailUrl = (id = "usdc-circle") => new URL(`https://example.com/api/report-cards/v9-detail?stablecoin=${id}`);
+  const siteResponses = async (db: D1Database) => [await handleReportCardsV9Table(db), await handleReportCardsV9Detail(db, detailUrl())];
+
+  async function failCompactWrite(db: D1Database, sqlite: DatabaseSync) {
+    sqlite.exec("CREATE TRIGGER refuse_site BEFORE INSERT ON safety_score_site_fragments BEGIN SELECT RAISE(ABORT, 'site write failed'); END");
+    const next = nextPublication();
+    const persisted = await persistDeferred(db, next);
+    await expect(materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!)).rejects.toThrow();
+    return next;
+  }
 
   it("materializes representation version 3 with local authority exposure", async () => {
     const { sqlite } = await seed();
@@ -786,9 +806,7 @@ describe("generation-bound compact Safety Scores", () => {
   it("reads compact immutable bytes without decoding a mutated source payload", async () => {
     const { db, sqlite } = await seed();
     const expected = await (await handleReportCardsV9Table(db)).json();
-    const row = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value as string);
-    row.payload = "not-base64";
-    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(stableJsonStringifyV1(row), SAFETY_SCORE_V9_CACHE_KEYS.publication);
+    corruptPublicationPayload(sqlite);
     expect(await (await handleReportCardsV9Table(db)).json()).toEqual(expected);
     expect((await handleReportCardsV9Detail(db, detailUrl())).status).toBe(200);
   });
@@ -801,7 +819,7 @@ describe("generation-bound compact Safety Scores", () => {
     for (const reasons of [[{ code: "dex-stale" }], [{ code: "assessment-failed", detail: "Read failed" }]] as const) {
       held.reasons = [...reasons];
       updateHealth(sqlite, held);
-      for (const response of [await handleReportCardsV9Table(db), await handleReportCardsV9Detail(db, detailUrl())]) {
+      for (const response of await siteResponses(db)) {
         expect(response.headers.get("Cache-Control")).toBe("no-store");
         expect(response.headers.get("X-Safety-Score-Status")).toBe("held");
         expect(await response.json()).toMatchObject({ updatedAt: publication.publishedAtSec, publicationHealth: held });
@@ -816,7 +834,7 @@ describe("generation-bound compact Safety Scores", () => {
     updateHealth(sqlite, mismatch);
     expect(await (await handleReportCardsV9Table(db)).json()).toMatchObject({ publicationHealth: { status: "held", reasons: [{ code: "assessment-failed" }] } });
     sqlite.prepare("DELETE FROM cache WHERE key = ?").run(SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth);
-    for (const response of [await handleReportCardsV9Table(db), await handleReportCardsV9Detail(db, detailUrl())]) {
+    for (const response of await siteResponses(db)) {
       expect(response.status).toBe(503);
       expect(await response.json()).toMatchObject({ reason: "v9-public-health-unavailable" });
     }
@@ -854,7 +872,7 @@ describe("generation-bound compact Safety Scores", () => {
     });
     const persisted = await persistDeferred(db, next);
     const before = sqlite.prepare("SELECT * FROM safety_score_site_manifests").all();
-    const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+    const decode = spyOnPublicationDecode();
     const pending = await handleReportCardsV9Detail(db, detailUrl("lusd-liquity"));
     expect(pending.status).toBe(503);
     expect(pending.headers.get("Cache-Control")).toBe("no-store");
@@ -870,10 +888,8 @@ describe("generation-bound compact Safety Scores", () => {
   it.each(["usr-resolv", "buck-buck-assets", "usds-sky"])("returns an explicit nonmember reason for %s without decoding", async id => {
     const { db, sqlite } = await seed();
     // Corrupt payload proves a supported frozen/nonmember read never decodes it.
-    const row = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value as string);
-    row.payload = "not-base64";
-    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(stableJsonStringifyV1(row), SAFETY_SCORE_V9_CACHE_KEYS.publication);
-    const parse = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+    corruptPublicationPayload(sqlite);
+    const parse = spyOnPublicationDecode();
     const before = sqlite.prepare("SELECT * FROM safety_score_site_manifests").all();
     for (let attempt = 0; attempt < 2; attempt++) {
       const response = await handleReportCardsV9Detail(db, detailUrl(id));
@@ -890,17 +906,17 @@ describe("generation-bound compact Safety Scores", () => {
     const { db, sqlite } = await seed();
     sqlite.exec("DELETE FROM safety_score_site_manifests");
     sqlite.prepare("DELETE FROM cache WHERE key = ?").run(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex);
-    const parse = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+    const parse = spyOnPublicationDecode();
     expect(await (await handleReportCardsV9Detail(db, detailUrl())).json()).toMatchObject({ reason: "safety-score-index-missing" });
     expect(parse).not.toHaveBeenCalled();
   });
 
   it("does not treat another accepted generation's census as absence", async () => {
     const { db, sqlite } = await seed();
-    const row = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex)!.value as string);
+    const row = JSON.parse(cacheValue(sqlite, SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex));
     row.safetyScoreIdentity.publicationGenerationId = "report-cards:v9:another";
     sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(stableJsonStringifyV1(row), SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex);
-    const parse = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");
+    const parse = spyOnPublicationDecode();
     expect(await (await handleReportCardsV9Detail(db, detailUrl("usr-resolv"))).json())
       .toMatchObject({ reason: "safety-score-index-publication-mismatch" });
     expect(parse).not.toHaveBeenCalled();
@@ -920,15 +936,11 @@ describe("generation-bound compact Safety Scores", () => {
 
   it("keeps acceptance and the previous selected generation when a required compact write fails", async () => {
     const { db, sqlite, publication } = await seed();
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(140_000);
+    setClockSec(140);
     const table = await (await handleReportCardsV9Table(db)).json() as object;
     const detail = await (await handleReportCardsV9Detail(db, detailUrl())).json() as object;
-    sqlite.exec("CREATE TRIGGER refuse_site BEFORE INSERT ON safety_score_site_fragments BEGIN SELECT RAISE(ABORT, 'site write failed'); END");
-    const next = nextPublication();
-    const persisted = await persistDeferred(db, next);
+    const next = await failCompactWrite(db, sqlite);
     expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex)!.updated_at).toBe(130);
-    await expect(materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!)).rejects.toThrow();
     for (const age of [60, CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec, CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec + 1]) {
       vi.setSystemTime((next.publishedAtSec + age) * 1000);
       const withinLagBudget = age <= CRON_SCHEDULE_CADENCES.v9PublicationOffset.intervalSec;
@@ -937,7 +949,7 @@ describe("generation-bound compact Safety Scores", () => {
         ...(!withinLagBudget ? { status: "held", heldSinceSec: next.publishedAtSec,
           reasons: [{ code: "v9-public-materialization-pending" }] } : {}),
       };
-      const responses = [await handleReportCardsV9Table(db), await handleReportCardsV9Detail(db, detailUrl())];
+      const responses = await siteResponses(db);
       for (const [index, response] of responses.entries()) {
         expect(response.headers.get("X-Safety-Score-Status")).toBe(withinLagBudget ? "current" : "held");
         expect(response.headers.get("X-Safety-Score-Generation")).toBe(publication.publicationGenerationId);
@@ -950,12 +962,8 @@ describe("generation-bound compact Safety Scores", () => {
 
   it("does not re-anchor a previous generation as current when the accepted publication clock is ahead of the reader", async () => {
     const { db, sqlite, publication } = await seed();
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(140_000);
-    sqlite.exec("CREATE TRIGGER refuse_site BEFORE INSERT ON safety_score_site_fragments BEGIN SELECT RAISE(ABORT, 'site write failed'); END");
-    const next = nextPublication();
-    const persisted = await persistDeferred(db, next);
-    await expect(materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!)).rejects.toThrow();
+    setClockSec(140);
+    const next = await failCompactWrite(db, sqlite);
 
     // The accepted row's clock leads this reading isolate by 10 s (writer/reader
     // skew). A future-dated clock is not a known lag within the one-cadence
@@ -980,16 +988,15 @@ describe("generation-bound compact Safety Scores", () => {
 
   it("keeps the selected generation when source cards change between fragment passes", async () => {
     const { db, sqlite, publication } = await seed();
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(140_000);
+    setClockSec(140);
     const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next",
       cards: [makeReportCardsV9Card({ id: "dai-makerdao", evidence: { level: "adequate", freshness: "current", reasons: [{
         code: "unresolved-control-identity", message: "x".repeat(2_400_000), path: "control:incidentState",
       }] } }), makeReportCardsV9Card({ id: "usdc-circle" })] });
     const persisted = await persistDeferred(db, next);
     const source = structuredClone(persisted.acceptedMaterialization!);
-    const canonical = sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication);
-    const selected = sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY);
+    const canonical = cacheRow(sqlite, SAFETY_SCORE_V9_CACHE_KEYS.publication);
+    const selected = cacheRow(sqlite, V9_PUBLIC_MATERIALIZATION_CACHE_KEY);
     const batch = db.batch.bind(db);
     let mutated = false;
     const spy = vi.spyOn(db, "batch").mockImplementation(async statements => {
@@ -1006,15 +1013,14 @@ describe("generation-bound compact Safety Scores", () => {
     await expect(materializeV9AcceptedPublication(db, source)).rejects.toThrow("v9-public-materialization-source-changed");
     spy.mockRestore();
     expect(mutated).toBe(true);
-    expect(sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)).toEqual(canonical);
-    expect(sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)).toEqual(selected);
+    expect(cacheRow(sqlite, SAFETY_SCORE_V9_CACHE_KEYS.publication)).toEqual(canonical);
+    expect(cacheRow(sqlite, V9_PUBLIC_MATERIALIZATION_CACHE_KEY)).toEqual(selected);
     expect(await (await handleReportCardsV9(db)).json()).toMatchObject({ updatedAt: publication.publishedAtSec });
   });
 
   it.each([1, 397])("coalesces %i cards within staging caps while preserving accepted reads", async cardCount => {
     const { db, sqlite, publication } = await seed();
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(140_000);
+    setClockSec(140);
     const cards = Array.from({ length: cardCount }, (_, index) => makeReportCardsV9Card({
       id: index === 0 ? "usdc-circle" : `v9-staging-coin-${String(index).padStart(3, "0")}`,
       evidence: { level: "adequate", freshness: "current", reasons: [{
@@ -1124,9 +1130,8 @@ describe("generation-bound compact Safety Scores", () => {
 
   it.each(["public", "site"])("refuses selection if one staged %s fragment disappears before the pointer switch", async surface => {
     const { db, sqlite, publication } = await seed();
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(140_000);
-    const marker = sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY);
+    setClockSec(140);
+    const marker = cacheRow(sqlite, V9_PUBLIC_MATERIALIZATION_CACHE_KEY);
     const next = nextPublication();
     let removed = false;
     const racedDb = {
@@ -1147,7 +1152,7 @@ describe("generation-bound compact Safety Scores", () => {
     } as D1Database;
     await expect(persistAndMaterialize(racedDb, currentInput(next))).rejects.toThrow();
     expect(removed).toBe(true);
-    expect(sqlite.prepare("SELECT * FROM cache WHERE key = ?").get(V9_PUBLIC_MATERIALIZATION_CACHE_KEY)).toEqual(marker);
+    expect(cacheRow(sqlite, V9_PUBLIC_MATERIALIZATION_CACHE_KEY)).toEqual(marker);
     expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.updated_at).toBe(130);
     const table = await handleReportCardsV9Table(db);
     expect(table.status).toBe(200);
