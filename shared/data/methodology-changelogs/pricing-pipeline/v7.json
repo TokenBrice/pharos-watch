@@ -2,8 +2,8 @@
   {
     "version": "7.1",
     "title": "DEWS Wave 2 non-USD native supply checkpoints, CADC legacy plus successor registers, and declarative supply state clocks",
-    "date": "2026-11-29",
-    "effectiveAt": 1795910400,
+    "date": "2026-11-28",
+    "effectiveAt": 1795863600,
     "summary": "Moves CADD, KRWQ, XOFm, ZARm and tGBP from undated DefiLlama caps to complete clocked native rosters (#2169 Wave 2), counts CADC's legacy and reissued successor registers together (#2393), replaces the hardcoded state-clock list with a declarative plan flag that now also covers ZCHF and EURI, lets reviewed native stock outrank a DefiLlama list row for CoinGecko-detail assets, and records the Wave 2 deferrals and the wM Mantra EVM/Moca exclusion as reviewed coverage decisions.",
     "impact": [
       "Reviewed preferred native supply (`shared/lib/onchain-supply-probe.ts`, `shared/lib/supply-perimeter-changes.ts`): `preferMcap: true` with enforced state clocks for `cadd-cad-digital` (Ethereum, Base, Solana Token-2022, Tempo TIP-20 and observed-zero-allowed Arc from Tetra's Supported Blockchains list; owner-approved restatement adding the Solana, Tempo and Arc stock DefiLlama 387 omits, about +3.0% at 2026-11-27 pins), `krwq-iq` (conserved Ethereum canonical supply with the five LayerZero OFT spokes reallocated out of it and the 11,000 KRWQ adapter remainder published under the non-canonical `KRWQ unattributed OFT escrow` label), `xofm-mento` and `zarm-mento` (single Celo registers), and `tgbp-tokenised` (eight StableTokenV1OFT EVM deployments including newly catalogued Arc plus the Solana mint, matching DefiLlama 317 to the unit). Each asset gets an asset-scoped perimeter cutover so DEWS compares native counts only after the change.",

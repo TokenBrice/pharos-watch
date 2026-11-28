@@ -209,15 +209,19 @@ describe("core stablecoin aggregate universe", () => {
     }
   });
 
-  it("keeps each Listing v2 re-admission's first new-perimeter supply observation on the new perimeter", () => {
+  it("keeps each native cutover's first new-perimeter supply observation on the new perimeter", () => {
     // First admitted observation clocks read from production (#2417, #2425); fences compare observedAt.
+    // #2169/#2393 sit at the planned deploy hour until re-dated to their first observation clocks.
     for (const [id, firstObservedAt] of [
       ["wtgxx-wisdomtree", "2026-11-27T10:45:23Z"], ["tbill-openeden", "2026-11-27T10:45:23Z"],
       ["cetes-etherfuse", "2026-11-27T10:45:23Z"], ["jltxx-jpmorgan", "2026-11-27T10:43:35Z"],
       ["mglo-midas-fasanara", "2026-11-27T16:16:22Z"],
+      ...["cadd-cad-digital", "krwq-iq", "xofm-mento", "zarm-mento", "tgbp-tokenised", "cadc-cad-coin"]
+        .map((wave2) => [wave2, "2026-11-28T11:00:00Z"] as const),
     ] as const) {
-      expect(isEarlierSupplyPerimeter(id, Date.parse(firstObservedAt) / 1000), id).toBe(false);
-      expect(isEarlierSupplyPerimeter(id, Date.parse("2026-11-27T00:00:00Z") / 1000), id).toBe(true);
+      const at = Date.parse(firstObservedAt) / 1000;
+      expect(isEarlierSupplyPerimeter(id, at), id).toBe(false);
+      expect(isEarlierSupplyPerimeter(id, at - (at % 86_400)), id).toBe(true);
     }
   });
 
