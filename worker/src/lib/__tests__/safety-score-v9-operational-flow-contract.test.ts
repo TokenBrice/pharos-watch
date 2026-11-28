@@ -33,6 +33,19 @@ const pin = { chain: "ethereum", position: "100", hash: HASH, timestamp: "2026-1
 const review = { observedAt: "2026-10-04", reviewedAt: "2026-10-04", expiresAt: "2026-10-31", reviewer: "Modeled compiler fixture", pin };
 const source = { label: "Modeled reviewed source", url: "https://example.com/compiler-model" };
 
+type AuthorityEdge = V1005AuthorityGraph["edges"][number];
+
+function authorityEdge(
+  edge: Pick<AuthorityEdge, "id" | "from" | "to" | "kind">,
+  path: AuthorityEdge["pathRefs"][number],
+  overrides: Partial<Omit<AuthorityEdge, "id" | "from" | "to" | "kind" | "pathRefs">> = {},
+): AuthorityEdge {
+  return {
+    ...edge, pathRefs: [path], selectors: [], role: null, activation: "active",
+    publicDelaySec: 0, calldataBound: true, proofRef: "closed", ...overrides,
+  };
+}
+
 /** Deliberately modeled source/state observations, never catalog evidence. */
 function modeledProfile(): MintAuthorityProfile {
   const scopePin = { position: pin.position, hash: pin.hash, runtimeIdentity: CODE_HASH, signerIdentity: "Descriptive custody identity only" };
@@ -366,8 +379,8 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     profile.executionCertificates!.proofs.push({ id: "cycle-closure", conclusion: "closed",
       statement: "The modeled exhaustive role census and source invariant close the governor and agent authority component.", evidenceRefIds: ["source"] });
     for (const [id, from, to] of [["agent-governor", "cycle-agent", "governor"], ["governor-agent", "governor", "cycle-agent"], ["agent-self", "cycle-agent", "cycle-agent"]]) {
-      graph.edges.push({ id: id!, from: from!, to: to!, kind: "upgrade", pathRefs: [{ controlRef: SCOPE_CONTROLLER, pathId: "issuance" }],
-        selectors: [], role: "governed-replacement", activation: "active", publicDelaySec: 172800, calldataBound: true, proofRef: "cycle-closure" });
+      graph.edges.push(authorityEdge({ id: id!, from: from!, to: to!, kind: "upgrade" }, { controlRef: SCOPE_CONTROLLER, pathId: "issuance" },
+        { role: "governed-replacement", publicDelaySec: 172800, proofRef: "cycle-closure" }));
     }
     restamp(profile);
     expect(compile(profile).process?.coverage).toBe("complete");
@@ -375,9 +388,8 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     if (failure === "census") profile.executionCertificates!.censuses[0]!.coverage = "partial";
     if (failure === "census-expired") profile.executionCertificates!.censuses[0]!.review = { ...review, expiresAt: "2026-10-04" };
     if (failure === "cycle-proof") failProof(profile, "cycle-closure");
-    if (failure === "key-alternative") graph.edges.push({ id: "external-key", from: "cycle-agent", to: "holder", kind: "admin",
-      pathRefs: [{ controlRef: SCOPE_CONTROLLER, pathId: "issuance" }], selectors: [], role: "independent-admin", activation: "active",
-      publicDelaySec: 172800, calldataBound: true, proofRef: "closed" });
+    if (failure === "key-alternative") graph.edges.push(authorityEdge({ id: "external-key", from: "cycle-agent", to: "holder", kind: "admin" }, { controlRef: SCOPE_CONTROLLER, pathId: "issuance" },
+      { role: "independent-admin", publicDelaySec: 172800 }));
     restamp(profile);
     const denied = compile(profile);
     expect(denied.process?.coverage).toBe("incomplete");
@@ -588,8 +600,8 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     scope.pin.signerIdentity = "Safe, multisig, owners, signatures; descriptive only";
     scope.observedState.signerIdentity = "Different descriptive prose";
     expect(compile(profile).process?.coverage).toBe("complete");
-    profile.authorityGraph!.edges.push({ id: "council-alternative", from: "governor", to: "holder", kind: "admin",
-      pathRefs: [{ controlRef: SCOPE_CONTROLLER, pathId: "issuance" }], selectors: ["0x40c10f19"], role: "approval", activation: "active", publicDelaySec: 172800, calldataBound: true, proofRef: "closed" });
+    profile.authorityGraph!.edges.push(authorityEdge({ id: "council-alternative", from: "governor", to: "holder", kind: "admin" }, { controlRef: SCOPE_CONTROLLER, pathId: "issuance" },
+      { selectors: ["0x40c10f19"], role: "approval", publicDelaySec: 172800 }));
     restamp(profile);
     const failed = compile(profile);
     expect(failed.process?.diagnostics).toContainEqual(expect.objectContaining({ code: "discretionary-root-independent", controlRef: SCOPE_CONTROLLER, pathId: "issuance" }));
@@ -599,7 +611,8 @@ describe("v10.05 source-bound operational and voting compilation", () => {
   it("fails a cycle and a changed authority state instead of retaining favorable graph credit", () => {
     const profile = modeledProfile();
     profile.authorityGraph!.nodes[0]!.terminal = false;
-    profile.authorityGraph!.edges.push({ id: "cycle", from: "governor", to: "governor", kind: "owner", pathRefs: [{ controlRef: SCOPE_CONTROLLER, pathId: "issuance" }], selectors: [], role: null, activation: "active", publicDelaySec: 172800, calldataBound: true, proofRef: "closed" });
+    profile.authorityGraph!.edges.push(authorityEdge({ id: "cycle", from: "governor", to: "governor", kind: "owner" }, { controlRef: SCOPE_CONTROLLER, pathId: "issuance" },
+      { publicDelaySec: 172800 }));
     restamp(profile);
     expect(compile(profile).governance.diagnostics).toContainEqual(expect.objectContaining({ code: "graph-cycle-unclosed" }));
     const changed = modeledProfile(); changed.authorityGraph!.nodes[0]!.terminal = false;
@@ -672,8 +685,8 @@ describe("v10.05 source-bound operational and voting compilation", () => {
 
   it("does not reinterpret the token root's own-vote provenance as an executable key bypass", () => {
     const profile = modeledProfile();
-    profile.authorityGraph!.edges.push({ id: "own-vote-origin", from: "governor", to: "holder", kind: "vote-origin",
-      pathRefs: [{ controlRef: SCOPE_CONTROLLER, pathId: "issuance" }], selectors: [], role: "own-locked-votes", activation: "active", publicDelaySec: 0, calldataBound: false, proofRef: "closed" });
+    profile.authorityGraph!.edges.push(authorityEdge({ id: "own-vote-origin", from: "governor", to: "holder", kind: "vote-origin" }, { controlRef: SCOPE_CONTROLLER, pathId: "issuance" },
+      { role: "own-locked-votes", calldataBound: false }));
     restamp(profile);
     expect(compile(profile).process?.coverage).toBe("complete");
   });
@@ -688,8 +701,8 @@ describe("v10.05 source-bound operational and voting compilation", () => {
     profile.executionCertificates!.proofs.push({ id: "external-strategy", conclusion: "unknown",
       statement: "The external strategy asset report remains an unknown Backing input beyond the proved finite native stock.", evidenceRefIds: ["source"] });
     profile.authorityGraph!.nodes.push({ id: "external-strategy", deployment: HOLDER, kind: "unknown", terminal: false, authorityCensusIds: [], runtime: null, proofRef: "external-strategy" });
-    profile.authorityGraph!.edges.push({ id: "external-report", from: "operational-program", to: "external-strategy", kind: "credit-origin",
-      pathRefs: [{ controlRef: PROGRAM, pathId: "interest" }], selectors: [], role: "strategy-assets", activation: "active", publicDelaySec: null, calldataBound: "unknown", proofRef: "external-strategy" });
+    profile.authorityGraph!.edges.push(authorityEdge({ id: "external-report", from: "operational-program", to: "external-strategy", kind: "credit-origin" }, { controlRef: PROGRAM, pathId: "interest" },
+      { role: "strategy-assets", publicDelaySec: null, calldataBound: "unknown", proofRef: "external-strategy" }));
     restamp(profile);
     expect(compile(profile).process).toMatchObject({ coverage: "complete", otherClassesQualified: true });
     profile.operationalIssuance!.paths[0] = { kind: "paired-accounting", path: { controlRef: PROGRAM, pathId: "interest" }, invariantProofRef: "closed", economicReachProofRef: "closed", envelope: null, externalAccountingTrust: "strategy-reported-assets" };
@@ -935,8 +948,8 @@ describe("governance public-clock and replacement-approval admission", () => {
       graph.nodes.push({ ...graph.nodes[1]!, id: "public-clock-route", kind: "timelock", terminal: false });
       graph.pathBindings.find((binding) => binding.path.controlRef === ref.controlRef && binding.path.pathId === ref.pathId)!.authorityNodeIds = ["public-clock-route"];
       for (const id of ["slow-public-route", "fast-public-route"]) {
-        graph.edges.push({ id, from: "public-clock-route", to: "governor", kind: "admin", pathRefs: [ref],
-          selectors: [], role: "governor-execution", activation: "active", publicDelaySec: delay, calldataBound: true, proofRef: "closed" });
+        graph.edges.push(authorityEdge({ id, from: "public-clock-route", to: "governor", kind: "admin" }, ref,
+          { role: "governor-execution", publicDelaySec: delay }));
       }
       restamp(profile);
       const positive = compile(profile);
@@ -1000,12 +1013,12 @@ describe("authority clock, cycle, and compact runtime admission", () => {
     graph.nodes.push({ ...graph.nodes[1]!, id: "outer-authority", kind: "contract", terminal: false },
       { ...graph.nodes[1]!, id: "inner-authority", kind: "contract", terminal: false });
     graph.pathBindings.find((binding) => binding.path.controlRef === PROGRAM && binding.path.pathId === "raise")!.authorityNodeIds = ["outer-authority"];
-    graph.edges.push({ id: "outer-clock", from: "outer-authority", to: "inner-authority", kind: "execution-hop",
-      pathRefs: [{ controlRef: PROGRAM, pathId: "raise" }], selectors: [], role: null, activation: "active",
-      publicDelaySec: outerDelay, calldataBound: true, proofRef: "closed" },
-    { id: "inner-clock", from: "inner-authority", to: "governor", kind: "execution-hop",
-      pathRefs: [{ controlRef: PROGRAM, pathId: "raise" }], selectors: [], role: null, activation: "active",
-      publicDelaySec: 172800, calldataBound: true, proofRef: "closed" });
+    graph.edges.push(
+      authorityEdge({ id: "outer-clock", from: "outer-authority", to: "inner-authority", kind: "execution-hop" },
+        { controlRef: PROGRAM, pathId: "raise" }, { publicDelaySec: outerDelay }),
+      authorityEdge({ id: "inner-clock", from: "inner-authority", to: "governor", kind: "execution-hop" },
+        { controlRef: PROGRAM, pathId: "raise" }, { publicDelaySec: 172800 }),
+    );
     restamp(profile);
     expect(authority(profile, "raise")).toMatchObject({ closed: true, governorRooted: true, publicDelaySec: 172800 });
     const positive = compile(profile);
@@ -1046,7 +1059,7 @@ describe("authority clock, cycle, and compact runtime admission", () => {
     expect(reviewedMintPosture(denied.rows[0]!, denied.asset.issuanceFacts)).toBe("unbounded-adverse");
   });
 
-  it("requires a compact clone's observed hash to match its variant even when the original exemplar is unchanged", () => {
+  function compactCloneFixture() {
     const clone = "ethereum:0x4444444444444444444444444444444444444444";
     const profile = modeledClassProfile(), certificates = profile.executionCertificates!, klass = certificates.classes[0]!;
     profile.controls![1]!.executionScope = modeledProfile().controls![1]!.executionScope;
@@ -1054,6 +1067,11 @@ describe("authority clock, cycle, and compact runtime admission", () => {
     profile.controls![1]!.executionScope!.paths[0]!.affectedDeployments.push(clone);
     klass.memberRefs = [clone];
     klass.sourcePathRefs = [{ controlRef: PROGRAM, pathId: "interest" }];
+    return { clone, profile, certificates, klass };
+  }
+
+  it("requires a compact clone's observed hash to match its variant even when the original exemplar is unchanged", () => {
+    const { clone, profile, certificates, klass } = compactCloneFixture();
     klass.requiredConditions = [{ id: "original", kind: "immutable", field: "immutables.original", description: "The clone binds the reviewed source exemplar.",
       test: { kind: "equal", value: PROGRAM }, proofRef: "closed" }];
     klass.compactMembers = [{ deployment: clone, codeHash: CODE_HASH, codeSize: 100,
@@ -1076,13 +1094,7 @@ describe("authority clock, cycle, and compact runtime admission", () => {
   });
 
   it.each(["wrong-clone-hash", "unreviewed-implementation", "wrong-implementation", "unproved-clone-template"] as const)("admits an exact reviewed EIP-1167 clone but denies the single %s gate", (failure) => {
-    const clone = "ethereum:0x4444444444444444444444444444444444444444";
-    const profile = modeledClassProfile(), certificates = profile.executionCertificates!, klass = certificates.classes[0]!;
-    profile.controls![1]!.executionScope = modeledProfile().controls![1]!.executionScope;
-    delete profile.controls![1]!.executionClassRef; certificates.members = [];
-    profile.controls![1]!.executionScope!.paths[0]!.affectedDeployments.push(clone);
-    klass.memberRefs = [clone];
-    klass.sourcePathRefs = [{ controlRef: PROGRAM, pathId: "interest" }];
+    const { clone, profile, certificates, klass } = compactCloneFixture();
     klass.requiredConditions = [{ id: "original", kind: "immutable", field: "immutables.original", description: "The clone binds the reviewed source exemplar.",
       test: { kind: "one-of", values: [PROGRAM, HOLDER] }, proofRef: "closed" }];
     certificates.proofs.push({ id: "clone-template", conclusion: "closed",
@@ -1149,9 +1161,8 @@ describe("D32 vote-caster and replacement authority traversal", () => {
 
     it.each(controlKinds)("denies the single active %s control edge even when own stake alone passes", (kind) => {
       const profile = votingProfile(family), graph = profile.authorityGraph!, voting = profile.governedIssuance!.votingControl;
-      const edge: V1005AuthorityGraph["edges"][number] = { id: "vote-program-key", from: "vote-program", to: "holder", kind,
-        pathRefs: [voting.routes[0]!.path], selectors: [], role: "vote-program-admin", activation: "disabled-final",
-        publicDelaySec: 0, calldataBound: true, proofRef: "closed" };
+      const edge = authorityEdge({ id: "vote-program-key", from: "vote-program", to: "holder", kind }, voting.routes[0]!.path,
+        { role: "vote-program-admin", activation: "disabled-final" });
       graph.edges.push(edge); restamp(profile);
       const positive = compile(profile);
       expect(positive.governance.votingControl).toMatchObject({ qualified: true, largestSingleControllerShareBps: 10000,
@@ -1194,12 +1205,11 @@ describe("D32 vote-caster and replacement authority traversal", () => {
       const profile = votingProfile(family), graph = profile.authorityGraph!, path = profile.governedIssuance!.votingControl.routes[0]!.path;
       graph.nodes.push({ ...graph.nodes[1]!, id: "vote-replacer", kind: "contract", terminal: false },
         { ...graph.nodes[1]!, id: "vote-admin", kind: "contract", terminal: false });
-      graph.edges.push({ id: "caster-replacement", from: "vote-program", to: "vote-replacer", kind: "vote-replacement",
-        pathRefs: [path], selectors: [], role: null, activation: "active", publicDelaySec: 0, calldataBound: true, proofRef: "closed" },
-      { id: "replacement-hop", from: "vote-replacer", to: "vote-admin", kind: "execution-hop",
-        pathRefs: [path], selectors: [], role: null, activation: "active", publicDelaySec: 0, calldataBound: true, proofRef: "closed" },
-      { id: "replacement-role", from: "vote-admin", to: "holder", kind: "role",
-        pathRefs: [path], selectors: [], role: "replacement-admin", activation: "active", publicDelaySec: 0, calldataBound: true, proofRef: "closed" });
+      graph.edges.push(
+        authorityEdge({ id: "caster-replacement", from: "vote-program", to: "vote-replacer", kind: "vote-replacement" }, path),
+        authorityEdge({ id: "replacement-hop", from: "vote-replacer", to: "vote-admin", kind: "execution-hop" }, path),
+        authorityEdge({ id: "replacement-role", from: "vote-admin", to: "holder", kind: "role" }, path, { role: "replacement-admin" }),
+      );
       restamp(profile);
       const denied = compile(profile);
       expect(denied.governance.votingControl).toMatchObject({ qualified: false, unknownAboveThresholdVoteOwnershipControllerIds: [],
@@ -1212,9 +1222,8 @@ describe("D32 vote-caster and replacement authority traversal", () => {
       const profile = votingProfile(family), graph = profile.authorityGraph!, voting = profile.governedIssuance!.votingControl;
       voting.routes[0]!.controllerPowers = [];
       voting.controllers[0]!.voteReplacementApproval = "unknown";
-      graph.edges.push({ id: "own-vote-role", from: "vote-program", to: "holder", kind: "role",
-        pathRefs: [voting.routes[0]!.path], selectors: [], role: "own-vote-admin", activation: "active",
-        publicDelaySec: 0, calldataBound: true, proofRef: "closed" });
+      graph.edges.push(authorityEdge({ id: "own-vote-role", from: "vote-program", to: "holder", kind: "role" }, voting.routes[0]!.path,
+        { role: "own-vote-admin" }));
       restamp(profile);
       const positive = compile(profile);
       expect(positive.governance.votingControl).toMatchObject({ qualified: true, largestSingleControllerShareBps: 6000,

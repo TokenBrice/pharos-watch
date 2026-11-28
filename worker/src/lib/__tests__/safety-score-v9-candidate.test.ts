@@ -134,6 +134,17 @@ function exactFixedInput(
   });
 }
 
+function dependencyGraphDiagnostics() {
+  return { graphState: "valid" as const, issueCodes: [], sccMemberAssetIds: [] };
+}
+
+function betaWrapperEdge() {
+  return {
+    edgeKey: "wrapper:beta", upstreamAssetId: "beta", dependencyType: "wrapper" as const,
+    economicRole: "serial-claim" as const, pathKind: "serial-dependency" as const, weight: 1, evidenceRefIds: [], failureDomains: [],
+  };
+}
+
 function reviewedExtension(fixedInput = exactFixedInput("alpha")): SafetyScoreV9FactSetExtensionV2 {
   const extension = structuredClone(
     buildSafetyScoreV9BaselineExtension(fixedInput, {
@@ -160,7 +171,7 @@ function reviewedExtension(fixedInput = exactFixedInput("alpha")): SafetyScoreV9
     mappedLiveReserveWeight: null,
     fallbackReason: null,
     edges: [],
-    diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
+    diagnostics: dependencyGraphDiagnostics(),
   };
   asset.routeReviews = [
     {
@@ -259,15 +270,19 @@ function reviewedExtension(fixedInput = exactFixedInput("alpha")): SafetyScoreV9
   return extension;
 }
 
+function mergeFixtureAssetMaps(target: ReturnType<typeof exactFixedInput>, source: ReturnType<typeof exactFixedInput>) {
+  for (const key of ["dexLiqMap", "pegDataById", "liveReserveMap", "liveReserveProvenanceMap",
+    "chainCirculatingById", "aggregateCirculatingById", "resolvedBlacklistStatuses"] as const) {
+    Object.assign(target[key], source[key]);
+  }
+}
+
 function reserveParentCascadeFixture() {
   const inputs = ["alpha", "beta", "gamma"].map((id) => exactFixedInput(id));
   const fixedInput = inputs[0]!;
   fixedInput.activeAssetIds = ["alpha", "beta", "gamma"];
   for (const other of inputs.slice(1)) {
-    for (const key of ["dexLiqMap", "pegDataById", "liveReserveMap", "liveReserveProvenanceMap",
-      "chainCirculatingById", "aggregateCirculatingById", "resolvedBlacklistStatuses"] as const) {
-      Object.assign(fixedInput[key], other[key]);
-    }
+    mergeFixtureAssetMaps(fixedInput, other);
   }
   fixedInput.liveReserveMap.alpha = [{
     ...FIXTURE_RESERVES[0]!, name: "Beta claim", assetClass: "stablecoin", coinId: "beta", depType: "wrapper",
@@ -311,7 +326,7 @@ function reserveParentCascadeFixture() {
         dependencyType: role === "serial-claim" ? "wrapper" : "collateral", economicRole: role,
         weight: 1, failureDomains: [],
       }],
-      diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
+      diagnostics: dependencyGraphDiagnostics(),
     };
   }
   return { fixedInput, extension, publishedAtSec: PUBLISHED_AT_SEC };
@@ -322,6 +337,13 @@ const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
 /** Candidate built from `fixedInput` with its reviewed extension at the fixture publication clock. */
 const buildReviewedCandidate = (fixedInput: Parameters<typeof reviewedExtension>[0]) =>
   buildSafetyScoreV9Candidate({ fixedInput, extension: reviewedExtension(fixedInput), publishedAtSec: PUBLISHED_AT_SEC });
+
+function dependencyMetadataFixture() {
+  const fixedInput = exactFixedInput("alpha");
+  const result = buildReviewedCandidate(fixedInput);
+  const asset = structuredClone(result.compiledFacts.assets[0]!);
+  return { fixedInput, result, asset };
+}
 
 describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
   let cascadeFixture!: ReturnType<typeof reserveParentCascadeFixture>;
@@ -352,13 +374,8 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
   });
 
   it("prefers the first unverified intermediary for a structural serial claim", () => {
-    const fixedInput = exactFixedInput("alpha");
-    const result = buildReviewedCandidate(fixedInput);
-    const asset = structuredClone(result.compiledFacts.assets[0]!);
-    asset.dependencies.edges = [{
-      edgeKey: "wrapper:beta", upstreamAssetId: "beta", dependencyType: "wrapper",
-      economicRole: "serial-claim", pathKind: "serial-dependency", weight: 1, evidenceRefIds: [], failureDomains: [],
-    }];
+    const { fixedInput, result, asset } = dependencyMetadataFixture();
+    asset.dependencies.edges = [betaWrapperEdge()];
     const verified = { kind: "bridge" as const, label: "Verified bridge", verified: true };
     const unverified = { kind: "bridge" as const, label: "Unverified bridge", verified: false };
     const meta = { id: "alpha", variantOf: "beta", reserves: [
@@ -375,13 +392,8 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
   });
 
   it("keeps a mixed native and verified bridge aggregate unannotated, but preserves unverified risk", () => {
-    const fixedInput = exactFixedInput("alpha");
-    const result = buildReviewedCandidate(fixedInput);
-    const asset = structuredClone(result.compiledFacts.assets[0]!);
-    asset.dependencies.edges = [{
-      edgeKey: "wrapper:beta", upstreamAssetId: "beta", dependencyType: "wrapper",
-      economicRole: "serial-claim", pathKind: "serial-dependency", weight: 1, evidenceRefIds: [], failureDomains: [],
-    }];
+    const { fixedInput, result, asset } = dependencyMetadataFixture();
+    asset.dependencies.edges = [betaWrapperEdge()];
     const bridge = { kind: "bridge" as const, label: "USDC.e", verified: true };
     fixedInput.liveReserveMap.alpha = [
       { sourceKey: "fixture:native", name: "Native USDC", pct: 72.5, risk: "low", coinId: "beta" },
@@ -400,9 +412,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
   });
 
   it("retains distinct keyed withheld slices sharing a label and preserves different reasons", () => {
-    const fixedInput = exactFixedInput("alpha");
-    const result = buildReviewedCandidate(fixedInput);
-    const asset = structuredClone(result.compiledFacts.assets[0]!);
+    const { fixedInput, result, asset } = dependencyMetadataFixture();
     asset.dependencies.edges = [];
     asset.gaps = [];
     asset.dependencies.rejectionReasons = [{ sliceIndex: 0, reason: "expired" }, { sliceIndex: 1, reason: "no-match" }];
@@ -420,13 +430,8 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
   });
 
   it("discloses an untyped sibling even when the same upstream has a modeled edge", () => {
-    const fixedInput = exactFixedInput("alpha");
-    const result = buildReviewedCandidate(fixedInput);
-    const asset = structuredClone(result.compiledFacts.assets[0]!);
-    asset.dependencies.edges = [{
-      edgeKey: "wrapper:beta", upstreamAssetId: "beta", dependencyType: "wrapper",
-      economicRole: "serial-claim", pathKind: "serial-dependency", weight: 1, evidenceRefIds: [], failureDomains: [],
-    }];
+    const { fixedInput, result, asset } = dependencyMetadataFixture();
+    asset.dependencies.edges = [betaWrapperEdge()];
     asset.gaps = [];
     asset.dependencies.diagnostics.issueCodes = [];
     asset.dependencies.rejectionReasons = [
@@ -446,9 +451,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
   });
 
   it("discloses withheld identities without inventing graph endpoints or treating cash as a relationship", () => {
-    const fixedInput = exactFixedInput("alpha");
-    const result = buildReviewedCandidate(fixedInput);
-    const asset = structuredClone(result.compiledFacts.assets[0]!);
+    const { fixedInput, result, asset } = dependencyMetadataFixture();
     asset.dependencies.edges = [];
     asset.dependencies.rejectionReasons = [{ sliceIndex: 0, reason: "no-match" }, { sliceIndex: 1, reason: "expired" }];
     const sourceSlices = [
@@ -607,11 +610,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
         });
       });
 
-    const result = buildSafetyScoreV9Candidate({
-      fixedInput,
-      extension: reviewedExtension(fixedInput),
-      publishedAtSec: PUBLISHED_AT_SEC,
-    });
+    const result = buildReviewedCandidate(fixedInput);
 
     expect(result.quarantines).toEqual([
       expect.objectContaining({
@@ -667,11 +666,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
         }] }]);
       });
 
-    const result = buildSafetyScoreV9Candidate({
-      fixedInput,
-      extension: reviewedExtension(fixedInput),
-      publishedAtSec: PUBLISHED_AT_SEC,
-    });
+    const result = buildReviewedCandidate(fixedInput);
 
     expect(build).toHaveBeenCalledTimes(2);
     expect(result.quarantines).toEqual([
@@ -692,10 +687,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     const reviewedAssets = inputs.map((input) => reviewedExtension(input).assets[0]!);
     const fixedInput = inputs[0]!;
     fixedInput.activeAssetIds = ["alpha", "beta"];
-    for (const key of ["dexLiqMap", "pegDataById", "liveReserveMap", "liveReserveProvenanceMap",
-      "chainCirculatingById", "aggregateCirculatingById", "resolvedBlacklistStatuses"] as const) {
-      Object.assign(fixedInput[key], inputs[1]![key]);
-    }
+    mergeFixtureAssetMaps(fixedInput, inputs[1]!);
     fixedInput.dexPayloadFingerprint = computeDexLiquidityPayloadFingerprint(fixedInput.dexLiqMap, fixedInput.dexGenerationId);
     fixedInput.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixedInput);
     const extension = reviewedExtension(fixedInput);
@@ -1328,10 +1320,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       const fixedInput = inputs[0]!;
       fixedInput.activeAssetIds = [...ids];
       for (const other of inputs.slice(1)) {
-        for (const key of ["dexLiqMap", "pegDataById", "liveReserveMap", "liveReserveProvenanceMap",
-          "chainCirculatingById", "aggregateCirculatingById", "resolvedBlacklistStatuses"] as const) {
-          Object.assign(fixedInput[key], other[key]);
-        }
+        mergeFixtureAssetMaps(fixedInput, other);
       }
       // Give fundA a lower reserve class so its internal score sits below dependents' own score,
       // forcing the concentrated-collateral parent limit (parent - 3) to bind on usdtb-ethena.
@@ -1368,7 +1357,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
             upstreamAssetId: e.upstreamAssetId, dependencyType: "collateral", economicRole: "basket-exposure",
             weight: e.weight, failureDomains: [],
           })),
-          diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
+          diagnostics: dependencyGraphDiagnostics(),
         };
       };
       addBasketEdges("usdtb-ethena", [{ upstreamAssetId: fundA, weight: 1 }]);

@@ -93,6 +93,14 @@ const okBook = (f: unknown) => BookFactSchema.safeParse(f).success;
 const comp0 = (f: ReturnType<typeof mkFixed>, e = mkExt({ registryFingerprint: f.registryFingerprint })) => compileFacts(f, e).assets[0]!;
 const evRes = (a: Omit<Parameters<typeof evalRes>[0], "resolvedUpstreamExposures">, ex?: Partial<Parameters<typeof evalRes>[0]>) => evalRes({ ...a, resolvedUpstreamExposures: [], ...ex }, POL);
 
+function unclassifiedTail(tail: ReserveSlice) {
+  return {
+    exposureKey: expKey(tail), classificationKey: "fixture-unclassified-tail", assetClass: null,
+    issuerOrObligorKey: null, riskFactors: [], liquidityHorizon: null, maturityDaysMax: null,
+    failureDomains: [], unclassifiedResidual: true as const,
+  };
+}
+
 function expiredMeta(): RegMeta {
   const m = eligMeta({ id: AID, mechanismArchetype: "fiat-cash", launchDate: "2020-01-01" }), p = m.proofOfReserves;
   if (!p?.latestReport) throw new Error("Expected named assurance report fixture");
@@ -328,7 +336,7 @@ describe("fail-closed reserve frame admission", () => {
     const tail = cashSlice("Unclassified remainder", 100, { unclassifiedResidual: true, residualReason: "insufficient-evidence" });
     const rows = ["A", "B", "C", "D", "E"].map((c) => cashSlice(`Cash ${c}`, 0.05)).concat(tail);
     const fixed = mkFixed({ assetId: AID, clockSec: NO_HIST_CLK, reserves: rows }), ext = mkExt({ clockSec: NO_HIST_CLK, registryFingerprint: fixed.registryFingerprint });
-    ext.assets[0]!.reserveClassifications = [{ exposureKey: expKey(tail), classificationKey: "fixture-unclassified-tail", assetClass: null, issuerOrObligorKey: null, riskFactors: [], liquidityHorizon: null, maturityDaysMax: null, failureDomains: [], unclassifiedResidual: true }];
+    ext.assets[0]!.reserveClassifications = [unclassifiedTail(tail)];
     const a = comp0(fixed, ext);
     expect(a.reserveExposures).toHaveLength(5); expect(a.reserveResiduals).toMatchObject([{ residualId: expKey(tail), weight: 0.9975 }]);
     expect(a.reserveExposures.reduce((s, r) => s + r.weight, 0) + a.reserveResiduals.reduce((s, r) => s + r.weight, 0)).toBeCloseTo(1, 12);
@@ -480,10 +488,18 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
     return compileIso(input, matExt(input, ext));
   }
 
+  const bankCash = (pct: number): ReserveSlice => ({
+    sourceKey: "fixture:cash", name: "Cash", pct, risk: "very-low", assetClass: "cash", issuerOrObligor: "bank:alpha",
+  });
+  const publishedResidual = (pct: number): ReserveSlice => ({
+    sourceKey: "fixture:published", name: "Other Cash and Cash Equivalents", pct,
+    risk: "high", unclassifiedResidual: true, residualReason: "insufficient-evidence",
+  });
+
   it.each([0.0014195216154720709, 1, 1.000001, 10])("retains bounded pricing but applies published residual gate at %s percent", (pct) => {
     const res = compPart([
-      { sourceKey: "fixture:cash", name: "Cash", pct: 100 - pct, risk: "very-low", assetClass: "cash", issuerOrObligor: "bank:alpha" },
-      { sourceKey: "fixture:published", name: "Other Cash and Cash Equivalents", pct, risk: "high", unclassifiedResidual: true, residualReason: "insufficient-evidence", publishedResidualCategory: true },
+      bankCash(100 - pct),
+      { ...publishedResidual(pct), publishedResidualCategory: true },
     ]);
     expect(res.quarantines).toEqual([]);
     const a = res.factSet.assets[0]!, r0 = a.reserveResiduals[0]!;
@@ -492,8 +508,8 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
   });
 
   it.each(["unmarked", "split", "incomplete"] as const)("does not exempt %s reserve uncertainty", (kind) => {
-    const tail: ReserveSlice = { sourceKey: "fixture:published", name: "Other Cash and Cash Equivalents", pct: 0.6, risk: "high", unclassifiedResidual: true, residualReason: "insufficient-evidence", ...(kind === "unmarked" ? {} : { publishedResidualCategory: true }) };
-    const res = compPart([{ sourceKey: "fixture:cash", name: "Cash", pct: kind === "split" ? 98.8 : kind === "incomplete" ? 99 : 99.4, risk: "very-low", assetClass: "cash", issuerOrObligor: "bank:alpha" }, tail, ...(kind === "split" ? [{ ...tail, sourceKey: "fixture:second", name: "Other Receivables" }] : [])]);
+    const tail: ReserveSlice = { ...publishedResidual(0.6), ...(kind === "unmarked" ? {} : { publishedResidualCategory: true }) };
+    const res = compPart([bankCash(kind === "split" ? 98.8 : kind === "incomplete" ? 99 : 99.4), tail, ...(kind === "split" ? [{ ...tail, sourceKey: "fixture:second", name: "Other Receivables" }] : [])]);
     expect(res.quarantines).toEqual([]);
     const a = res.factSet.assets[0]!;
     for (const r of a.reserveResiduals) expect(a.gaps.find((g) => r.status.gapIds.includes(g.gapId))!.reasonCode).toBe("partial-reserve-review");
@@ -501,7 +517,7 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
 
   it("reconciles accepted live rounding overshoot without erasing dust or a disjoint explicit remainder", () => {
     const rows: ReserveSlice[] = [
-      { sourceKey: "fixture:cash", name: "Cash", pct: 99.9998, risk: "very-low", assetClass: "cash", issuerOrObligor: "bank:alpha" },
+      bankCash(99.9998),
       { sourceKey: "fixture:dust", name: "Dust holding", pct: 0.00000001, risk: "very-low", assetClass: "cash", issuerOrObligor: "bank:dust" },
       { sourceKey: "fixture:tail", name: "Unclassified reserve share", pct: 0.00029874702072, risk: "high", unclassifiedResidual: true, residualReason: "insufficient-evidence" },
     ];
@@ -513,7 +529,7 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
   });
 
   it("keeps a true overfull reserve frame unavailable instead of normalizing away the producer failure", () => {
-    const a = compPart([{ sourceKey: "fixture:cash", name: "Cash", pct: 60, risk: "very-low", assetClass: "cash", issuerOrObligor: "bank:alpha" }, { sourceKey: "fixture:tail", name: "Unclassified reserve share", pct: 41, risk: "high", unclassifiedResidual: true, residualReason: "insufficient-evidence" }]).factSet.assets[0]!;
+    const a = compPart([bankCash(60), { sourceKey: "fixture:tail", name: "Unclassified reserve share", pct: 41, risk: "high", unclassifiedResidual: true, residualReason: "insufficient-evidence" }]).factSet.assets[0]!;
     expect(a.gaps).toContainEqual(expect.objectContaining({ causeProof: expect.objectContaining({ cause: "A", rejectionCode: "fact-build-failed" }), causeScope: expect.objectContaining({ componentKey: "asset-compilation" }) }));
     expect(a.reserveExposures).toEqual([]); expect(a.reserveResiduals).toEqual([]);
   });
@@ -535,7 +551,7 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
   it.each([false, true])("uses only the admitted envelope for an all-unknown tail when live=%s", (withLive) => {
     const tail = { ...(withLive ? { sourceKey: "fixture:tail" } : {}), name: "Unclassified remainder", pct: 100, risk: "high" as const, unclassifiedResidual: true as const, residualReason: "insufficient-evidence" as const };
     const fixed = mkFixed({ reserves: [tail], omitLiveReserve: !withLive }), ext = mkExt({ registryFingerprint: fixed.registryFingerprint }), ia = ext.assets[0]!;
-    ia.reserveClassifications = withLive ? [{ exposureKey: expKey(tail), classificationKey: "fixture-unclassified-tail", assetClass: null, issuerOrObligorKey: null, riskFactors: [], liquidityHorizon: null, maturityDaysMax: null, failureDomains: [], unclassifiedResidual: true }] : [];
+    ia.reserveClassifications = withLive ? [unclassifiedTail(tail)] : [];
     ia.reviewedStaticReserveRows = { rows: [tail], evidenceClass: "independent", provenance: "audited-fallback" };
     ia.researchEvidence.push({ evidenceKey: "fixture-current-composition", sourceId: "fixture-composition-report", observedAtSec: fixed.clockSec - 1, publishedAtSec: fixed.clockSec - 1, publishedBy: "issuer", url: "https://example.com/current-composition", contentSha256: "1".repeat(64), confidence: "verified", maxAgeSec: 3600 });
     ia.componentEvidence.push({ componentKey: "reviewed-static-reserves", evidenceKeys: ["fixture-current-composition"] });

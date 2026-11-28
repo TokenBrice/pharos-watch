@@ -1166,16 +1166,12 @@ describe("direct exit fact builder", () => {
     const run = (clockSec: number, status: "populated" | "unknown", acceptedPublication?: ReturnType<typeof buildSafetyScoreV9AcceptedPublicationBaseline>) => {
       const d = exactFixedInput({ clockSec });
       d.dexLiqMap.alpha!.exitRouteObservations = [];
-      d.dexLiqMap.alpha!.exitRouteObservationCoverage = {
-        status, capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION, retainedPoolCount: 0, observationCount: 0,
-        scoreEligibleObservationCount: 0, scoreEligiblePoolCount: 0, scoreEligibleCapabilityPoolCount: 0, unsupportedPoolCount: 0,
-        evidenceCounts: {}, unsupportedReasons: status === "populated" ? {} : { deploymentCensusUnavailable: 1 },
-      };
+      d.dexLiqMap.alpha!.exitRouteObservationCoverage = emptyDexCov({
+        status, scoreEligibleCapabilityPoolCount: 0,
+        unsupportedReasons: status === "populated" ? {} : { deploymentCensusUnavailable: 1 },
+      });
       if (status === "populated") {
-        d.dexDeploymentSupplyCoverageById.alpha = {
-          totalSupplyUsd: 10_000_000, verifiedNoPoolsSupplyUsd: 10_000_000, verifiedNoPoolsSupplyRatio: 1, observedSupplyUsd: 0,
-          observedSupplyRatio: 0, providerInaccessibleSupplyUsd: 0, providerInaccessibleSupplyRatio: 0, unknownSupplyUsd: 0, unknownSupplyRatio: 0, unknownChains: [],
-        };
+        d.dexDeploymentSupplyCoverageById.alpha = { ...VERIFIED_NO_POOLS, unknownChains: [] };
       } else delete d.dexDeploymentSupplyCoverageById.alpha;
       const fixed = rebuildFixed(d);
       const rev = structuredClone(extension({ clockSec, registryFingerprint: fixed.registryFingerprint }));
