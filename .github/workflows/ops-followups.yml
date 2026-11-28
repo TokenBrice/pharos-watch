@@ -38,7 +38,7 @@ jobs:
                 (add // [])
                 | unique_by(.number)
                 | .[]
-                | ((.body // "") | capture("(?m)^Due:\\s*(?<due>\\d{4}-\\d{2}-\\d{2})") | .due) as $due
+                | ((.body // "") | capture("(?m)^Due:[ \\t]*(?<due>\\d{4}-\\d{2}-\\d{2})[ \\t\\r]*$") | .due) as $due
                 | select($due != null and $due <= $today)
                 | select([.comments[] | select((.body | contains($marker)) and .createdAt >= $recent)] | length == 0)
                 | "\(.number) \($due)"' \

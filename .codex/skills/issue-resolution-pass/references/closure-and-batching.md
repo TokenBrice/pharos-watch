@@ -22,7 +22,7 @@ The plan carries these for the executor. Apply them when ordering lanes and writ
 
 - Plan no release that changes Safety Score inputs or its evaluation-build manifest to activate between the hourly `:16` preparation and the `:22` publication, and observe the next accepted publication before the next such release. An urgent fix that must land inside the window is named as urgent in the plan, with the publication it is expected to skip.
 - A paired Liquidity/Pricing methodology release deploys both Workers in one window and avoids `:08`–`:17`.
-- A green deploy is activation proof only. Each release names the first production execution that proves it. If an unmonitored check falls after the session, keep the owning issue open with a moved `Due:`, or bundle the pass's post-session acceptance into at most one rollout issue with rolling `Due:`. Skip filing when `post-deploy-acceptance`, `nightly-validation`, `cron-liveness`, or `post-deploy-first-execution` (for its 3 listed jobs) already catches failure.
+- A green deploy is activation proof only. Each release names the first production execution that proves it. If an unmonitored check falls after the session, keep the owning issue open with a moved `Due:`, or bundle the pass's post-session acceptance into at most one rollout issue with rolling `Due:`. Skip filing when `post-deploy-acceptance`, `nightly-validation`, `cron-liveness`, or `post-deploy-first-execution` (for its 3 jobs in [Independent Production Monitors](../../../../docs/deployment-process.md#independent-production-monitors)) already catches failure.
 
 ## Closure Audit
 

@@ -107,6 +107,7 @@ describe("post-deploy first-execution monitor", () => {
     const skips = [
       { ...coins, status: "skipped_locked" },
       { ...dex, status: "skipped_neutral", metadata: { reason: "liquidity-cadence-reuse" } },
+      { ...dex, status: "skipped_neutral", metadata: { reason: "curve-identity-unavailable" } },
       ...["v9-evaluator-changed-recapture-pending", "v9-publication-hourly-already-accepted"].map((reason) =>
         ({ ...v9, status: "skipped_neutral", metadata: { reason } })),
     ].map((row) => ({ ...row, started_at: notBefore + 1 }));
@@ -126,7 +127,19 @@ describe("post-deploy first-execution monitor", () => {
       v9_generation: generation, v9_finished_at: state === "active" ? null : startedAt + 5, v9_worker_version: heavy };
     expect(check({ cronRuns: byJob(coins, dex, seed) }).status).toBe(status);
     expect(check({ cronRuns: byJob(coins, dex, { ...seed, v9_worker_version: workerVersion }) }).status).toBe("pending");
-    if (state === "active") expect(check({ nowSec: notBefore + 4_500, cronRuns: byJob(coins, dex, seed) }).status).toBe("pending");
+    if (state === "active") {
+      expect(check({ nowSec: notBefore + 4_500, cronRuns: byJob(coins, dex, { ...seed, started_at: notBefore + 3_500 }) }).status).toBe("pending");
+      expect(check({ nowSec: startedAt + 3_600, cronRuns: byJob(coins, dex, seed) }).status).toBe("failed");
+    }
+    if (state === "superseded") {
+      const rep = heavy.replace("bbbb", "0000");
+      const history = { ...deployments, "stablecoin-heavy": [deploy(rep, notBefore + 4_600), deploy(heavy)] };
+      const lateSeed = { ...seed, started_at: notBefore + 3_500, v9_finished_at: notBefore + 4_602 };
+      const repDex = { ...dex, worker_version: rep, started_at: notBefore + 4_601 };
+      expect(check({ nowSec: notBefore + 4_610, deployments: history, cronRuns: byJob(coins, dex, lateSeed, repDex) }).status).toBe("pending");
+      const repV9 = { ...v9, worker_version: rep, started_at: notBefore + 4_605 };
+      expect(check({ nowSec: notBefore + 4_610, deployments: history, cronRuns: byJob(coins, dex, lateSeed, repDex, repV9) }).status).toBe("passed");
+    }
   });
 
   it("retains failures before and after a success and redacts metadata", () => {
@@ -160,7 +173,7 @@ describe("post-deploy first-execution monitor", () => {
     const later = notBefore + 23_000;
     const ages = { ...deployments, "stablecoin-api": [deploy(workerVersion, later)] };
     const openIssue = { number: 10, body: "Due: 2027-01-01\n" +
-      "<!-- post-deploy-failed-jobs: stablecoin-heavy:sync-dex-liquidity stablecoin-heavy:compute-safety-score-v9 -->" };
+      "<!-- post-deploy-failed-jobs: stablecoin-heavy:sync-dex-liquidity -->" };
     const recent = { ...coins, started_at: later, metadata: { ...metadata, syncStartSec: later } };
     const args = { deployments: ages, openIssue, nowSec: later + 30, publishedStablecoins: publication(later) };
     const error = { ...dex, started_at: later, status: "error" };
@@ -171,8 +184,11 @@ describe("post-deploy first-execution monitor", () => {
     expect(render(failure, later)).toContain(openIssue.body.split("\n")[0]);
     expect(render(failure, later)).toContain(openIssue.body.split("\n")[1]);
     const healthy = { ...dex, started_at: later + 1 };
+    // Even for a DEX-only issue, every tracked job on the affected Worker must pass before closing.
     expect(state({ ...byJob(recent, error, healthy), [v9.job]: [] }).canCloseIssue).toBe(false);
     expect(state(byJob(recent, error, healthy, { ...v9, started_at: later })).canCloseIssue).toBe(true);
+    expect(check({ ...args, publishedStablecoins: null, cronRuns: byJob(recent, error, healthy, { ...v9, started_at: later }) }))
+      .toMatchObject({ status: "unavailable", reason: "publication-input-unavailable", canCloseIssue: false });
   });
 
   it("accepts Worker deployments without a CI SHA", () => {
@@ -181,9 +197,10 @@ describe("post-deploy first-execution monitor", () => {
     expect(render(verdict, nowSec)).toContain("Worker deploy SHA unavailable");
   });
 
-  it.each([{ deployments: {} }, { cronRuns: null }, { cronRuns: { ...cronRuns, [job]: [{ ...coins, metadata: "broken" }] } },
-    { cronRuns: { ...cronRuns, [job]: Array(100).fill(coins) } }, { publishedStablecoins: null }])("reports unavailable evidence %#", (patch) => {
-    expect(check(patch).status).toBe("unavailable");
+  it.each([{ deployments: {} }, { openIssue: {} }, { cronRuns: null }, { cronRuns: { ...cronRuns, [job]: [{ ...coins, metadata: "broken" }] } },
+    { cronRuns: { ...cronRuns, [job]: Array(100).fill(coins) } }, { publishedStablecoins: null },
+    { publishedStablecoins: null, cronRuns: byJob({ ...coins, status: "error" }, dex, v9) }])("reports unavailable evidence %#", (patch) => {
+    expect(check(patch)).toMatchObject({ status: "unavailable", canCloseIssue: false });
   });
 
   it("reports a missing Cloudflare file at the CLI boundary", () => {

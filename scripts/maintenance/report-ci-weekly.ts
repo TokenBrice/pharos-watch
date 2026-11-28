@@ -456,7 +456,9 @@ function parseIssueDueDate(raw: unknown, label: string): string | null | undefin
   }
   const ms = Date.parse(`${raw}T00:00:00Z`);
   if (!Number.isFinite(ms) || new Date(ms).toISOString().slice(0, 10) !== raw) {
-    throw new Error(`${label}.due must be a valid calendar date`);
+    // Treat an impossible calendar date in an issue body as undated so one typo
+    // leaves that issue actionable without discarding the whole hygiene snapshot.
+    return null;
   }
   return raw;
 }

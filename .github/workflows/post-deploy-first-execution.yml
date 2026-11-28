@@ -87,6 +87,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          umask 077
           export POST_DEPLOY_EVIDENCE_DIR="$RUNNER_TEMP/post-deploy-first-execution"
           mkdir -p "$POST_DEPLOY_EVIDENCE_DIR"
           verdict="$POST_DEPLOY_EVIDENCE_DIR/verdict.json"
@@ -105,6 +106,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          umask 077
           dir="$RUNNER_TEMP/post-deploy-first-execution"
           issue_number=$(jq -r '.number // empty' "$dir/issue.json")
           if [[ "$STATUS" == 'failed' ]]; then

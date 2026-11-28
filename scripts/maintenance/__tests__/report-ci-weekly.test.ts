@@ -228,8 +228,9 @@ describe("weekly CI report", () => {
       [{ ...empty, closedInWindow: [{ number: 1, closedAt: "nope", labels: [] }] }, /ISO timestamp/],
       [{ ...empty, openNow: [{ number: 1, title: 42, labels: [] }] }, /title/],
       [{ ...empty, openNow: [{ number: 1, title: "ok", labels: [1] }] }, /labels/],
-      [{ ...empty, openNow: [{ number: 1, title: "ok", labels: [], due: "2026-02-31" }] }, /due/],
+      [{ ...empty, openNow: [{ number: 1, title: "ok", labels: [], due: "not-a-date" }] }, /due/],
     ] as const) expect(() => parseIssueHygiene(bad)).toThrow(pattern);
+    expect(parseIssueHygiene({ ...empty, openNow: [{ number: 1, title: "bad date", labels: ["ops:calendar"], due: "2026-02-31" }] }).openNow[0]?.due).toBeNull();
     expect(parseIssueHygiene(sampleIssues)).toEqual(sampleIssues);
   });
 

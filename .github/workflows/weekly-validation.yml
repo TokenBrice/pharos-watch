@@ -374,7 +374,7 @@ jobs:
                         number,
                         title: (.title // ""),
                         labels: [(.labels // [])[].name],
-                        due: ([((.body // "") | capture("(?m)^Due:\\s*(?<due>\\d{4}-\\d{2}-\\d{2})").due)] | first // null)
+                        due: ([((.body // "") | capture("(?m)^Due:[ \\t]*(?<due>\\d{4}-\\d{2}-\\d{2})[ \\t\\r]*$").due)] | first // null)
                       }
                   ]
                 }

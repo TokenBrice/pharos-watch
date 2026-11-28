@@ -109,7 +109,7 @@ function readCronRuns(input: unknown, job: Job) {
         cacheWriteMode: fields.cacheWriteMode, cacheWriteSucceeded: fields.cacheWriteSucceeded,
       },
       queueSeed: job === "compute-safety-score-v9" && (fields.mode === "queue-seed" || fields.productive === false ||
-        row.productive === 0 || typeof fields.runId === "string" || typeof fields.queueRunId === "string"),
+        typeof fields.runId === "string" || typeof fields.queueRunId === "string"),
       queueRun: { state: row.v9_state, version: row.v9_worker_version, generation: row.v9_generation, finishedAt: row.v9_finished_at },
     });
   }
@@ -124,7 +124,10 @@ function neutralSkip(run: CronRun): boolean {
   if (run.job === "compute-safety-score-v9" && run.status === "ok" &&
       reason === "v9-public-materialization-retry-materialized") return true;
   if (run.status !== "skipped_neutral") return false;
-  if (run.job === "sync-dex-liquidity") return reason === "liquidity-cadence-reuse" || reason === "scoring-stage-producer-running";
+  if (run.job === "sync-dex-liquidity") {
+    return reason === "liquidity-cadence-reuse" || reason === "scoring-stage-producer-running" ||
+      reason === "curve-identity-unavailable";
+  }
   return typeof reason === "string" && [
     "v9-publication-hourly-already-accepted", "v9-evaluator-changed-recapture-pending", "v9-capture-advanced",
     "v9-capture-already-accepted", "v9-slot-window-too-short", "v9-core-slot-not-ready", "v9-competing-slot-active",
@@ -163,11 +166,12 @@ function evaluateJob(input: MonitorInput, job: Job, window: ServingWindow, runs:
     }
     if (verdict.outcome !== "passed" || !run.queueSeed) return verdict;
     const terminal = run.queueRun;
-    if (terminal.version === workerVersion && terminal.state === "active") {
+    if (terminal.version === workerVersion && (terminal.state === "active" ||
+        (!window.active && isTimestamp(terminal.finishedAt) && terminal.finishedAt >= window.until))) {
       return { outcome: "pending", reason: "v9-queue-publication-pending" };
     }
     if (terminal.version !== workerVersion || !isTimestamp(terminal.finishedAt) ||
-        terminal.finishedAt < run.startedAt || terminal.finishedAt > input.nowSec) {
+        terminal.finishedAt < run.startedAt || terminal.finishedAt >= window.until) {
       return { outcome: "pending", reason: "v9-queue-publication-unconfirmed" };
     }
     return terminal.state === "completed" && typeof terminal.generation === "string" && terminal.generation.length > 0
@@ -204,8 +208,10 @@ function evaluateJob(input: MonitorInput, job: Job, window: ServingWindow, runs:
     return { outcome: "skip", reason: "superseded-before-first-slot" };
   }
   const observedUntil = window.active ? input.nowSec : window.until;
-  if (!recovering && verdict.reason !== "v9-queue-publication-pending" &&
-      observedUntil >= activationAtSec + CRON_INTERVALS[job] + GRACE_SEC) {
+  const deadline = verdict.reason === "v9-queue-publication-pending" && first
+    ? first.startedAt + CRON_INTERVALS[job]
+    : activationAtSec + CRON_INTERVALS[job] + GRACE_SEC;
+  if (!recovering && observedUntil >= deadline) {
     return { ...verdict, outcome: "failed" };
   }
   return window.active ? verdict : { outcome: "skip", reason: "superseded-before-confirmation" };
@@ -213,13 +219,18 @@ function evaluateJob(input: MonitorInput, job: Job, window: ServingWindow, runs:
 
 export function evaluatePostDeployFirstExecutions(input: MonitorInput): Verdict {
   const jobs: JobVerdict[] = [];
-  if (!isRecord(input.deployments)) return { status: "unavailable", reason: "deployment-input-unavailable", jobs };
+  if (!isRecord(input.deployments)) return { status: "unavailable", reason: "deployment-input-unavailable", jobs, canCloseIssue: false };
   if (!isTimestamp(input.nowSec) || !Number.isSafeInteger(input.lookbackSec) ||
       input.lookbackSec < minimumLookbackSec) {
-    return { status: "unavailable", reason: "watch-window-unavailable", jobs };
+    return { status: "unavailable", reason: "watch-window-unavailable", jobs, canCloseIssue: false };
   }
   const issue = readOpenIssue(input.openIssue);
-  if (!issue) return { status: "unavailable", reason: "issue-input-unavailable", jobs };
+  if (!issue) return { status: "unavailable", reason: "issue-input-unavailable", jobs, canCloseIssue: false };
+  const publishedGeneration = isRecord(input.publishedStablecoins) && isRecord(input.publishedStablecoins._meta)
+    ? input.publishedStablecoins._meta.updatedAt : null;
+  if (!isTimestamp(publishedGeneration) || publishedGeneration > input.nowSec) {
+    return { status: "unavailable", reason: "publication-input-unavailable", jobs, issue, canCloseIssue: false };
+  }
   const since = input.nowSec - input.lookbackSec;
   for (const [worker, trackedJobs] of workers) {
     const windows = readServingWindows(input.deployments[worker], since, input.nowSec);
@@ -228,9 +239,11 @@ export function evaluatePostDeployFirstExecutions(input: MonitorInput): Verdict 
         outcome: "unavailable", reason: "deployment-input-unavailable" });
       continue;
     }
+    const workerHasIssue = trackedJobs.some((job) => issue.jobs.includes(job));
     const workerJobs: JobVerdict[] = [];
     for (const job of trackedJobs) {
-      const applicable = windows.filter(({ deployment }) => deployment.activationAtSec >= since || issue.jobs.includes(job));
+      const applicable = windows.filter(({ deployment, active }) =>
+        deployment.activationAtSec >= since || (active && workerHasIssue));
       if (!applicable.length) continue;
       const runs = readCronRuns(input.cronRuns, job);
       for (const window of applicable) {
@@ -248,8 +261,11 @@ export function evaluatePostDeployFirstExecutions(input: MonitorInput): Verdict 
     : jobs.some(({ outcome }) => outcome === "failed") ? "failed"
     : jobs.some(({ outcome }) => outcome === "pending") ? "pending"
     : jobs.some(({ outcome }) => outcome === "passed") ? "passed" : "skip";
-  const canCloseIssue = status !== "unavailable" && status !== "failed" && issue.jobs.length > 0 &&
-    issue.jobs.every((job) => jobs.some((entry) => entry.active && entry.job === job && entry.outcome === "passed"));
+  const affectedJobs = workers
+    .filter(([, tracked]) => tracked.some((job) => issue.jobs.includes(job)))
+    .flatMap(([, tracked]) => tracked);
+  const canCloseIssue = status !== "unavailable" && status !== "failed" && affectedJobs.length > 0 &&
+    affectedJobs.every((job) => jobs.some((entry) => entry.active && entry.job === job && entry.outcome === "passed"));
   return { status, jobs, issue, canCloseIssue };
 }
 
@@ -310,7 +326,8 @@ export async function collectPostDeployCloudflareEvidence(directory: string): Pr
         const windows = readServingWindows(history, since, nowSec);
         if (!windows) return [];
         const oldest = windows[windows.length - 1].deployment.activationAtSec;
-        return WORKER_JOBS[worker].filter((job) => oldest >= since || issue?.jobs.includes(job)).map(async (job) => {
+        const workerHasIssue = WORKER_JOBS[worker].some((job) => issue?.jobs.includes(job));
+        return WORKER_JOBS[worker].filter(() => oldest >= since || workerHasIssue).map(async (job) => {
           try {
             const v9 = job === "compute-safety-score-v9";
             const response = await fetchRead(`https://api.cloudflare.com/client/v4/accounts/${account}/d1/database/${id}/query`, {

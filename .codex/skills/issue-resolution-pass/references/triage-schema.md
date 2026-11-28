@@ -58,7 +58,7 @@ Applies to `ops:upstream-wait` issues (and `excluded-blocked` external waits) wh
 
 - **1st unchanged re-check:** comment `Upstream unchanged (strike 1/3): <evidence>` and move `Due:` to `+14d`.
 - **2nd unchanged re-check:** comment `Upstream unchanged (strike 2/3): <evidence>` and move `Due:` to `+30d`.
-- **3rd unchanged re-check (or >30 days idle):** comment `Upstream unchanged (strike 3/3): <evidence>` and escalate to `needs-decision` — codify the blocker as a documented limitation/disposition and close, or park on a quarterly (`+90d`) `ops:upstream-wait` re-check.
+- **3rd unchanged re-check (or >30 days idle):** comment `Upstream unchanged (strike 3/3): <evidence>` and escalate to `needs-decision` — codify the blocker as a documented limitation/disposition and close, or park on a quarterly (`+90d`) `ops:upstream-wait` re-check (subsequent unchanged quarterly checks comment `Upstream unchanged (quarterly check): <evidence>` and advance `+90d` until resolved or retired).
 
 ## Owner Decision Table
 
