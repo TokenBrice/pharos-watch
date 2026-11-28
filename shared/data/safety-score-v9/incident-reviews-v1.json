@@ -21282,14 +21282,14 @@
         "surface:ca5bc5eea72d21aca91da76b",
         "surface:9464a92cefad86127e811ff5",
         "surface:cc67a9d55d30c2b6b74d64c4",
-        "surface:95d0ffd01fc2326f58a5d72b"
+        "surface:8d654cd9e133853917dac31e"
       ],
       "sourcesRefs": [
         "source:899591617bf10a344315415a",
         "source:889b70089cc4d00576e11108",
         "source:1b8e4fa8066e7184305ca408",
         "source:6965e20b31d2cc8e4a4ef2ac",
-        "source:228cbde6b00cec37ef35ef3f"
+        "source:c076c3b22417167da5d7ee56"
       ]
     },
     {
@@ -75314,13 +75314,13 @@
       }
     },
     {
-      "id": "source:228cbde6b00cec37ef35ef3f",
+      "id": "source:c076c3b22417167da5d7ee56",
       "value": {
         "label": "Reviewed BSC role history behind the 2026-11-25 roster (mint-authority profile)",
         "url": "https://bscscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
         "observedAt": "2026-11-25T10:45:26Z",
         "location": "shared/data/stablecoins/domains/mint-authority/idrx-idrx.json BSC controls; complete RoleGranted/RoleRevoked history from deployment block 29948779 through BSC block 135641119 (hash 0x00aa4f88e8f13d8abc7ecade467ea244f499c8a5068d6884bf3259f534931520)",
-        "excerpt": "32 role events since deployment. The in-window changes are issuer-initiated DEFAULT_ADMIN rotations: MINTER_ROLE revoked from counterfactual Safe 0xf80fdf24 at block 131940931 and from Safe 0xfcdd2816 at block 131940992 (2026-11-06), and granted to Safe 1.5.0 proxies 0x74fc44f2 at block 134627818 and 0x691e35e2 at block 134627897 (2026-11-20). They are enumerated as operational role changes, not as compromise or unauthorized-mint incidents."
+        "excerpt": "32 role events since deployment. The four after the 2026-07-30 review (28 events through block 113086546) are issuer-initiated DEFAULT_ADMIN rotations: MINTER_ROLE revoked from counterfactual Safe 0xf80fdf24 at block 131940931 and from Safe 0xfcdd2816 at block 131940992 (2026-11-06), and granted to Safe 1.5.0 proxies 0x74fc44f2 at block 134627818 and 0x691e35e2 at block 134627897 (2026-11-20). They are enumerated as operational role changes, not as compromise or unauthorized-mint incidents."
       }
     }
   ],
@@ -94030,11 +94030,11 @@
       }
     },
     {
-      "id": "surface:95d0ffd01fc2326f58a5d72b",
+      "id": "surface:8d654cd9e133853917dac31e",
       "value": {
         "kind": "explorer-events",
         "url": "https://api-bsc-mainnet-full.n.dwellir.com",
-        "finding": "Pinned BSC reads at BSC block 136126254 (hash 0xcadffc7dea5776189be5832eaf2be8a8ac3dbd8a293df987c33d4a86bd32546b, 2026-11-27T23:25:58Z): paused()=false; role holders match the reviewed controls (MINTER Safes 0x942ca56d, 0x3274da26, 0x74fc44f2, 0x691e35e2; DEFAULT_ADMIN Safe 0xfcdd2816 and EOA 0x5515be1d; UPGRADER timelock 0x58aa9720). Role/upgrade/admin-change scan [135641119,136126254] returned no events; the earlier deployment-to-135641119 history holds only the 2026-11-06 revocations and 2026-11-20 grants, which are issuer role rotations, not incidents (bounded window, not lifetime proof)."
+        "finding": "Pinned BSC reads at BSC block 136126254 (hash 0xcadffc7dea5776189be5832eaf2be8a8ac3dbd8a293df987c33d4a86bd32546b, 2026-11-27T23:25:58Z): paused()=false; role holders match the reviewed controls (MINTER Safes 0x942ca56d, 0x3274da26, 0x74fc44f2, 0x691e35e2; DEFAULT_ADMIN Safe 0xfcdd2816 and EOA 0x5515be1d; UPGRADER timelock 0x58aa9720). Role/upgrade/admin-change scan [135641119,136126254] returned no events. The complete deployment-to-135641119 history holds 32 role events; the four after the 2026-07-30 review (28 events through block 113086546) are the 2026-11-06 MINTER_ROLE revocations and 2026-11-20 grants, issuer role rotations, not incidents (bounded window, not lifetime proof)."
       }
     }
   ]
