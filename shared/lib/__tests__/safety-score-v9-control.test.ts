@@ -48,6 +48,24 @@ const unknownPoolBridge = (controlKey: string, deploymentKey: string, materialSu
     authority: { authorityKey: `bridge-route:${deploymentKey}`, model: "unknown", threshold: null },
     materialSupplyShare, incidentState: "unknown", status: boundedUnknown(statusKey),
   });
+type IssuanceGovernance = NonNullable<V9DeploymentControlFactV2["issuanceGovernance"]>;
+const completeIssuanceGovernance = (
+  governorAuthorityKey: string,
+  details: Pick<IssuanceGovernance, "minUnavoidableDelaySec" | "votingPower" | "nonGovernorUnboundedPathKeys" | "votingControl">,
+): IssuanceGovernance => ({
+  coverage: "complete", incompleteReasons: [], governorAuthorityKey, decisionRule: "affirmative-vote",
+  vetoQuorumBps: null, vetoOverride: null, enumerable: true, diagnostics: [], ...details,
+});
+
+const reviewedSupplyRoute = (
+  deploymentRouteKey: string, supplyShare: number, supplyUsd: number,
+  reviewedRouteKind: V9EconomicControlAssetFacts["supply"]["selectedBridgeRoutes"][number]["reviewedRouteKind"],
+) => ({ deploymentRouteKey, supplyShare, supplyUsd, reviewState: "selected-reviewed" as const, reviewedRouteKind });
+const unmatchedSupplyRoute = (deploymentRouteKey: string, supplyShare: number, supplyUsd: number) =>
+  ({ deploymentRouteKey, supplyShare, supplyUsd, reviewState: "unmatched" as const });
+const unresolvedSupplyRoute = (deploymentRouteKey: string, supplyShare: number, supplyUsd: number) =>
+  ({ deploymentRouteKey, supplyShare, supplyUsd, reviewState: "selected-unresolved" as const });
+
 const reviewedBridge = (routes: V9BridgeControlReview["routes"]): V9BridgeControlReview => ({ status: requiredKnown("bridge"), routes });
 const reasonCodes = (r: ReturnType<typeof evaluate>) => r.reasons.map((x) => x.code);
 const comp = (r: ReturnType<typeof evaluate>, kind: string) => r.components.find((c) => c.kind === kind);
@@ -72,8 +90,8 @@ function nullShareDeploymentScenario(scenario: NullShareDeploymentScenario) {
   const nullShareBridge = depBridge(controlKey, { deploymentKey, materialSupplyShare: null, status });
   const reviewedShare = gapShare === null ? null : 1 - gapShare;
   const selectedBridgeRoutes = reviewedShare === null ? [] : [
-    { deploymentRouteKey: "ethereum:0xcanonical", supplyUsd: reviewedShare * 100, supplyShare: reviewedShare, reviewState: "selected-reviewed" as const, reviewedRouteKind: "native" as const },
-    ...(includeGapRow ? [{ deploymentRouteKey: deploymentKey, supplyUsd: (gapShare ?? 0) * 100, supplyShare: gapShare ?? 0, reviewState: "unmatched" as const }] : []),
+    reviewedSupplyRoute("ethereum:0xcanonical", reviewedShare, reviewedShare * 100, "native" as const),
+    ...(includeGapRow ? [unmatchedSupplyRoute(deploymentKey, gapShare ?? 0, (gapShare ?? 0) * 100)] : []),
   ];
   return {
     nullShareBridge,
@@ -81,7 +99,7 @@ function nullShareDeploymentScenario(scenario: NullShareDeploymentScenario) {
       facts: {
         ...facts([nullShareBridge]), controlStatus: requiredKnown("controls"),
         supply: makeSupplyPartition({
-          status: requiredKnown("supply"), routes: selectedBridgeRoutes,
+          routes: selectedBridgeRoutes,
           selectedRouteSupplyShare: reviewedShare, unknownRouteSupplyShare: gapShare, unreviewedRouteSupplyShare: gapShare === null ? null : 0,
         }),
       },
@@ -115,11 +133,10 @@ function chainLabelPoolResult(assetId: string, poolShare: number | null, { withP
     facts: {
       ...facts(controls), assetId,
       supply: makeSupplyPartition({
-        status: requiredKnown("supply"),
         routes: [
-          { deploymentRouteKey: reviewedControl.deploymentKey, supplyUsd: reviewedShare * 100, supplyShare: reviewedShare, reviewState: "selected-reviewed", reviewedRouteKind: "controlled" },
-          ...(poolShare !== null ? [{ deploymentRouteKey: poolKey, supplyUsd: poolShare * 100, supplyShare: poolShare, reviewState: "unmatched" as const }] : []),
-          ...namedUnmatched.map((r) => ({ deploymentRouteKey: r.key, supplyUsd: r.share * 100, supplyShare: r.share, reviewState: "unmatched" as const })),
+          reviewedSupplyRoute(reviewedControl.deploymentKey, reviewedShare, reviewedShare * 100, "controlled"),
+          ...(poolShare !== null ? [unmatchedSupplyRoute(poolKey, poolShare, poolShare * 100)] : []),
+          ...namedUnmatched.map((r) => unmatchedSupplyRoute(r.key, r.share, r.share * 100)),
         ],
         selectedRouteSupplyShare: reviewedShare, unknownRouteSupplyShare: (poolShare ?? 0) + namedShare, unreviewedRouteSupplyShare: 0,
       }),
@@ -144,8 +161,8 @@ describe("Safety Score v9 economic control", () => {
       facts: {
         ...facts([mintControl, control("custody:a", "custody"), ...bridges]),
         supply: makeSupplyPartition({
-          status: requiredKnown("supply"), selectedRouteSupplyShare: 1, unknownRouteSupplyShare: 0, unreviewedRouteSupplyShare: 0,
-          routes: bridges.map((item) => ({ deploymentRouteKey: item.deploymentKey, supplyUsd: 50, supplyShare: 0.5, reviewState: "selected-reviewed", reviewedRouteKind: "controlled" })),
+          selectedRouteSupplyShare: 1, unknownRouteSupplyShare: 0, unreviewedRouteSupplyShare: 0,
+          routes: bridges.map((item) => reviewedSupplyRoute(item.deploymentKey, 0.5, 50, "controlled")),
         }),
       },
       mint: boundedMint(mintControl.controlKey),
@@ -396,8 +413,7 @@ describe("Safety Score v9 economic control", () => {
         facts: {
           ...facts([missing]), controlStatus: requiredKnown("controls"),
           supply: makeSupplyPartition({
-            status: requiredKnown("supply"),
-            routes: [{ deploymentRouteKey: "ethereum:native", supplyUsd: rowShare * 100, supplyShare: rowShare, reviewState: "selected-reviewed", reviewedRouteKind: "native" }],
+            routes: [reviewedSupplyRoute("ethereum:native", rowShare, rowShare * 100, "native")],
             selectedRouteSupplyShare: aggregateShare, unknownRouteSupplyShare: 0, unreviewedRouteSupplyShare: 0,
           }),
         },
@@ -410,10 +426,9 @@ describe("Safety Score v9 economic control", () => {
       facts: {
         ...facts([split]), controlStatus: requiredKnown("controls"),
         supply: makeSupplyPartition({
-          status: requiredKnown("supply"),
           routes: [
-            { deploymentRouteKey: "ethereum:native", supplyUsd: 90, supplyShare: 0.9, reviewState: "selected-reviewed", reviewedRouteKind: "native" },
-            ...[0.04, 0.06].map((supplyShare) => ({ deploymentRouteKey: split.deploymentKey, supplyUsd: supplyShare * 100, supplyShare, reviewState: "unmatched" as const })),
+            reviewedSupplyRoute("ethereum:native", 0.9, 90, "native"),
+            ...[0.04, 0.06].map((supplyShare) => unmatchedSupplyRoute(split.deploymentKey, supplyShare, supplyShare * 100)),
           ],
           selectedRouteSupplyShare: 0.9, unknownRouteSupplyShare: 0.1, unreviewedRouteSupplyShare: 0,
         }),
@@ -429,10 +444,9 @@ describe("Safety Score v9 economic control", () => {
     const economicFacts: V9EconomicControlAssetFacts = {
       ...facts([first]),
       supply: makeSupplyPartition({
-        status: requiredKnown("supply"),
         routes: [
-          { deploymentRouteKey: first.deploymentKey, supplyUsd: 95, supplyShare: 0.95, reviewState: "selected-reviewed", reviewedRouteKind: "controlled" },
-          { deploymentRouteKey: "unmatched-chain:fixture:arbitrum", supplyUsd: 5, supplyShare: 0.05, reviewState: "unmatched" },
+          reviewedSupplyRoute(first.deploymentKey, 0.95, 95, "controlled"),
+          unmatchedSupplyRoute("unmatched-chain:fixture:arbitrum", 0.05, 5),
         ],
         selectedRouteSupplyShare: 0.95, unknownRouteSupplyShare: 0.05, unreviewedRouteSupplyShare: 0,
       }),
@@ -497,8 +511,8 @@ describe("Safety Score v9 economic control", () => {
           supply: makeSupplyPartition({
             status: supplyStatus,
             routes: [
-              { deploymentRouteKey: "ethereum:native", supplyUsd: 100 * (1 - share), supplyShare: 1 - share, reviewState: "selected-reviewed", reviewedRouteKind: "native" },
-              { deploymentRouteKey: b.deploymentKey, supplyUsd: 100 * share, supplyShare: share, reviewState: "selected-unresolved" },
+              reviewedSupplyRoute("ethereum:native", 1 - share, 100 * (1 - share), "native"),
+              unresolvedSupplyRoute(b.deploymentKey, share, 100 * share),
             ],
             selectedRouteSupplyShare: 1 - share, unreviewedRouteSupplyShare: share,
           }),
@@ -540,11 +554,10 @@ describe("Safety Score v9 economic control", () => {
       facts: {
         ...facts([namedControl]),
         supply: makeSupplyPartition({
-          status: requiredKnown("supply"),
           routes: [
-            { deploymentRouteKey: "ethereum:native", supplyUsd: 94, supplyShare: 0.94, reviewState: "selected-reviewed", reviewedRouteKind: "native" },
-            { deploymentRouteKey: "unmatched-chain-label-pool:fixture-asset", supplyUsd: 4, supplyShare: 0.04, reviewState: "unmatched" },
-            { deploymentRouteKey: "unmatched-chain:fixture-asset:bsc", supplyUsd: 2, supplyShare: 0.02, reviewState: "unmatched" },
+            reviewedSupplyRoute("ethereum:native", 0.94, 94, "native"),
+            unmatchedSupplyRoute("unmatched-chain-label-pool:fixture-asset", 0.04, 4),
+            unmatchedSupplyRoute("unmatched-chain:fixture-asset:bsc", 0.02, 2),
           ],
           selectedRouteSupplyShare: 0.94, unknownRouteSupplyShare: 0.06, unreviewedRouteSupplyShare: 0,
         }),
@@ -563,10 +576,9 @@ describe("Safety Score v9 economic control", () => {
       const economicFacts: V9EconomicControlAssetFacts = {
         ...facts([ctrl]),
         supply: makeSupplyPartition({
-          status: requiredKnown("supply"),
           routes: [
-            { deploymentRouteKey: supplyDeployment, supplyUsd: 100 * (1 - residue), supplyShare: 1 - residue, reviewState: "selected-reviewed", reviewedRouteKind },
-            { deploymentRouteKey: "unmatched-chain:fixture-asset:arbitrum", supplyUsd: 100 * residue, supplyShare: residue, reviewState: "unmatched" },
+            reviewedSupplyRoute(supplyDeployment, 1 - residue, 100 * (1 - residue), reviewedRouteKind),
+            unmatchedSupplyRoute("unmatched-chain:fixture-asset:arbitrum", residue, 100 * residue),
           ],
           selectedRouteSupplyShare: 1 - residue, unknownRouteSupplyShare: residue, unreviewedRouteSupplyShare: 0,
         }),
@@ -585,7 +597,7 @@ describe("Safety Score v9 economic control", () => {
 
   it("fails closed when reviewed bridge inventory has no route joins or omits reviewedRouteKind", () => {
     const noJoins = evaluate({
-      facts: { ...facts(), supply: makeSupplyPartition({ status: requiredKnown("supply"), routes: [{ deploymentRouteKey: "ethereum:reviewed", supplyUsd: 100, supplyShare: 1, reviewState: "selected-reviewed" }] }) },
+      facts: { ...facts(), supply: makeSupplyPartition({ routes: [{ deploymentRouteKey: "ethereum:reviewed", supplyUsd: 100, supplyShare: 1, reviewState: "selected-reviewed" }] }) },
       bridge: reviewedBridge([]),
     });
     const unresolvedBridge = depBridge("bridge:retained-unresolved", { status: boundedUnknown("control.retained-unresolved"), materialSupplyShare: 0.09 });
@@ -593,10 +605,9 @@ describe("Safety Score v9 economic control", () => {
       facts: {
         ...facts([unresolvedBridge]),
         supply: makeSupplyPartition({
-          status: requiredKnown("supply"),
           routes: [
             { deploymentRouteKey: "ethereum:retained-reviewed", supplyUsd: 91, supplyShare: 0.91, reviewState: "selected-reviewed" },
-            { deploymentRouteKey: unresolvedBridge.deploymentKey, supplyUsd: 9, supplyShare: 0.09, reviewState: "selected-unresolved" },
+            unresolvedSupplyRoute(unresolvedBridge.deploymentKey, 0.09, 9),
           ],
           selectedRouteSupplyShare: 0.91, unreviewedRouteSupplyShare: 0.09,
         }),
@@ -736,12 +747,12 @@ describe("independent authority proofs and incident recovery", () => {
     expect(gradeEconomicControlAuthority({ ...row, executionScopeComplete: false }, mint, SEMANTIC_POLICY)).toBe(65);
     const governor = {
       ...row, authority: { authorityKey: SCOPE_CONTROLLER, model: "governance" as const, threshold: null },
-      issuanceGovernance: {
-        coverage: "complete" as const, incompleteReasons: [], governorAuthorityKey: SCOPE_CONTROLLER,
-        decisionRule: "affirmative-vote" as const, minUnavoidableDelaySec: 172800, votingPower: "past-block-checkpoint" as const,
-        vetoQuorumBps: null, vetoOverride: null, enumerable: true, nonGovernorUnboundedPathKeys: [],
-        votingControl: makeCompiledVotingControl(), diagnostics: [],
-      },
+      issuanceGovernance: completeIssuanceGovernance(SCOPE_CONTROLLER, {
+        minUnavoidableDelaySec: 172800,
+        votingPower: "past-block-checkpoint" as const,
+        nonGovernorUnboundedPathKeys: [],
+        votingControl: makeCompiledVotingControl(),
+      }),
     };
     expect(gradeEconomicControlAuthority(governor, mint, SEMANTIC_POLICY)).toBe(75);
     expect(gradeEconomicControlAuthority({ ...governor, issuanceGovernance: { ...governor.issuanceGovernance, minUnavoidableDelaySec: 0 } }, mint, SEMANTIC_POLICY)).toBe(65);
@@ -799,11 +810,12 @@ describe("owner Control rules", () => {
     const setter = control("mint:savings-rate", "mint", {
       authority: { authorityKey: ref, model: "contract", threshold: null },
       capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
-      issuanceGovernance: {
-        coverage: "complete", incompleteReasons: [], governorAuthorityKey: ref, decisionRule: "affirmative-vote",
-        minUnavoidableDelaySec: 172800, votingPower: "past-block-checkpoint", vetoQuorumBps: null, vetoOverride: null,
-        enumerable: true, nonGovernorUnboundedPathKeys: [], votingControl: makeCompiledVotingControl(), diagnostics: [],
-      },
+      issuanceGovernance: completeIssuanceGovernance(ref, {
+        minUnavoidableDelaySec: 172800,
+        votingPower: "past-block-checkpoint",
+        nonGovernorUnboundedPathKeys: [],
+        votingControl: makeCompiledVotingControl(),
+      }),
     });
     const mint = makeReviewedMintInput(setter.controlKey);
     const oracle = { status: requiredKnown("savings-rate"), tier: "privileged-internal-pricing" as const, pricingKind: "savings-rate" as const, liquidationBranchesApplicable: false, branches: [] };
@@ -915,11 +927,12 @@ describe("owner H bounded-stock closure", () => {
     const minter = control("mint:bounded-delegation", "mint", {
       authority: { authorityKey: ref, model: "governance", threshold: null },
       capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded", issuanceProcess: process,
-      issuanceGovernance: {
-        coverage: "complete", incompleteReasons: [], governorAuthorityKey: ref, decisionRule: "affirmative-vote",
-        minUnavoidableDelaySec: 0, votingPower: "lock-escrowed", vetoQuorumBps: null, vetoOverride: null, enumerable: true,
-        nonGovernorUnboundedPathKeys: ["operational#interest"], votingControl: makeCompiledVotingControl({ largestSingleControllerShareBps: 10000 }), diagnostics: [],
-      },
+      issuanceGovernance: completeIssuanceGovernance(ref, {
+        minUnavoidableDelaySec: 0,
+        votingPower: "lock-escrowed",
+        nonGovernorUnboundedPathKeys: ["operational#interest"],
+        votingControl: makeCompiledVotingControl({ largestSingleControllerShareBps: 10000 }),
+      }),
     });
     const mint = makeReviewedMintInput(minter.controlKey, { reconciliation: "none", supervision: "none" });
     const positive = evaluate({ facts: facts([minter]), mint });

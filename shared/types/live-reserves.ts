@@ -120,7 +120,9 @@ export const ReserveSyncAdapterReliabilitySchema = /* @__PURE__ */ (() => z.obje
 }))();
 export type ReserveSyncAdapterReliability = z.infer<typeof ReserveSyncAdapterReliabilitySchema>;
 
-export const ReserveFeedReviewSchema = /* @__PURE__ */ (() => z.object({
+export const OperationalReviewDurabilitySchema = /* @__PURE__ */ z.enum(["standard", "structural"]);
+
+const ReserveFeedAcknowledgementSchema = /* @__PURE__ */ (() => z.object({
   stablecoinId: z.string().min(1),
   adapterKey: z.enum(LIVE_RESERVE_ADAPTER_KEYS),
   failureCategory: z.enum([
@@ -152,6 +154,10 @@ export const ReserveFeedReviewSchema = /* @__PURE__ */ (() => z.object({
       && review.errorClass == null && review.sourceTimestamp == null)) {
     ctx.addIssue({ code: "custom", message: "Review must name one compatible failure or snapshot finding" });
   }
+}))();
+
+export const ReserveFeedReviewSchema = /* @__PURE__ */ (() => ReserveFeedAcknowledgementSchema.safeExtend({
+  durability: OperationalReviewDurabilitySchema.optional(),
 }))();
 export type ReserveFeedReview = z.output<typeof ReserveFeedReviewSchema>;
 
@@ -227,7 +233,7 @@ export const ReserveCompositionOverviewSchema = /* @__PURE__ */ (() => z.object(
   healthAuthoritativeFreshCoins: z.number().optional(),
   healthDegradedCoins: z.number().int().nonnegative().optional(),
   acknowledgedFeedIds: z.array(z.string()).optional(),
-  acknowledgedFeeds: z.array(ReserveFeedReviewSchema).optional(),
+  acknowledgedFeeds: z.array(ReserveFeedAcknowledgementSchema).optional(),
   expiredFeedReviewIds: z.array(z.string()).optional(),
   invalidFeedReviewIds: z.array(z.string()).optional(),
   unacknowledgedPersistentlyStaleIndependentCoins: z.array(z.object({
@@ -501,7 +507,7 @@ export const ReserveSyncStateViewSchema = /* @__PURE__ */ (() => z
     uncertainWrite: z.boolean().optional(),
     /** Budgets, clock, and generation behind `stale`; absent only from producers predating ADR-30 publication. */
     freshness: ReserveFreshnessViewSchema.optional(),
-    acknowledgedFeed: ReserveFeedReviewSchema.optional(),
+    acknowledgedFeed: ReserveFeedAcknowledgementSchema.optional(),
   })
   .strict())();
 export type ReserveSyncStateView = z.output<typeof ReserveSyncStateViewSchema>;

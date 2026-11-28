@@ -502,6 +502,9 @@ export const STATUS_RESERVE_COMPOSITION_THRESHOLDS = {
 
 /** Reviews suppress only matched operational health gates, never evidence admission. */
 export const RESERVE_FEED_REVIEW_MAX_AGE_SEC = 14 * 24 * 3600;
+const STRUCTURAL_REVIEW_MAX_AGE_SEC = 60 * 24 * 3600;
+export const RESERVE_FEED_STRUCTURAL_REVIEW_MAX_AGE_SEC = STRUCTURAL_REVIEW_MAX_AGE_SEC;
+export const DEPEG_BLIND_EVENT_STRUCTURAL_REVIEW_MAX_AGE_SEC = STRUCTURAL_REVIEW_MAX_AGE_SEC;
 
 // --- Reserve adapter alert thresholds ---
 /**

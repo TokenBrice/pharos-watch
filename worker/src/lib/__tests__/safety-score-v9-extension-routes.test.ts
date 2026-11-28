@@ -836,8 +836,11 @@ describe("buildDexRouteReview model-confidence derivation", () => {
   }
   const dRevs = (obs: RouteObs[]) => { const f = stub(undefined); setDex(f, { [USDC]: { exitRouteObservations: obs } }); return routeRevs(f, USDC); };
 
-  it("bounds a single measured cycle at medium model confidence", () => {
-    expect(dRevs([dObs("measured-executable-depth")])[0]).toMatchObject({ lane: "dex", executionCertainty: "bounded", modelConfidence: "medium" });
+  it.each([
+    ["bounds a single measured cycle at medium model confidence", false, "medium"],
+    ["grades repeated measured executable depth as high model confidence", true, "high"],
+  ] as const)("%s", (_title, mature, modelConfidence) => {
+    expect(dRevs([dObs("measured-executable-depth", mature)])[0]).toMatchObject({ lane: "dex", executionCertainty: "bounded", modelConfidence });
   });
 
   it("uses realized measured cost and preserves the legacy request-bound fallback", () => {
@@ -846,10 +849,6 @@ describe("buildDexRouteReview model-confidence derivation", () => {
     expect(dRevs([o])[0]?.executionCosts).toEqual([{ requestedNotionalUsd: 1e6, maxCostBps: 50, executionCostBps: 37 }]);
     delete o.capacityCurve[0]!.executionCostBps;
     expect(dRevs([o])[0]?.executionCosts).toEqual([{ requestedNotionalUsd: 1e6, maxCostBps: 50, executionCostBps: 50 }]);
-  });
-
-  it("grades repeated measured executable depth as high model confidence", () => {
-    expect(dRevs([dObs("measured-executable-depth", true)])[0]).toMatchObject({ lane: "dex", executionCertainty: "bounded", modelConfidence: "high" });
   });
 
   it("uses the uniform three-hour measured-adapter confidence window", () => {
@@ -931,6 +930,7 @@ describe("explicit holder restrictions remain separate from route evidence", () 
 
 describe("captured local-fiat output and cost references", () => {
   const ref = { valueUsd: 1.25, source: "fx", contributorCount: 0, asOf: NOW - 60 };
+  const capturedJpy = () => redFx({ rowOverrides: { stablecoinId: USDC }, output: { kind: "unresolved-asset", assetKeys: ["fiat:JPY"] }, pegDataById: { captured: { pegCurrency: "JPY", pegReference: ref } } });
 
   it.each(["CHF"])("values %s fiat with the captured currency reference, not USD par", (currency) => {
     const { fixedInput: f } = redFx({ rowOverrides: { stablecoinId: USDC }, output: { kind: "fiat", currency }, pegDataById: { captured: { pegCurrency: currency, pegReference: ref } } });
@@ -966,7 +966,7 @@ describe("captured local-fiat output and cost references", () => {
 
   it.each(["issuer-redemption", "eventual-redemption"] as const)("values an explicit single external fiat identity on a %s issuer route", (rf) => {
     withCfg(USDC, { unresolvedOutputAssetKeys: ["fiat:JPY"] }, () => {
-      const { fixedInput: f, row } = redFx({ rowOverrides: { stablecoinId: USDC }, output: { kind: "unresolved-asset", assetKeys: ["fiat:JPY"] }, pegDataById: { captured: { pegCurrency: "JPY", pegReference: ref } } });
+      const { fixedInput: f, row } = capturedJpy();
       row.capacityProfile!.exitRouteObservations![0]!.routeFamily = rf;
       expect(rev0(f, USDC).output).toMatchObject({ kind: "fiat", assetKeys: ["fiat:JPY"], valuation: { unitValueUsd: 1.25 } });
     });
@@ -974,7 +974,7 @@ describe("captured local-fiat output and cost references", () => {
 
   it("keeps delayed protocol fiat identities and ambiguous issuer outputs unresolved", () => {
     withCfg(USDC, { unresolvedOutputAssetKeys: ["fiat:JPY", "fiat:CHF"] }, () => {
-      const { fixedInput: f, row } = redFx({ rowOverrides: { stablecoinId: USDC }, output: { kind: "unresolved-asset", assetKeys: ["fiat:JPY"] }, pegDataById: { captured: { pegCurrency: "JPY", pegReference: ref } } });
+      const { fixedInput: f, row } = capturedJpy();
       const obs = row.capacityProfile!.exitRouteObservations![0]!;
       obs.routeFamily = "eventual-redemption"; obs.scope = { kind: "protocol", protocol: "synthetic-vault" };
       expect(rev0(f, USDC).output).toBeNull();

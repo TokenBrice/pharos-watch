@@ -8,7 +8,8 @@ import {
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_HISTORICAL_IDS } from "@shared/lib/psi-eligible";
 import { ACTIVE_IDS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
-import { STATUS_DEPEG_DETECTION_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { DEPEG_BLIND_EVENT_STRUCTURAL_REVIEW_MAX_AGE_SEC, STATUS_DEPEG_DETECTION_THRESHOLDS } from "@shared/lib/status-thresholds";
+import { OperationalReviewDurabilitySchema } from "@shared/types/live-reserves";
 import { getReferenceMarket, getReferenceMarketClosureStart, isMetalMarketClosed, type ReferenceMarket } from "@shared/lib/reference-market-hours";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { z } from "zod";
@@ -427,11 +428,14 @@ export const DepegBlindEventReviewSchema = z.object({
   stablecoinId: z.string().refine((id) => ACTIVE_IDS.has(id)),
   owner: z.literal("ops"),
   reason: z.string().trim().min(1),
+  durability: OperationalReviewDurabilitySchema.optional(),
   sources: z.array(z.string().url().startsWith("https://")).min(1),
   reviewedAt: reviewClockSchema,
   expiresAt: reviewClockSchema,
 }).refine((review) => review.expiresAt > review.reviewedAt
-  && review.expiresAt - review.reviewedAt <= DEPEG_BLIND_EVENT_REVIEW_MAX_AGE_SEC);
+  && review.expiresAt - review.reviewedAt <= (review.durability === "structural"
+    ? DEPEG_BLIND_EVENT_STRUCTURAL_REVIEW_MAX_AGE_SEC
+    : DEPEG_BLIND_EVENT_REVIEW_MAX_AGE_SEC));
 
 /** O2: acknowledge only operator blind-coverage findings, never depeg evidence or lifecycle. */
 export const DEPEG_BLIND_EVENT_REVIEWS: readonly z.infer<typeof DepegBlindEventReviewSchema>[] = [

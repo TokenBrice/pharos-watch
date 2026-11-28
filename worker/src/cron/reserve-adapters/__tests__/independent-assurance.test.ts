@@ -70,6 +70,8 @@ function htmlConfig(config: LiveReservesConfig, url: string) {
   return { ...config, inputs: { primary: { kind: "http-html" as const, url } } };
 }
 
+const assuranceLine = (code: string, label: string, amount: string) => ({ code, label, amount });
+
 function manifest(overrides: Partial<IndependentAssuranceManifest> = {}): IndependentAssuranceManifest {
   return {
     schemaVersion: 1,
@@ -87,8 +89,8 @@ function manifest(overrides: Partial<IndependentAssuranceManifest> = {}): Indepe
     conclusion: "nothing-came-to-attention",
     assuranceTier: "independent-assurance",
     unit: "AUD",
-    assets: [{ code: "cash", label: "Cash", amount: "101.00" }],
-    liabilities: [{ code: "supply", label: "Supply", amount: "100.00" }],
+    assets: [assuranceLine("cash", "Cash", "101.00")],
+    liabilities: [assuranceLine("supply", "Supply", "100.00")],
     reportedAssetTotal: "101.00",
     computedAssetTotal: "101.00",
     reportedLiabilityTotal: "100.00",
@@ -183,6 +185,10 @@ const FIDD_OCTOBER_VIEWER_URL = "https://fwc.widen.net/s/nextreport/fidelity-dig
 const FIDD_VIEWER_HTML = '<html><head><title>Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---September-2026.pdf</title></head><body><a id="download" href="/content/azzc1igqzr/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---September-2026.pdf?u=5lvvtn&amp;download=true">Download</a></body></html>';
 const FIDD_OCTOBER_VIEWER_HTML = FIDD_VIEWER_HTML.replaceAll("September-2026", "October-2026");
 
+const assuranceIndexCase = <A extends string, C extends string, P extends IndependentAssuranceProduct>(
+  adapter: A, coinId: C, product: P, html: string, newerLink: string,
+) => ({ adapter, coinId, product, html, newerHtml: html + newerLink });
+
 function assuranceFenceCases() {
   const ausd = getIndependentAssuranceManifest("AUSD");
   const agoraReviewed =
@@ -198,22 +204,8 @@ function assuranceFenceCases() {
       html: `<a href="${agoraReviewed}">September</a>`,
       newerHtml: `<a href="${agoraReviewed}">September</a><a href="https://files.buildwithfern.com/agora.docs.buildwithfern.com/new/docs/assets/2026%20Oct%20-%20Agora%20Dollar%20Reserve%20Report.pdf">October</a>`,
     },
-    {
-      adapter: "anchorage-independent-assurance",
-      coinId: "usat-tether",
-      product: "USAT",
-      html: indexFixture("anchorage-independent-assurance.html"),
-      newerHtml: indexFixture("anchorage-independent-assurance.html") +
-        '<a href="https://learn.anchorage.com/10.31.26_USAT-Stablecoin-Attestation-Report.pdf">Oct</a>',
-    },
-    {
-      adapter: "anchorage-independent-assurance",
-      coinId: "usdpt-western-union",
-      product: "USDPT",
-      html: indexFixture("usdpt-independent-assurance.html"),
-      newerHtml: indexFixture("usdpt-independent-assurance.html") +
-        '<a href="https://learn.anchorage.com/10.31.26_USDPT_Stablecoin_Attestation_Report.pdf">Oct</a>',
-    },
+    assuranceIndexCase("anchorage-independent-assurance", "usat-tether", "USAT", indexFixture("anchorage-independent-assurance.html"), '<a href="https://learn.anchorage.com/10.31.26_USAT-Stablecoin-Attestation-Report.pdf">Oct</a>'),
+    assuranceIndexCase("anchorage-independent-assurance", "usdpt-western-union", "USDPT", indexFixture("usdpt-independent-assurance.html"), '<a href="https://learn.anchorage.com/10.31.26_USDPT_Stablecoin_Attestation_Report.pdf">Oct</a>'),
     ...[
       ["/wp-content/uploads/2026/11/202610_AUDC-Agreed-upon-procedures-report-Oct26_.pdf",
         "/wp-content/uploads/2026/12/AUDC-Agreed-upon-procedures-report-Nov26_.pdf"],
@@ -227,38 +219,10 @@ function assuranceFenceCases() {
         reportUrl: featured ? undefined : reportUrl, html, newerHtml: html + `<a href="${auddHost}${nov}">November 2026</a>`,
       } as const;
     }),
-    {
-      adapter: "cadd-independent-assurance",
-      coinId: "cadd-cad-digital",
-      product: "CADD",
-      html: indexFixture("cadd-independent-assurance.html"),
-      newerHtml: indexFixture("cadd-independent-assurance.html") +
-        '<a href="https://drive.google.com/file/d/1OctFailsClosedPlaceholderID/view?usp=sharing">October 2026 attestation</a>',
-    },
-    {
-      adapter: "fdusd-independent-assurance",
-      coinId: "fdusd-first-digital",
-      product: "FDUSD",
-      html: indexFixture("fdusd-independent-assurance.html"),
-      newerHtml: indexFixture("fdusd-independent-assurance.html") +
-        '<div role="listitem" class="transparency-report_item w-dyn-item"><div>Nov 2026</div><a href="https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/cafe_Attestation%20Report%20on%20Reserves%20Account%20Nov.pdf">Download</a></div>',
-    },
-    {
-      adapter: "rlusd-independent-assurance",
-      coinId: "rlusd-ripple",
-      product: "RLUSD",
-      html: indexFixture("rlusd-independent-assurance.html"),
-      newerHtml: indexFixture("rlusd-independent-assurance.html") +
-        '<a href="https://ripple.com/RLUSD_Reserve_Report_October_2026.pdf">October</a>',
-    },
-    {
-      adapter: "sbc-independent-assurance",
-      coinId: "sbc-brale",
-      product: "SBC",
-      html: `<a href="${getIndependentAssuranceManifest("SBC").reportUrl}">September</a>`,
-      newerHtml: `<a href="${getIndependentAssuranceManifest("SBC").reportUrl}">September</a>` +
-        '<a href="https://brale.xyz/SBC-Stable-Coin-Reserve-Attestation-Report-10-2026.pdf">October</a>',
-    },
+    assuranceIndexCase("cadd-independent-assurance", "cadd-cad-digital", "CADD", indexFixture("cadd-independent-assurance.html"), '<a href="https://drive.google.com/file/d/1OctFailsClosedPlaceholderID/view?usp=sharing">October 2026 attestation</a>'),
+    assuranceIndexCase("fdusd-independent-assurance", "fdusd-first-digital", "FDUSD", indexFixture("fdusd-independent-assurance.html"), '<div role="listitem" class="transparency-report_item w-dyn-item"><div>Nov 2026</div><a href="https://cdn.prod.website-files.com/675ab99bf1f7ea944d49a55b/cafe_Attestation%20Report%20on%20Reserves%20Account%20Nov.pdf">Download</a></div>'),
+    assuranceIndexCase("rlusd-independent-assurance", "rlusd-ripple", "RLUSD", indexFixture("rlusd-independent-assurance.html"), '<a href="https://ripple.com/RLUSD_Reserve_Report_October_2026.pdf">October</a>'),
+    assuranceIndexCase("sbc-independent-assurance", "sbc-brale", "SBC", `<a href="${getIndependentAssuranceManifest("SBC").reportUrl}">September</a>`, '<a href="https://brale.xyz/SBC-Stable-Coin-Reserve-Attestation-Report-10-2026.pdf">October</a>'),
     {
       adapter: "fidd-independent-assurance",
       coinId: "fidd-fidelity",
@@ -461,7 +425,7 @@ describe("independent-assurance manifest framework", () => {
 
   it.each(["200", "0", "-1"])("publishes reported liability %s with degraded evidence", async (liability) => {
     const reviewed = manifest({
-      liabilities: [{ code: "supply", label: "Supply", amount: liability }],
+      liabilities: [assuranceLine("supply", "Supply", liability)],
       reportedLiabilityTotal: liability,
     });
     vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(reviewed);
@@ -676,10 +640,10 @@ describe("independent-assurance manifest framework", () => {
       reportDate: "2026-06-30",
       reportAsOf: "2026-06-30T08:00:00Z",
       assets: [
-        { code: "cash", label: "Cash", amount: "2300280.35" },
-        { code: "cash-equivalents", label: "Cash equivalents", amount: "4899995.78" },
+        assuranceLine("cash", "Cash", "2300280.35"),
+        assuranceLine("cash-equivalents", "Cash equivalents", "4899995.78"),
       ],
-      liabilities: [{ code: "circulation", label: "Circulation", amount: "6840292.27" }],
+      liabilities: [assuranceLine("circulation", "Circulation", "6840292.27")],
       reportedAssetTotal: "7200276.54",
       computedAssetTotal: "7200276.13",
       reportedLiabilityTotal: "6840292.27",
@@ -695,7 +659,7 @@ describe("independent-assurance manifest framework", () => {
 
   it("rejects a zero reported asset total before computing a relative difference", () => {
     const zeroAssets = manifest({
-      assets: [{ code: "cash", label: "Cash", amount: "0" }],
+      assets: [assuranceLine("cash", "Cash", "0")],
       computedAssetTotal: "0",
       reportedAssetTotal: "0",
     });
@@ -711,8 +675,8 @@ describe("independent-assurance manifest framework", () => {
       reportedAssetTotal: "7200276.54",
       computedAssetTotal: "7200276.13",
       assets: [
-        { code: "cash", label: "Cash", amount: "2300280.35" },
-        { code: "cash-equivalents", label: "Cash equivalents", amount: "4899995.78" },
+        assuranceLine("cash", "Cash", "2300280.35"),
+        assuranceLine("cash-equivalents", "Cash equivalents", "4899995.78"),
       ],
     });
 
@@ -890,8 +854,9 @@ describe("assurance adapter descriptor provenance", () => {
 const agoraManifest = getIndependentAssuranceManifest("AUSD");
 const agoraProfile = AGORA_INDEPENDENT_ASSURANCE_PROFILE;
 // Agora returns prepared HTML only; it reports no out-of-band newer entry.
-const prepareAgora = async (...args: Parameters<NonNullable<typeof agoraProfile.prepareIndexHtml>>) =>
-  (await agoraProfile.prepareIndexHtml!(...args)) as string;
+const prepareAgora = async (html: string) =>
+  (await agoraProfile.prepareIndexHtml!(html, new AbortController().signal)) as string;
+const agoraSignedReport = agoraManifest.reportUrl.replace("files.buildwithfern.com", "fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com") + "?X-Amz-Signature=abcd";
 const agoraFixture = "agora-transparency-2026-09-30-august.html";
 const agoraFern = `/_fern-files${new URL(agoraManifest.reportUrl).pathname}`;
 const agoraAnchor = (href: string) => `<a href="${href}">2026 Sep - Agora Dollar Reserve Report</a>`;
@@ -914,10 +879,9 @@ describe("Agora reviewed September examination", () => {
   });
 
   it("rewrites the signed reviewed report while keeping older transport links", async () => {
-    const signed = agoraManifest.reportUrl.replace("files.buildwithfern.com", "fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com") + "?X-Amz-Signature=abcd";
     const august = "https://fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf?X-Amz-Signature=efgh";
     const may = "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf";
-    const prepared = await prepareAgora([signed, august, may].map(href => `<a href="${href}">report</a>`).join("\n"), new AbortController().signal);
+    const prepared = await prepareAgora([agoraSignedReport, august, may].map(href => `<a href="${href}">report</a>`).join("\n"));
     expect(collectPdfAnchors(prepared)).toEqual([
       { href: agoraManifest.reportUrl, text: "report" },
       { href: august, text: "report" },
@@ -926,22 +890,21 @@ describe("Agora reviewed September examination", () => {
   });
 
   it("accepts a single already-stable reviewed link", async () => {
-    const prepared = await prepareAgora(agoraAnchor(agoraManifest.reportUrl), new AbortController().signal);
+    const prepared = await prepareAgora(agoraAnchor(agoraManifest.reportUrl));
     expect(collectPdfAnchors(prepared)).toEqual([{ href: agoraManifest.reportUrl, text: "2026 Sep - Agora Dollar Reserve Report" }]);
   });
 
   it("fails closed on the frozen July index because the September reviewed link is missing", async () => {
-    await expect(prepareAgora(indexFixture("agora-transparency-2026-09-30.html"), new AbortController().signal))
+    await expect(prepareAgora(indexFixture("agora-transparency-2026-09-30.html")))
       .rejects.toThrow("reviewed report link missing or ambiguous");
   });
 
   it("binds the official Fern index to the reviewed stable artifact", async () => {
-    const prepared = await prepareAgora(agoraCurrentIndex(), new AbortController().signal);
+    const prepared = await prepareAgora(agoraCurrentIndex());
     expect(collectPdfAnchors(prepared).filter(a => a.href === agoraManifest.reportUrl)).toEqual([
       { href: agoraManifest.reportUrl, text: "2026 Sep - Agora Dollar Reserve Report" },
     ]);
-    const signed = agoraManifest.reportUrl.replace("files.buildwithfern.com", "fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com") + "?X-Amz-Signature=abcd";
-    expect(await prepareAgora(agoraAnchor(signed), new AbortController().signal)).toContain(`href="${agoraManifest.reportUrl}"`);
+    expect(await prepareAgora(agoraAnchor(agoraSignedReport))).toContain(`href="${agoraManifest.reportUrl}"`);
   });
 
   it.each([
@@ -949,7 +912,7 @@ describe("Agora reviewed September examination", () => {
     agoraAnchor(agoraManifest.reportUrl.replace("files.buildwithfern.com", "example.com")),
     agoraAnchor(agoraFern.replace("03ab55af", "00000000")),
   ])("fails closed on missing, duplicated or drifted reviewed identity", async html => {
-    await expect(prepareAgora(html, new AbortController().signal)).rejects.toThrow("reviewed report link missing or ambiguous");
+    await expect(prepareAgora(html)).rejects.toThrow("reviewed report link missing or ambiguous");
   });
 
   it("reports a newer report as unreviewed and fails closed on undated candidates", async () => {
@@ -1053,7 +1016,7 @@ describe("audd-independent-assurance (William Buck ASRS 4400 AUP)", () => {
     }
     expect(() => reconcileIndependentAssuranceManifest({
       ...manifest,
-      liabilities: [{ code: "small", label: "Small circulation", amount: "1.00" }],
+      liabilities: [assuranceLine("small", "Small circulation", "1.00")],
       reportedLiabilityTotal: "1.01",
     }, AUDD_INDEPENDENT_ASSURANCE_PROFILE.reconciliation)).toThrow("reported liability total differs");
   });
@@ -1083,7 +1046,7 @@ describe("cadd-independent-assurance (Baker Tilly CSAE 3000)", () => {
       reportedLiabilityDifference: "0",
     });
     expect(manifest.assets).toEqual([
-      { code: "cad-cash", label: "Canadian Dollar Cash", amount: "1320001.34" },
+      assuranceLine("cad-cash", "Canadian Dollar Cash", "1320001.34"),
     ]);
     expect(manifest.liabilities).toHaveLength(1);
     const liability = manifest.liabilities[0];
@@ -1133,6 +1096,9 @@ describe("cadd-independent-assurance (Baker Tilly CSAE 3000)", () => {
 
 });
 
+const notionBlock = <T>(id: string, type: string, properties: T) =>
+  ({ spaceId: "space", value: { value: { id, type, properties } } });
+
 const ROOT_RECORD = {
   recordMap: {
     block: {
@@ -1154,29 +1120,11 @@ const ROOT_RECORD = {
 const YEAR_RECORD = {
   recordMap: {
     block: {
-      [BRLA_NOTION_PIN.yearBlockId]: {
-        spaceId: "space",
-        value: {
-          value: {
-            id: BRLA_NOTION_PIN.yearBlockId,
-            type: "header",
-            properties: { title: [[BRLA_NOTION_PIN.yearTitle]] },
-          },
-        },
-      },
-      [BRLA_NOTION_PIN.reportBlockId]: {
-        spaceId: "space",
-        value: {
-          value: {
-            id: BRLA_NOTION_PIN.reportBlockId,
-            type: "file",
-            properties: {
+      [BRLA_NOTION_PIN.yearBlockId]: notionBlock(BRLA_NOTION_PIN.yearBlockId, "header", { title: [[BRLA_NOTION_PIN.yearTitle]] }),
+      [BRLA_NOTION_PIN.reportBlockId]: notionBlock(BRLA_NOTION_PIN.reportBlockId, "file", {
               title: [[BRLA_NOTION_PIN.attachmentTitle]],
               source: [[BRLA_NOTION_PIN.attachmentSource]],
-            },
-          },
-        },
-      },
+            }),
     },
   },
 };
@@ -1280,7 +1228,7 @@ describe("BRLA Notion reviewed discovery", () => {
     vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue({
       ...manifest,
       assets: [
-        { code: "cash-and-cash-equivalents", label: "Cash or Equivalent", amount: "72064692.29" },
+        assuranceLine("cash-and-cash-equivalents", "Cash or Equivalent", "72064692.29"),
         repo,
       ],
       liabilities: manifest.liabilities.map((row, index) => ({
@@ -1321,19 +1269,10 @@ describe("BRLA Notion reviewed discovery", () => {
         recordMap: {
           block: {
             [BRLA_NOTION_PIN.yearBlockId]: YEAR_RECORD.recordMap.block[BRLA_NOTION_PIN.yearBlockId],
-            [BRLA_NOTION_PIN.reportBlockId]: {
-              spaceId: "space",
-              value: {
-                value: {
-                  id: BRLA_NOTION_PIN.reportBlockId,
-                  type: "file",
-                  properties: {
+            [BRLA_NOTION_PIN.reportBlockId]: notionBlock(BRLA_NOTION_PIN.reportBlockId, "file", {
                     title: [[BRLA_NOTION_PIN.attachmentTitle]],
                     source: [["attachment:drifted:Avenia_-_Transparency_Report_-_20261031_(Audit_Attestation).pdf"]],
-                  },
-                },
-              },
-            },
+                  }),
           },
         },
       },
@@ -1348,16 +1287,7 @@ describe("BRLA Notion reviewed discovery", () => {
         recordMap: {
           block: {
             ...YEAR_RECORD.recordMap.block,
-            [novemberBlockId]: {
-              spaceId: "space",
-              value: {
-                value: {
-                  id: novemberBlockId,
-                  type: "file",
-                  properties: { title: [["Avenia - Transparency Report - 20261130 (Audit Attestation).pdf"]] },
-                },
-              },
-            },
+            [novemberBlockId]: notionBlock(novemberBlockId, "file", { title: [["Avenia - Transparency Report - 20261130 (Audit Attestation).pdf"]] }),
           },
         },
       },
@@ -1394,6 +1324,9 @@ describe("BRLA Notion reviewed discovery", () => {
 });
 
 describe("BRLA PDF byte verification", () => {
+  const verifySignedBrlaPdf = (manifest: Parameters<typeof fetchAndVerifyBrlaPdf>[0]["manifest"]) => fetchAndVerifyBrlaPdf({
+    manifest, signedUrl: SIGNED_URL, reportHosts: ["file.notion.so", "file.notion.com"], signal: AbortSignal.timeout(1000),
+  });
 
   const bytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37, 0x0a, 0x25, 0xaa, 0xbb]);
   const manifest = {
@@ -1419,23 +1352,13 @@ describe("BRLA PDF byte verification", () => {
 
   it("accepts reviewed bytes", async () => {
     installBinaryFetch();
-    const result = await fetchAndVerifyBrlaPdf({
-      manifest,
-      signedUrl: SIGNED_URL,
-      reportHosts: ["file.notion.so", "file.notion.com"],
-      signal: AbortSignal.timeout(1000),
-    });
+    const result = await verifySignedBrlaPdf(manifest);
     expect(result.byteLength).toBe(bytes.length);
   });
 
   it("rejects drifted bytes", async () => {
     installBinaryFetch(true);
-    await expect(fetchAndVerifyBrlaPdf({
-      manifest,
-      signedUrl: SIGNED_URL,
-      reportHosts: ["file.notion.so", "file.notion.com"],
-      signal: AbortSignal.timeout(1000),
-    })).rejects.toThrow("PDF SHA-256");
+    await expect(verifySignedBrlaPdf(manifest)).rejects.toThrow("PDF SHA-256");
   });
 });
 
@@ -1444,7 +1367,7 @@ describe("BRLA asset classification", () => {
     const reviewed = getIndependentAssuranceManifest("BRLA");
     const withUnknown = {
       ...reviewed,
-      assets: [...reviewed.assets, { code: "unreviewed-holdings", label: "Unreviewed holdings", amount: "123.45" }],
+      assets: [...reviewed.assets, assuranceLine("unreviewed-holdings", "Unreviewed holdings", "123.45")],
     };
 
     const { slices, unknownExposurePct, warnings } = buildBrlaReserveSlices(withUnknown);
@@ -1463,7 +1386,7 @@ describe("BRLA asset classification", () => {
     const reviewed = getIndependentAssuranceManifest("BRLA");
     const garbage = {
       ...reviewed,
-      assets: [{ code: "cash-and-cash-equivalents", label: "Cash", amount: "not-a-number" }],
+      assets: [assuranceLine("cash-and-cash-equivalents", "Cash", "not-a-number")],
     };
 
     expect(() => buildBrlaReserveSlices(garbage)).toThrow("unparsable asset amount");

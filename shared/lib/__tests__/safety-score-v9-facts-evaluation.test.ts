@@ -34,6 +34,16 @@ const P = V9_CANDIDATE_POLICY_V1;
 type V3Core = Omit<ReturnType<typeof CompiledV9FactSetV3Schema.parse>, "v9FactSetDigest">;
 type EvalResult = ReturnType<typeof evaluateV9FactSet>;
 
+const alphaAndBeta = () => {
+  const input = coreFixture();
+  const assets = input.assets as unknown as readonly V9AssetFactsV2[];
+  return {
+    input,
+    alpha: assets.find((asset) => asset.assetId === "alpha")!,
+    beta: assets.find((asset) => asset.assetId === "beta")!,
+  };
+};
+
 const mutableNativeFactSet = () => CompiledV9FactSetV3Schema.parse(compileNativeV3FactSet(coreFixture()));
 const nativeCore = (assetId = "alpha") => {
   const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
@@ -170,6 +180,19 @@ function exitFactorGap(
   asset.gaps.push(gap);
   route.factorStatuses = { ...route.factorStatuses, [factorKey]: reqStatus(gap.policyRuleId, "missing", [gap.gapId], gap.evidenceRefIds) };
   return gap;
+}
+
+function resetExit(
+  asset: V9AssetFactsV3,
+  gaps: V9AssetFactsV3["gaps"],
+  exitStatus: V9AssetFactsV3["exitStatus"],
+  exitRoutes: V9AssetFactsV3["exitRoutes"] = [],
+) {
+  asset.gaps = [...asset.gaps.filter((gap) => gap.ownerDomain !== "exit"), ...gaps];
+  asset.evidence = asset.evidence.filter((ref) => ref.evidenceId !== "evidence:route" && ref.evidenceId !== "evidence:rejected-route");
+  asset.exitStatus = exitStatus;
+  asset.exitRoutes = exitRoutes;
+  asset.mechanismExitFacts = [];
 }
 
 function exitPromotionFixture() {
@@ -403,10 +426,7 @@ describe("Safety Score v9 fact evaluation", () => {
   it("keeps real bounded exit witnesses without emitting a U physical-redemption profile question", () => {
     const { core, asset } = nativeCore();
     const gap = localGap("alpha:physical-runtime", "missing-same-notional-route", "exit", "exit.runtime.required", "missing", "exit-routes", "The reviewed physical redemption has no admitted execution model.");
-    asset.gaps = [...asset.gaps.filter((r) => r.ownerDomain !== "exit"), gap];
-    asset.exitRoutes = [];
-    asset.evidence = asset.evidence.filter((r) => r.evidenceId !== "evidence:route" && r.evidenceId !== "evidence:rejected-route");
-    asset.exitStatus = reqStatus("exit.runtime.required", "missing", [gap.gapId], []);
+    resetExit(asset, [gap], reqStatus("exit.runtime.required", "missing", [gap.gapId], []));
     asset.mechanismExitFacts = [{ factKey: "physical-redemption", disposition: "supported", quality: "limited", evidenceRefIds: ["evidence:base"] }];
     const evaluated = evalCore(core);
     expect(evaluated.exit.score).toBe(unknownQuality("exit", "U", P.policy.semantic));
@@ -455,11 +475,6 @@ describe("Safety Score v9 fact evaluation", () => {
     });
     const physOut: V9AssetFactsV3["exitRoutes"][number]["output"] = { status: knownStatus(), kind: "physical-commodity-delivery", sameNotionalEligible: false, assetKeys: ["commodity:xau"], basketWeights: [], valuation: mkVal("commodity-delivery", "commodity:xau", 2_500, "commodity-ref") };
     const usdOut: V9AssetFactsV3["exitRoutes"][number]["output"] = { status: knownStatus(), kind: "fiat", assetKeys: ["fiat:USD"], basketWeights: [], valuation: mkVal("reviewed-par", "fiat:USD", 1, "fiat-ref") };
-    const resetExit = (asset: V9AssetFactsV3, gaps: V9AssetFactsV3["gaps"], exitStatus: V9AssetFactsV3["exitStatus"], exitRoutes: V9AssetFactsV3["exitRoutes"]) => {
-      asset.gaps = [...asset.gaps.filter((g) => g.ownerDomain !== "exit"), ...gaps];
-      asset.evidence = asset.evidence.filter((r) => r.evidenceId !== "evidence:route" && r.evidenceId !== "evidence:rejected-route");
-      asset.exitStatus = exitStatus; asset.exitRoutes = exitRoutes; asset.mechanismExitFacts = [];
-    };
     const RULE_SN = "v9.exit.same-notional-route", RULE_RF = "v9.exit.route-factors", ms = (rule: string, id: string) => reqStatus(rule, "missing", [id]);
     const xgz = nativeCore(), physSettleGap = mkGap("alpha:gap:exit-route:phys:settlement", "missing-same-notional-route", RULE_RF, physKey, "Physical settlement undisclosed.");
     certifyRouteC(xgz.asset, physSettleGap, physKey, "settlement");
@@ -498,11 +513,7 @@ describe("Safety Score v9 fact evaluation", () => {
     const { core, asset } = nativeCore();
     const gap = localGap("alpha:runtime-inventory", "missing-runtime-route-evidence", "exit", "exit.runtime.required", "missing", "exit-routes", "Runtime routes are not admitted.");
     const decoy = localGap("alpha:unrelated-runtime", "missing-runtime-route-evidence", "exit", "exit.unrelated.required", "missing", "unrelated-exit-factor", "An unrelated Exit datum is missing.");
-    asset.exitRoutes = [];
-    asset.gaps = [...asset.gaps.filter((r) => r.ownerDomain !== "exit"), gap, decoy];
-    asset.evidence = asset.evidence.filter((r) => r.evidenceId !== "evidence:route" && r.evidenceId !== "evidence:rejected-route");
-    asset.exitStatus = reqStatus("exit.runtime.required", "missing", [gap.gapId, decoy.gapId], []);
-    asset.mechanismExitFacts = [];
+    resetExit(asset, [gap, decoy], reqStatus("exit.runtime.required", "missing", [gap.gapId, decoy.gapId], []));
     const evaluated = evalCore(core);
     expect(evaluated.scoreInput.pillars.exit).toMatchObject({ score: null, evidenceLevel: "insufficient", aggregationDisposition: "unavailable", limitedEvidenceCauses: [], limitingCauseGapIds: [] });
     expect(evaluated.trace.includedPillars).not.toContain("exit");
@@ -1037,9 +1048,7 @@ describe("Safety Score v9 fact evaluation", () => {
       { name: "below both boundaries", supplyUsd: 1_000_000_000, requestUsd: 25_000_000, materialityRequestUsd: 25_000_000, executableUsd: 99_999, material: false },
       { name: "$100k absolute boundary", supplyUsd: 1_000_000_000, requestUsd: 25_000_000, materialityRequestUsd: 25_000_000, executableUsd: 100_000, material: true },
     ]) {
-      const input = coreFixture();
-      const alpha = input.assets.find((a) => a.assetId === "alpha")! as unknown as V9AssetFactsV2;
-      const beta = input.assets.find((a) => a.assetId === "beta")! as unknown as V9AssetFactsV2;
+      const { input, alpha, beta } = alphaAndBeta();
       beta.supply.circulatingUsd = s.supplyUsd;
       for (const chain of beta.supply.chainDistribution!.chains) chain.supplyUsd = s.supplyUsd * chain.supplyShare;
       const routeEvidence = alpha.evidence.find((e) => e.evidenceId === "evidence:route")!;
@@ -1090,9 +1099,7 @@ describe("Safety Score v9 fact evaluation", () => {
   });
 
   it.each(["unknown", "dust-gap", "empty", "issuer-zero", "not-applicable"])("dust preserves public Exit evidence and unknown weight: %s", (scenario) => {
-    const input = coreFixture();
-    const alpha = input.assets.find((a) => a.assetId === "alpha")! as unknown as V9AssetFactsV2;
-    const beta = input.assets.find((a) => a.assetId === "beta")! as unknown as V9AssetFactsV2;
+    const { input, alpha, beta } = alphaAndBeta();
     const evidence = beta.evidence;
     const routeEvidence = alpha.evidence.find((r) => r.evidenceId === "evidence:route")!;
     const dust = structuredClone(alpha.exitRoutes.find((r) => r.lane === "dex")!);
@@ -1126,9 +1133,7 @@ describe("Safety Score v9 fact evaluation", () => {
   });
 
   it.each(["exact-complete", "exact-lower-bound"] as const)("does not attribute non-score-eligible %s redemption zero as measured exhaustion", (coverageClass) => {
-    const input = coreFixture();
-    const alpha = input.assets.find((a) => a.assetId === "alpha")! as unknown as V9AssetFactsV2;
-    const beta = input.assets.find((a) => a.assetId === "beta")! as unknown as V9AssetFactsV2;
+    const { input, alpha, beta } = alphaAndBeta();
     const routeEvidence = alpha.evidence.find((e) => e.evidenceId === "evidence:route")!;
     const redemptionRoute = structuredClone(alpha.exitRoutes.find((r) => r.routeId === "issuer-main")!);
     Object.assign(redemptionRoute, {

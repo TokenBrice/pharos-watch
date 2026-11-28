@@ -1548,6 +1548,10 @@
       ],
       "reading": [
         {
+          "sources": [".github/workflows/post-deploy-first-execution.yml", "scripts/ci/check-post-deploy-first-execution.ts"],
+          "local": [{ "path": "docs/deployment-process.md", "anchor": "independent-production-monitors" }]
+        },
+        {
           "sources": ["functions/**"],
           "local": [
             { "path": "docs/architecture.md", "anchor": "pages-function-endpoints-not-worker-api" },
@@ -1658,6 +1662,10 @@
         "npx vitest run scripts/maintenance/__tests__/probe-page-performance.test.ts scripts/maintenance/__tests__/report-build-size.test.ts scripts/maintenance/__tests__/analyze-web-vitals.test.ts"
       ],
       "testOwnership": [
+        {
+          "sources": [".github/workflows/post-deploy-first-execution.yml", "scripts/ci/check-post-deploy-first-execution.ts"],
+          "tests": ["scripts/__tests__/first-execution-acceptance.test.ts"]
+        },
         {
           "sources": ["public/critical-css-loader.js", "scripts/maintenance/inline-homepage-critical-css.ts"],
           "tests": ["scripts/__tests__/inline-homepage-critical-css.test.ts"]

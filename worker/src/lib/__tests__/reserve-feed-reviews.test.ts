@@ -11,10 +11,9 @@ import { YUZU_REVIEW as review } from "./live-reserves-store.test-support";
 const accountable = "primary:http-json: Accountable ";
 const http = "primary:http-html: HTTP 403 for https://www.fidelitydigitalassets.com/stablecoin?timestamp=changed";
 // Independent fixtures: the stored primary-endpoint 403s the StraitsX reviews acknowledge (#2353).
-const reviewedHttp: Record<string, string> = {
-  "xsgd-straitsx": "primary:http-html: HTTP 403 for https://www.straitsx.com/xsgd",
-  "xusd-straitsx": "primary:http-html: HTTP 403 for https://www.straitsx.com/xusd",
-};
+const reviewedHttp = Object.fromEntries(["xsgd", "xusd"].map((product) => [
+  `${product}-straitsx`, `primary:http-html: HTTP 403 for https://www.straitsx.com/${product}`,
+]));
 function state(r = review, overrides: Partial<State> = {}): State {
   const now = r.reviewedAt + 1;
   return {
@@ -28,7 +27,8 @@ function state(r = review, overrides: Partial<State> = {}): State {
   };
 }
 async function check(s: State, r = review, expected: Review | null = r, db = mockD1(), now = r.reviewedAt + 1) {
-  expect(await matchReview(db, s, now, resolveReviews(now, [r]).activeById)).toEqual(expected);
+  const { durability: _durability, ...view } = expected ?? {};
+  expect(await matchReview(db, s, now, resolveReviews(now, [r]).activeById)).toEqual(expected && view);
 }
 function history(r = review, overrides: Record<string, unknown> = {}, failed = false) {
   return mockD1([{ match: "status != 'skipped'", rows: [], first: {
@@ -38,13 +38,15 @@ function history(r = review, overrides: Record<string, unknown> = {}, failed = f
   }, ...(failed ? { throwError: new Error("read") } : {}) }]);
 }
 const skipped = { lastStatus: "skipped", lastError: null, metadata: { failureCategory: "circuit-open" } } as const;
+const structural: Review = { ...review, durability: "structural", expiresAt: review.reviewedAt + 60 * 86400 };
 
 describe("reserve feed review policy", () => {
   it("pins the #2353 cohort and keeps each StraitsX 403 bound to its own endpoint", async () => {
-    expect(RESERVE_FEED_REVIEWS.map((r) => [r.stablecoinId, r.adapterKey, r.errorClass ?? null, r.warningCodes, new Date(r.expiresAt * 1000).toISOString()])).toEqual([
-      ["xsgd-straitsx", "straitsx-independent-assurance", "http-403", [], "2026-12-06T12:38:00.000Z"],
-      ["xusd-straitsx", "straitsx-independent-assurance", "http-403", [], "2026-12-06T12:38:00.000Z"],
-      ["apxusd-apyx", "accountable", null, ["reserve-undercollateralized"], "2026-12-06T12:38:00.000Z"],
+    const expiry = Date.UTC(2026, 11, 6, 12, 38) / 1000;
+    expect(RESERVE_FEED_REVIEWS.map((r) => [r.stablecoinId, r.adapterKey, r.errorClass ?? null, r.warningCodes, r.expiresAt])).toEqual([
+      ["xsgd-straitsx", "straitsx-independent-assurance", "http-403", [], expiry],
+      ["xusd-straitsx", "straitsx-independent-assurance", "http-403", [], expiry],
+      ["apxusd-apyx", "accountable", null, ["reserve-undercollateralized"], expiry],
     ]);
     const [xsgd, xusd] = RESERVE_FEED_REVIEWS;
     await check(state(xsgd, { lastError: reviewedHttp["xusd-straitsx"] }), xsgd, null);
@@ -52,7 +54,7 @@ describe("reserve feed review policy", () => {
     await check(state(xsgd, { lastError: reviewedHttp["xsgd-straitsx"].replace("403", "429") }), xsgd, null);
   });
   it("matches authored findings; rejects changed, corrupt, fatal and expired evidence", async () => {
-    for (const r of [review, ...RESERVE_FEED_REVIEWS]) {
+    for (const r of [review, structural, ...RESERVE_FEED_REVIEWS]) {
       const s = state(r);
       await check(s, r);
       const mutations: Partial<State>[] = [
@@ -84,6 +86,8 @@ describe("reserve feed review policy", () => {
       { reviewedAt: now + 1 }, { owner: " " }, { sources: [{ url: "http://example.com", evidenceDate: "2026-11-04" }] },
       ...["2026-02-30", "2026-11-08"].map((evidenceDate) => ({ sources: [{ url: "https://example.com", evidenceDate }] })),
       { expiresAt: review.reviewedAt }, { expiresAt: review.reviewedAt + 14 * 86400 + 1 },
+      { durability: "standard", expiresAt: structural.expiresAt },
+      { durability: "structural", expiresAt: structural.expiresAt + 1 },
       { failureCategory: "" }, { adapterKey: "m0" }, { failureCategory: null, errorPrefix: null },
       { errorClass: "http-403" }, { errorClass: "http-200", failureCategory: "upstream-http", errorPrefix: null },
       { sourceTimestamp: now }, { warningCodes: ["same", "same"] },

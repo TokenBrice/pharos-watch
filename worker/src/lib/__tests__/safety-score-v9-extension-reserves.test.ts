@@ -417,12 +417,17 @@ describe("reviewed live unknown residuals", () => {
     }));
   });
 
-  it("gives split and unsplit copies of a reviewed own-liability vault the same zero score", () => {
+  function ownVaultFixture() {
     const vault: ReserveSlice = { ...known, name: "Own vault", assetClass: "protocol-position", pct: 100 };
     const meta = reviewedMeta([vault], { nonLinkDispositions: [{
       reserveIndex: 0, reserveName: vault.name, pct: 100, disposition: "self-reserve", ownLiability: true,
       rationale: "Vault holds the same issuer liability.",
     }] });
+    return { vault, meta };
+  }
+
+  it("gives split and unsplit copies of a reviewed own-liability vault the same zero score", () => {
+    const { vault, meta } = ownVaultFixture();
     const whole = compile([vault], meta).result.score;
     expect(whole).toBe(0);
     expect(compile([{ ...vault, pct: 40 }, { ...vault, pct: 60 }], meta).result.score).toBe(whole);
@@ -431,11 +436,7 @@ describe("reviewed live unknown residuals", () => {
   it.each([
     ["live", "unrelated evidence"], ["live", "conflicting residual"], ["static", "unrelated evidence"],
   ])("quarantines only the %s own-liability asset with %s", (source, fault) => {
-    const vault: ReserveSlice = { ...known, name: "Own vault", assetClass: "protocol-position", pct: 100 };
-    const meta = reviewedMeta([vault], { nonLinkDispositions: [{
-      reserveIndex: 0, reserveName: vault.name, pct: 100, disposition: "self-reserve", ownLiability: true,
-      rationale: "Vault holds the same issuer liability.",
-    }] });
+    const { vault, meta } = ownVaultFixture();
     const { fixed, extension: original, result } = compile(source === "live" ? [vault] : [], meta);
     expect(result.score).toBe(0);
     const extension = structuredClone(original);
@@ -473,11 +474,7 @@ describe("reviewed live unknown residuals", () => {
   });
 
   it("keeps a fresh producer-confirmed own liability at zero after its review expires", () => {
-    const vault: ReserveSlice = { ...known, name: "Own vault", assetClass: "protocol-position", pct: 100 };
-    const meta = reviewedMeta([vault], { nonLinkDispositions: [{
-      reserveIndex: 0, reserveName: vault.name, pct: 100, disposition: "self-reserve", ownLiability: true,
-      rationale: "Vault holds the same issuer liability.",
-    }] });
+    const { vault, meta } = ownVaultFixture();
     const { fixed, extension: original } = compile([{ ...vault, selfReferential: true }], meta);
     const extension = structuredClone(original);
     const review = extension.assets.find(row => row.assetId === "alpha")!.researchEvidence
@@ -1067,15 +1064,20 @@ describe("curated reserve dependency admission", () => {
     },
   );
 
-  it("drops curated basket edges when the reserve review is expired", () => {
+  function curatedBasketFixture(reviewedAt: string) {
     const fixed = makeV9TwoAssetFixedInput({
       omitAlphaReserve: true,
       liveToFallbackCoins: ["alpha"],
       clockSec: DEPENDENCY_CLOCK_SEC,
     });
     const extension = buildSafetyScoreV9BaselineExtension(fixed, {
-      metaById: dependencyMetaById("2026-01-01"),
+      metaById: dependencyMetaById(reviewedAt),
     });
+    return { fixed, extension };
+  }
+
+  it("drops curated basket edges when the reserve review is expired", () => {
+    const { fixed, extension } = curatedBasketFixture("2026-01-01");
     const alpha = extension.assets.find((asset) => asset.assetId === "alpha")!;
     expect(alpha.dependencies).toMatchObject({
       source: "curated-reserve",
@@ -1099,14 +1101,7 @@ describe("curated reserve dependency admission", () => {
   });
 
   it("keeps curated basket edges when the review is admissible", () => {
-    const fixed = makeV9TwoAssetFixedInput({
-      omitAlphaReserve: true,
-      liveToFallbackCoins: ["alpha"],
-      clockSec: DEPENDENCY_CLOCK_SEC,
-    });
-    const extension = buildSafetyScoreV9BaselineExtension(fixed, {
-      metaById: dependencyMetaById("2026-08-19"),
-    });
+    const { fixed, extension } = curatedBasketFixture("2026-08-19");
     const alpha = extension.assets.find((asset) => asset.assetId === "alpha")!;
     expect(alpha.dependencies).toMatchObject({
       source: "curated-reserve",
@@ -1287,31 +1282,20 @@ describe("buildReviewedReserveClassifications", () => {
     issuerOrObligor: "Reserve bank",
   };
 
-  it("admits a reviewed reserve classification inside 365 days", () => {
+  it.each([
+    ["admits a reviewed reserve classification inside 365 days", "2025-08-21", /^registry-reviewed:/, "bank-deposit"],
+    ["rejects a reviewed reserve classification past 365 days", "2025-08-19", /^source-native:/, null],
+  ])("%s", (_title, reviewedAt, classificationPrefix, assetClass) => {
     const clockSec = Date.UTC(2026, 7, 20) / 1_000;
     const classifications = buildReviewedReserveClassifications(
       [{ name: "Cash", pct: 100, risk: "very-low" }],
-      reviewedMeta([classifiedCash], { reviewedAt: "2025-08-21", compositionAsOf: "2025-08-21" }),
+      reviewedMeta([classifiedCash], { reviewedAt, compositionAsOf: reviewedAt }),
       clockSec,
     );
 
     expect(classifications[0]).toMatchObject({
-      classificationKey: expect.stringMatching(/^registry-reviewed:/),
-      assetClass: "bank-deposit",
-    });
-  });
-
-  it("rejects a reviewed reserve classification past 365 days", () => {
-    const clockSec = Date.UTC(2026, 7, 20) / 1_000;
-    const classifications = buildReviewedReserveClassifications(
-      [{ name: "Cash", pct: 100, risk: "very-low" }],
-      reviewedMeta([classifiedCash], { reviewedAt: "2025-08-19", compositionAsOf: "2025-08-19" }),
-      clockSec,
-    );
-
-    expect(classifications[0]).toMatchObject({
-      classificationKey: expect.stringMatching(/^source-native:/),
-      assetClass: null,
+      classificationKey: expect.stringMatching(classificationPrefix),
+      assetClass,
     });
   });
 

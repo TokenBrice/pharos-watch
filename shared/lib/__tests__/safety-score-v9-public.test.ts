@@ -109,6 +109,21 @@ function fx(assetId: string, o: FxOpts): ProjIn {
   };
 }
 
+const parentBoundFixture = (
+  assetId: string, reason: string, edges: Partial<Pick<V9ResolvedDependencyInputs, "serial" | "basket">>,
+) => fx(assetId, {
+  score: 64, grade: "C+", caps: [cap("parent", 64, "parent", reason, true)],
+  dependency: { assetId, serial: [], basket: [], cycleBlocked: false, ...edges },
+});
+
+type WrapperLimit = NonNullable<Trace["wrapperParentLimit"]>;
+const pureWrapperLimit = (parent: Pick<WrapperLimit, "parentKind" | "parentAssetId"> = {}): WrapperLimit => ({
+  schemaVersion: 1, parentScore: 67, form: "pure", appliedDiscount: 3, limit: 64, ...parent,
+});
+
+const scoredFixture = (assetId: string, trace: Trace, pillars: FxOpts["pillars"]) =>
+  fx(assetId, { score: trace.finalScore, grade: trace.finalGrade, qualityScore: trace.weightedQuality, pegAdjustedScore: trace.preCapScore, pillars });
+
 const rfx = (id: string, o: Partial<FxOpts> = {}) => fx(id, { score: 91.8, grade: "A+", ...o });
 const fx50 = (id: string) => fx(id, { score: 50, grade: "C-", qualityScore: 50, pillars: { backing: 50, exit: 50, control: 50 } });
 const fx70 = (id: string) => fx(id, { score: 70, grade: "B" });
@@ -121,6 +136,13 @@ const openEv = (): V9OpenEvidence => ({ semantics: "open-question-v1", totals: {
 const meta = (tag = "public-test", extra: Record<string, unknown> = {}) => ({ openEvidence: openEv(), candidateId: `safety-score-v9:v1:${tag}`, policyVersion: "9.0", publicationGenerationId: `report-cards:v9:v1:${tag}`, publishedAtSec: 1001, ...extra });
 const publish = (results: ProjIn[], extra: Partial<Parameters<typeof buildResp>[0]> = {}) => buildResp({ ...meta(), ...extra, results });
 const rt = (r: ReturnType<typeof buildResp>) => RespSchema.parse(jp(js(r)));
+const attachMintControl = (input: ProjIn, fact: ReturnType<typeof mkCtrl>) => {
+  input.control = {
+    ...input.control!,
+    components: [{ ...input.control!.components[0]!, controlKeys: [fact.controlKey] }],
+    controlFacts: [fact],
+  };
+};
 const setScored = (i: ProjIn, si: ReturnType<typeof mkScoreIn>) => Object.assign(i, { scoreInput: si, trace: scoreAsset(si, i.policy) });
 
 describe("Safety Score v9 public projection", () => {
@@ -192,7 +214,7 @@ describe("Safety Score v9 public projection", () => {
       const exit = evalExit({ circulatingUsd: 2e7, gaps: [miss.gap], routes }, POL);
       const si = mkScoreIn({ assetId: "dust", pillars: { backing: mkPillar(50), control: mkPillar(50), exit: mkPillar(exit.score, { ...exit, reasons: [], evidenceLevel: exit.score === null ? "insufficient" : "limited", excludedCauses: [cause], excludedCauseGapIds: ["gap:exit"], excludedComponentKeys: ["rail"] }) } });
       const tr = scoreAsset(si, POL);
-      const i = fx("dust", { score: tr.finalScore, grade: tr.finalGrade, qualityScore: tr.weightedQuality, pegAdjustedScore: tr.preCapScore, pillars: { backing: 50, exit: exit.score, control: 50 } });
+      const i = scoredFixture("dust", tr, { backing: 50, exit: exit.score, control: 50 });
       Object.assign(i, { trace: tr, scoreInput: si, exit });
       i.backing = { ...i.backing!, contributions: i.backing!.contributions.map((c) => ({ ...c, factors: [{ componentKey: "unknown", score: 50, normalizedWeight: 0.5, effectiveScoringWeight: 0.5, ...unk("U", "gap:backing") }, { componentKey: "known", score: 50, normalizedWeight: 0.5, ...KNOWN, effectiveScoringWeight: 0.5 }] })) };
       const c = pc(i), priced = { score: null, aggregationDisposition: "excluded-a-b", pricedUnknown: { cause: "U", score: 50 } };
@@ -251,7 +273,7 @@ describe("Safety Score v9 public projection", () => {
   it.each(["C", "U"] as const)("publishes a priced %s unknown without fabricating pillar evidence", (cause) => {
     const si = mkScoreIn({ assetId: "priced-unknown", pillars: { backing: mkPillar(92), control: mkPillar(94), exit: mkPillar(null, { aggregationDisposition: "unavailable", supportedComponentKeys: [], causeGapIds: ["gap:exit"], limitedEvidenceCauses: [cause] }) } });
     const tr = scoreAsset(si, POL);
-    const i = fx("priced-unknown", { score: tr.finalScore, grade: tr.finalGrade, pillars: { backing: 92, exit: null, control: 94 }, qualityScore: tr.weightedQuality, pegAdjustedScore: tr.preCapScore });
+    const i = scoredFixture("priced-unknown", tr, { backing: 92, exit: null, control: 94 });
     Object.assign(i, { trace: tr, scoreInput: si });
     const c = pc(i);
     expect(c.pillars.exit).toMatchObject({ score: null, supportedComponentKeys: [] });
@@ -579,7 +601,7 @@ describe("Safety Score v9 public projection", () => {
   it("publishes effective weighted signatures without turning unknown key bypasses into quorum credit", () => {
     const i = fx70("alpha"), w = weightedQuorum([...Array<number>(8).fill(24), ...Array<number>(18).fill(1)], 25);
     const ctrl = mkCtrl("control:mint", "mint", { authority: { authorityKey: w.deployment, model: "multisig", threshold: null, weightedQuorum: w } });
-    i.control = { ...i.control!, components: [{ ...i.control!.components[0]!, controlKeys: [ctrl.controlKey] }], controlFacts: [ctrl] };
+    attachMintControl(i, ctrl);
     const det = () => { const b = CardSchema.parse(pc(i)).breakdowns!.control; return resCtrl(b, b.components[0]!)[0]!; };
     expect(det().minimumCryptographicSignatures).toBe(2);
     ctrl.authority!.weightedQuorum = { ...w, masterKey: "enabled" }; expect(det().minimumCryptographicSignatures).toBe(1);
@@ -603,7 +625,7 @@ describe("Safety Score v9 public projection", () => {
   it("preserves certificate and contributor paths for controls without a path scope", () => {
     const i = fx70("alpha"), scope = reviewedScope(), contrib = reviewedScope({ paths: [{ ...scope.paths[0]!, id: "upgrade", capabilities: ["upgrade"] }] });
     const ctrl = mkCtrl("control:mint", "mint", { executionScope: scope, executionScopeContributors: [{ authorityKey: contrib.controllerDeployment, scope: contrib }] });
-    i.control = { ...i.control!, components: [{ ...i.control!.components[0]!, controlKeys: [ctrl.controlKey] }], controlFacts: [ctrl] };
+    attachMintControl(i, ctrl);
     const bd = CardSchema.parse(pc(i)).breakdowns!.control;
     expect(resCtrl(bd, bd.components[0]!)[0]!.executionPaths.map((p) => [p.id, p.capabilities])).toEqual([["issuance", ["mint"]], ["upgrade", ["upgrade"]]]);
   });
@@ -659,15 +681,15 @@ describe("Safety Score v9 public projection", () => {
   });
 
   it("publishes wrapper forms only on wrapper claims, not sibling mechanism claims", () => {
-    const i = fx("dependent", { score: 64, grade: "C+", caps: [cap("parent", 64, "parent", "Parent limit.", true)], dependency: { assetId: "dependent", basket: [], cycleBlocked: false, serial: [{ upstreamAssetId: "mechanism", score: 67, blocked: false }, { upstreamAssetId: "wrapper", score: 67, blocked: false }] } });
+    const i = parentBoundFixture("dependent", "Parent limit.", { serial: [{ upstreamAssetId: "mechanism", score: 67, blocked: false }, { upstreamAssetId: "wrapper", score: 67, blocked: false }] });
     i.dependencyTypes = new Map([["serial:mechanism", "mechanism"], ["serial:wrapper", "wrapper"]]);
-    i.trace.wrapperParentLimit = { schemaVersion: 1, parentScore: 67, form: "pure", appliedDiscount: 3, limit: 64 };
+    i.trace.wrapperParentLimit = pureWrapperLimit();
     expect(pc(i).dependencies.serial).toMatchObject([{ upstreamAssetId: "mechanism", dependencyType: "mechanism", wrapperForm: null }, { upstreamAssetId: "wrapper", dependencyType: "wrapper", wrapperForm: "pure" }]);
   });
 
   it("reconciles concentrated collateral separately without relaxing serial-parent validation", () => {
-    const i = fx("concentrated", { score: 64, grade: "C+", caps: [cap("parent", 64, "parent", "Collateral parent limit.", true)], dependency: { assetId: "concentrated", serial: [], cycleBlocked: false, basket: [{ upstreamAssetId: "collateral", weight: 0.99, score: 95, boundedUnknown: false }] } });
-    i.trace.wrapperParentLimit = { schemaVersion: 1, parentKind: "concentrated-collateral", parentAssetId: "collateral", parentScore: 67, form: "pure", appliedDiscount: 3, limit: 64 };
+    const i = parentBoundFixture("concentrated", "Collateral parent limit.", { basket: [{ upstreamAssetId: "collateral", weight: 0.99, score: 95, boundedUnknown: false }] });
+    i.trace.wrapperParentLimit = pureWrapperLimit({ parentKind: "concentrated-collateral", parentAssetId: "collateral" });
     const c = pc(i);
     expect(c.dependencies.basket[0]).toMatchObject({ score: 95, collateralParentScore: 67 }); expect(ok(c)).toBe(true);
     expect(attrParent(c, "parent:collateral:incident", "Required parent collateral: incident")).toMatchObject({ upstreamAssetId: "collateral", score: 67, blocked: false });
@@ -955,23 +977,11 @@ describe("Safety Score v9 public NR cap suppression", () => {
       score: 67, grade: "B-", qualityScore: 67, pillars: { backing: 88, exit: 55, control: 60 },
       nrReasons: [{ code: "critical-unresolved", field: "backing", message: "Earlier-sorting NR code." }],
     });
-    const depIn = fx("usdtb-ethena", {
-      score: 64, grade: "C+",
-      caps: [cap("parent", 64, "parent", "Collateral parent limit.", true)],
-      dependency: { assetId: "usdtb-ethena", serial: [], cycleBlocked: false, basket: [{ upstreamAssetId: "buidl-blackrock", weight: 1, score: 88, boundedUnknown: false }] },
-    });
-    depIn.trace.wrapperParentLimit = { schemaVersion: 1, parentKind: "concentrated-collateral", parentAssetId: "buidl-blackrock", parentScore: 67, form: "pure", appliedDiscount: 3, limit: 64 };
+    const depIn = parentBoundFixture("usdtb-ethena", "Collateral parent limit.", { basket: [{ upstreamAssetId: "buidl-blackrock", weight: 1, score: 88, boundedUnknown: false }] });
+    depIn.trace.wrapperParentLimit = pureWrapperLimit({ parentKind: "concentrated-collateral", parentAssetId: "buidl-blackrock" });
     // Serial wrapper dependent of an ungraded tokenized fund must pass parent-attribution reconciliation (NS-09).
-    const serialChildIn = fx("serial-fund-wrapper", {
-      score: 64, grade: "C+",
-      caps: [cap("parent", 64, "parent", "Wrapper parent limit.", true)],
-      dependency: {
-        assetId: "serial-fund-wrapper",
-        serial: [{ upstreamAssetId: "buidl-blackrock", score: 67, ratingStatus: "rated", blocked: false, limitedEvidenceCauses: [], causeGapIds: [] }],
-        basket: [], cycleBlocked: false,
-      },
-    });
-    serialChildIn.trace.wrapperParentLimit = { schemaVersion: 1, parentKind: "serial", parentScore: 67, form: "pure", appliedDiscount: 3, limit: 64 };
+    const serialChildIn = parentBoundFixture("serial-fund-wrapper", "Wrapper parent limit.", { serial: [{ upstreamAssetId: "buidl-blackrock", score: 67, ratingStatus: "rated", blocked: false, limitedEvidenceCauses: [], causeGapIds: [] }] });
+    serialChildIn.trace.wrapperParentLimit = pureWrapperLimit({ parentKind: "serial" });
     const resp = rt(publish([fundIn, depIn, serialChildIn]));
     const fund = resp.cards.find((c) => c.id === "buidl-blackrock")!;
     const dep = resp.cards.find((c) => c.id === "usdtb-ethena")!;

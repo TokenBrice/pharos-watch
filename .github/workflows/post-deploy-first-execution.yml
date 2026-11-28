@@ -1,0 +1,126 @@
+name: Post-deploy First Execution
+
+on:
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: post-deploy-first-execution-publication
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+
+      - name: Install locked dependencies for the evaluator
+        shell: bash
+        run: npm ci --ignore-scripts
+
+      - name: Read the open first-execution failure issue
+        id: open-issue
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          dir="$RUNNER_TEMP/post-deploy-first-execution"
+          mkdir -p "$dir"
+          gh api --paginate --slurp "repos/$GH_REPO/issues?state=open&per_page=100" \
+            | jq '[.[][] | select(.pull_request == null and .title == "Post-deploy first-execution failure") | {number, body}][0]' \
+            > "$dir/issue.tmp"
+          mv "$dir/issue.tmp" "$dir/issue.json"
+
+      - name: Read Cloudflare deployments and cron evidence
+        id: cloudflare
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          export POST_DEPLOY_EVIDENCE_DIR="$RUNNER_TEMP/post-deploy-first-execution"
+          mkdir -p "$POST_DEPLOY_EVIDENCE_DIR"
+          node --import tsx --input-type=module <<'JS'
+          import { collectPostDeployCloudflareEvidence } from "./scripts/ci/check-post-deploy-first-execution.ts";
+          await collectPostDeployCloudflareEvidence(process.env.POST_DEPLOY_EVIDENCE_DIR);
+          JS
+
+      - name: Read the public stablecoin generation
+        id: stablecoins
+        env:
+          PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          out="$RUNNER_TEMP/post-deploy-first-execution/stablecoins.json"
+          if [[ -z "$PHAROS_API_KEY" ]] || ! curl --fail --silent --connect-timeout 10 --max-time 30 \
+            -H "X-API-Key: $PHAROS_API_KEY" -H 'Cache-Control: no-cache' \
+            'https://api.pharos.watch/api/stablecoins' -o "$out"; then
+            rm -f "$out"
+          fi
+
+      - name: Evaluate saved first-execution evidence
+        id: evaluate
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          export POST_DEPLOY_EVIDENCE_DIR="$RUNNER_TEMP/post-deploy-first-execution"
+          mkdir -p "$POST_DEPLOY_EVIDENCE_DIR"
+          verdict="$POST_DEPLOY_EVIDENCE_DIR/verdict.json"
+          node --import tsx scripts/ci/check-post-deploy-first-execution.ts > "$verdict"
+          jq -r '.summary' "$verdict" >> "$GITHUB_STEP_SUMMARY"
+          printf 'status=%s\n' "$(jq -r '.status' "$verdict")" >> "$GITHUB_OUTPUT"
+          printf 'can_close_issue=%s\n' "$(jq -r '.canCloseIssue == true' "$verdict")" >> "$GITHUB_OUTPUT"
+
+      - name: Reconcile the first-execution failure issue
+        id: issue
+        if: ${{ steps.evaluate.outputs.status == 'failed' || steps.evaluate.outputs.can_close_issue == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          STATUS: ${{ steps.evaluate.outputs.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          dir="$RUNNER_TEMP/post-deploy-first-execution"
+          issue_number=$(jq -r '.number // empty' "$dir/issue.json")
+          if [[ "$STATUS" == 'failed' ]]; then
+            jq -r '.summary' "$dir/verdict.json" > "$dir/issue.md"
+            if [[ -n "$issue_number" ]]; then
+              gh issue edit "$issue_number" --add-label 'ops:followup' --body-file "$dir/issue.md"
+            else
+              gh issue create --title 'Post-deploy first-execution failure' --label 'ops:followup' --body-file "$dir/issue.md"
+            fi
+          elif [[ -n "$issue_number" ]]; then
+            gh issue close "$issue_number" --reason completed --comment "$(jq -r '.recoveryComment' "$dir/verdict.json")"
+          fi
+
+      - name: Fail on an unsuccessful first execution or unavailable evidence
+        if: ${{ !cancelled() && (steps.evaluate.outputs.status == 'failed' || steps.evaluate.outputs.status == 'unavailable') }}
+        shell: bash
+        run: exit 1

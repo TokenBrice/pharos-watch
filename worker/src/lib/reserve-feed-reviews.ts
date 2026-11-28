@@ -1,6 +1,6 @@
 import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserve-policy";
 import { ReserveFeedReviewSchema, type ReserveFeedReview } from "@shared/types/live-reserves";
-import { RESERVE_FEED_REVIEW_MAX_AGE_SEC } from "@shared/lib/status-thresholds";
+import { RESERVE_FEED_REVIEW_MAX_AGE_SEC, RESERVE_FEED_STRUCTURAL_REVIEW_MAX_AGE_SEC } from "@shared/lib/status-thresholds";
 import { getLiveReserveAdapterDefinition, getLiveReserveAdapterValidationPolicy } from "@shared/lib/live-reserve-adapters";
 import { resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
 import { getConfiguredLiveReserveCoins, type ReserveSyncStateRecord } from "./live-reserves/store-shared";
@@ -44,6 +44,7 @@ export function resolveReserveFeedReviews(
     const parsed = ReserveFeedReviewSchema.safeParse(review);
     const config = configured.get(review.stablecoinId)?.liveReservesConfig;
     const evidenceClass = config ? getLiveReserveAdapterDefinition(config.adapter)?.evidenceClass : null;
+    const maxAgeSec = review.durability === "structural" ? RESERVE_FEED_STRUCTURAL_REVIEW_MAX_AGE_SEC : RESERVE_FEED_REVIEW_MAX_AGE_SEC;
     const validDates = parsed.success && review.sources.every(({ evidenceDate }) => {
       const time = Date.parse(`${evidenceDate}T00:00:00Z`);
       return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === evidenceDate && time / 1000 <= review.reviewedAt;
@@ -52,7 +53,7 @@ export function resolveReserveFeedReviews(
       || (evidenceClass !== "independent" && evidenceClass !== "static-validated"
         && !(evidenceClass === "weak-live-probe" && review.sourceTimestamp != null))
       || !validDates || review.reviewedAt > now || review.expiresAt <= review.reviewedAt
-      || review.expiresAt - review.reviewedAt > RESERVE_FEED_REVIEW_MAX_AGE_SEC) {
+      || review.expiresAt - review.reviewedAt > maxAgeSec) {
       invalidIds.push(review.stablecoinId);
     } else if (now >= review.expiresAt) {
       expiredIds.push(review.stablecoinId);
@@ -92,7 +93,7 @@ export async function matchReserveFeedReview(
   state: ReserveSyncStateRecord | null,
   now: number,
   reviewsById = resolveReserveFeedReviews(now).activeById,
-): Promise<ReserveFeedReview | null> {
+): Promise<Omit<ReserveFeedReview, "durability"> | null> {
   if (!state || state.metadata.uncertainWrite === true) return null;
   // Unreadable stored warnings are not an empty set: the strict decoder could
   // not corroborate the review's exact-warning match, so the alert stays eligible.
@@ -148,5 +149,6 @@ export async function matchReserveFeedReview(
         || observed.username || observed.password || observed.hash) return null;
     } catch { return null; }
   } else if (failure.lastError !== review.errorPrefix) return null;
-  return review;
+  const { durability: _durability, ...acknowledgement } = review;
+  return acknowledgement;
 }

@@ -812,6 +812,11 @@ function burnRow(fixture: BurnFixture, logs = [fixture.log]) {
   return parseMintBurnLogs(fixture.config, fixture.eventDef, logs, fixture.timestamps, fixture.priceContext).rows[0];
 }
 
+function reconcileFixtureBurns(db: D1Database, fixture: BurnFixture) {
+  return reconcileReviewedSupplyBurns(db, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
+    { count: 0, limit: 20 }, new Map(), 1_699_999_200);
+}
+
 describe("reviewed burn economic materialization", () => {
   function rangeFixture() {
     vi.useFakeTimers();
@@ -1055,8 +1060,7 @@ describe("reviewed burn economic materialization", () => {
     await insertMintBurnRows(db, rows);
     await recalcAffectedHours(db, collectAffectedHours(rows));
     vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValueOnce(contexts);
-    expect(await reconcileReviewedSupplyBurns(db, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
-      { count: 0, limit: 20 }, new Map(), 1_699_999_200)).toBe(2);
+    expect(await reconcileFixtureBurns(db, fixture)).toBe(2);
     // A crash here leaves old hourly bytes and recoverable durable debt, not a lost repair.
     expect(read("burn_count", "hourly")).toEqual({ burn_count: 2 });
     expect(read("COUNT(*) AS n", "dirty_hours")).toEqual({ n: 1 });
@@ -1064,8 +1068,7 @@ describe("reviewed burn economic materialization", () => {
     expect(read("burn_count, burn_volume_usd", "hourly"))
       .toEqual({ burn_count: 1, burn_volume_usd: 20_000 });
     expect(read("COUNT(*) AS n", "dirty_hours")).toEqual({ n: 0 });
-    expect(await reconcileReviewedSupplyBurns(db, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
-      { count: 0, limit: 20 }, new Map(), 1_699_999_200)).toBe(0);
+    expect(await reconcileFixtureBurns(db, fixture)).toBe(0);
   });
 
   it("bounds retained reconciliation and makes progress beyond the first batch", async () => {
@@ -1082,8 +1085,7 @@ describe("reviewed burn economic materialization", () => {
     }
     await insertMintBurnRows(db, rows);
     vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValue(contexts);
-    const run = () => reconcileReviewedSupplyBurns(db, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
-      { count: 0, limit: 20 }, new Map(), 1_699_999_200);
+    const run = () => reconcileFixtureBurns(db, fixture);
     expect(await run()).toBe(20);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_events WHERE burn_review_reason IS NULL").get()).toEqual({ n: 5 });
     expect(await run()).toBe(5);
@@ -1106,8 +1108,7 @@ describe("reviewed burn economic materialization", () => {
     }
     await insertMintBurnRows(db, rows);
     vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValue(contexts);
-    const run = () => reconcileReviewedSupplyBurns(db, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
-      { count: 0, limit: 20 }, new Map(), 1_699_999_200);
+    const run = () => reconcileFixtureBurns(db, fixture);
     await run();
     await run();
     expect(sqlite.prepare("SELECT burn_type FROM mint_burn_events WHERE id = ?").get(rows[20].id))
@@ -1130,8 +1131,7 @@ describe("reviewed burn economic materialization", () => {
     await recalcAffectedHours(db, collectAffectedHours([row]));
     // The retained aggregate includes an already-pruned sibling.
     sqlite.exec("UPDATE mint_burn_hourly SET burn_count = 2, burn_volume_usd = 45000, net_flow_usd = -45000");
-    expect(await reconcileReviewedSupplyBurns(db, fixture.config, [mintBurnAlchemyEndpoint("https://rpc.example")],
-      { count: 0, limit: 20 }, new Map(), 1_699_999_200)).toBe(0);
+    expect(await reconcileFixtureBurns(db, fixture)).toBe(0);
     expect(read("burn_count, burn_volume_usd", "hourly"))
       .toEqual({ burn_count: 2, burn_volume_usd: 45_000 });
     expect(read("COUNT(*) AS n", "dirty_hours")).toEqual({ n: 0 });

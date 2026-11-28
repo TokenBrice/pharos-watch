@@ -600,9 +600,20 @@ describe("market and risk collectors", () => {
     return pegObs(v, { pegReference: { valueUsd: v, source: kind, contributorCount: 1, asOf: refAt }, admittedDeviationBps: bps, referenceAdmission: bps == null ? { ...clocks, status: "held-closed-session", reason: "reference-market-closed" } : { ...clocks, status: "admitted", reason: "live-reference" } });
   };
 
+  function metalDepeg(
+    id: string, symbol: string, pegType: "peggedGOLD" | "peggedSILVER",
+    now: number, ageDays: number, peakBps: number, latchedReference: number, price: number, priceObservedAt = now,
+  ) {
+    const ctx = ctxFor(depegTbl([{
+      stablecoin_id: id, symbol, peg_type: pegType, source: "live",
+      direction: peakBps > 0 ? "above" : "below", peak_deviation_bps: peakBps,
+      started_at: now - ageDays * 86_400, peg_reference: latchedReference,
+    }]));
+    return { ctx, a: makeAsset({ id, symbol, pegType, price, priceObservedAt }) };
+  }
+
   it("measures a USD-quoted gold event against the current reference, not the latched one", async () => {
-    const now = nowS(), ctx = ctxFor(depegTbl([{ stablecoin_id: "xaum-matrixdock", symbol: "XAUM", peg_type: "peggedGOLD", source: "live", direction: "above", peak_deviation_bps: 1660, started_at: now - 10 * 86_400, peg_reference: 4051 }]));
-    const a = makeAsset({ id: "xaum-matrixdock", symbol: "XAUM", pegType: "peggedGOLD", price: 3902, priceObservedAt: now });
+    const now = nowS(), { ctx, a } = metalDepeg("xaum-matrixdock", "XAUM", "peggedGOLD", now, 10, 1660, 4051, 3902);
     track(ctx, a); ctx.currentPegObservationById = new Map([[a.id, schedObs(3902, 0, now)]]);
     const r = await colDepegs(ctx);
     expect(r.value.topDepegs[0]).toMatchObject({ severityBasis: "current", currentBps: 0, pegReference: 3902, currentPriceUsd: 3902, bps: 1660 });
@@ -610,8 +621,7 @@ describe("market and risk collectors", () => {
   });
 
   it("flags a month-old premium against the current reference as chronic-shallow", async () => {
-    const now = nowS(), ctx = ctxFor(depegTbl([{ stablecoin_id: "xagm-matrixdock", symbol: "XAGM", peg_type: "peggedSILVER", source: "live", direction: "above", peak_deviation_bps: 2043, started_at: now - 41 * 86_400, peg_reference: 38.22 }]));
-    const a = makeAsset({ id: "xagm-matrixdock", symbol: "XAGM", pegType: "peggedSILVER", price: 30.411, priceObservedAt: now });
+    const now = nowS(), { ctx, a } = metalDepeg("xagm-matrixdock", "XAGM", "peggedSILVER", now, 41, 2043, 38.22, 30.411);
     track(ctx, a, 100e6); ctx.currentPegObservationById = new Map([[a.id, schedObs(30, 137, now)]]);
     const r = await colDepegs(ctx);
     expect(r.value.topDepegs[0]).toMatchObject({ currentBps: 137, severityBasis: "current", pegReference: 30, pegReferenceBasis: "current", currentPriceUsd: 30.411 });
@@ -619,8 +629,7 @@ describe("market and risk collectors", () => {
   });
 
   it.each(["missing", "withheld"] as const)("never falls back to the latched reference when the current reference is %s", async (state) => {
-    const now = nowS(), ctx = ctxFor(depegTbl([{ stablecoin_id: "xaum-matrixdock", symbol: "XAUM", peg_type: "peggedGOLD", source: "live", direction: "below", peak_deviation_bps: -5000, started_at: now - 41 * 86_400, peg_reference: 5000 }]));
-    const a = makeAsset({ id: "xaum-matrixdock", symbol: "XAUM", pegType: "peggedGOLD", price: 1000, priceObservedAt: now });
+    const now = nowS(), { ctx, a } = metalDepeg("xaum-matrixdock", "XAUM", "peggedGOLD", now, 41, -5000, 5000, 1000);
     track(ctx, a); ctx.currentPegObservationById = state === "withheld" ? new Map([[a.id, pegObs(null, { pegReferenceUnavailable: true })]]) : new Map();
     const r = await colDepegs(ctx), top = r.value.topDepegs[0];
     expect(top).toMatchObject({ severityBasis: "peak-fallback", bps: -5000 });
@@ -631,9 +640,9 @@ describe("market and risk collectors", () => {
 
   it("holds a weekend metal deviation instead of ranking it as current", async () => {
     const now = Date.parse("2026-11-13T22:01:00Z") / 1_000, qAt = now - 120;
-    const ctx = ctxFor(depegTbl([{ stablecoin_id: "paxg-paxos", symbol: "PAXG", peg_type: "peggedGOLD", source: "live", direction: "below", peak_deviation_bps: -600, started_at: now - 10 * 86_400, peg_reference: 4000 }]));
+    const { ctx, a } = metalDepeg("paxg-paxos", "PAXG", "peggedGOLD", now, 10, -600, 4000, 3900, qAt);
     ctx.nowSec = now;
-    const a = Object.assign(makeAsset({ id: "paxg-paxos", symbol: "PAXG", pegType: "peggedGOLD", price: 3900, priceObservedAt: qAt }), { currentPeg: schedObs(4000, -250, qAt) });
+    Object.assign(a, { currentPeg: schedObs(4000, -250, qAt) });
     track(ctx, a); ctx.currentPegObservationById = new Map([[a.id, schedObs(4000, null, qAt, "fallback", now)]]);
     const { value, qualityReasons } = await colDepegs(ctx);
     expect(value.topDepegs[0]).toMatchObject({ severityBasis: "peak-fallback", bps: -600 }); expect(value.topDepegs[0].currentBps).toBeUndefined();

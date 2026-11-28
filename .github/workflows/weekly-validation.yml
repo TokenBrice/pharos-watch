@@ -325,6 +325,70 @@ jobs:
             echo "::warning title=Nightly test timings unavailable::No test-timings artifact in the last two weeks; the slow-file section reports unavailable."
           fi
 
+      - name: Fetch 7-day issue hygiene
+        # Advisory input mirroring `timings`: an API hiccup leaves no file, so
+        # the report names the issue hygiene section unavailable instead of zero.
+        id: issues
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SINCE: ${{ steps.window.outputs.since }}
+          UNTIL: ${{ steps.window.outputs.until }}
+        run: |
+          set -uo pipefail
+          mkdir -p .tmp/ci-weekly
+          issues=".tmp/ci-weekly/issues.json"
+          rm -f "${issues}"
+          work="$(mktemp -d "${RUNNER_TEMP}/ci-weekly-issues.XXXXXX")"
+          trap 'rm -rf "${work}"' EXIT
+          gh_read() {
+            local out attempt
+            for attempt in 1 2 3; do
+              if out="$(gh api --paginate "$@")"; then printf '%s\n' "${out}"; return 0; fi
+              sleep "$((attempt * 15))"
+            done
+            return 1
+          }
+          if gh_read "repos/${GH_REPO}/issues?state=all&since=${SINCE}&per_page=100" | jq -s 'add // []' > "${work}/updated.json" \
+            && gh_read "repos/${GH_REPO}/issues?state=open&per_page=100" | jq -s 'add // []' > "${work}/open.json"; then
+            jq -n --arg since "${SINCE}" --arg until "${UNTIL}" \
+              --slurpfile updated "${work}/updated.json" \
+              --slurpfile open "${work}/open.json" '
+              ($updated[0] | map(select(.pull_request == null)) | unique_by(.number)) as $u
+              | ($open[0] | map(select(.pull_request == null)) | unique_by(.number)) as $o
+              | {
+                  version: 1,
+                  openedInWindow: [
+                    $u[]
+                    | select(.created_at != null and .created_at >= $since and .created_at <= $until)
+                    | {number, createdAt: .created_at, labels: [(.labels // [])[].name]}
+                  ],
+                  closedInWindow: [
+                    $u[]
+                    | select(.state == "closed" and .closed_at != null and .closed_at >= $since and .closed_at <= $until)
+                    | {number, closedAt: .closed_at, labels: [(.labels // [])[].name]}
+                  ],
+                  openNow: [
+                    $o[]
+                    | {
+                        number,
+                        title: (.title // ""),
+                        labels: [(.labels // [])[].name],
+                        due: ([((.body // "") | capture("(?m)^Due:[ \\t]*(?<due>\\d{4}-\\d{2}-\\d{2})[ \\t\\r]*$").due)] | first // null)
+                      }
+                  ]
+                }
+            ' > "${work}/issues.json"
+            if [[ -s "${work}/issues.json" ]] && jq -e 'type == "object" and .version == 1' "${work}/issues.json" >/dev/null 2>&1; then
+              mv "${work}/issues.json" "${issues}"
+            fi
+          fi
+          if [[ -s "${issues}" ]]; then
+            echo "Collected 7-day issue hygiene snapshot."
+          else
+            echo "::warning title=Issue hygiene unavailable::Failed to fetch GitHub issues; the issue hygiene section reports unavailable."
+          fi
+
       - name: Install route Markdown parser dependencies
         id: route-parser
         continue-on-error: true
@@ -348,6 +412,7 @@ jobs:
           )
           if [[ -s .tmp/ci-weekly/test-timings.json ]]; then args+=(--timings .tmp/ci-weekly/test-timings.json); fi
           if [[ -f .tmp/ci-weekly/added-tests.log ]]; then args+=(--added-test-log .tmp/ci-weekly/added-tests.log); fi
+          if [[ -s .tmp/ci-weekly/issues.json ]]; then args+=(--issues .tmp/ci-weekly/issues.json); fi
           node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
             scripts/maintenance/report-ci-weekly.ts "${args[@]}"
           cat "${out}" >> "${GITHUB_STEP_SUMMARY}"

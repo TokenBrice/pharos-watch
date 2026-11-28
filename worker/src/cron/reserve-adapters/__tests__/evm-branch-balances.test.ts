@@ -77,6 +77,9 @@ function branchRpc(options: BranchRpcOptions = {}): Record<string, AdapterRpcVal
   return { ...rpc, ...options.extra };
 }
 
+const singleTokenRpc = (token: string, balance: bigint | null, decimals: bigint | null, extra?: BranchRpcOptions["extra"]) =>
+  branchRpc({ balances: { [token]: balance }, decimals: { [token]: decimals }, extra });
+
 interface HoneyOptions {
   assetCount?: number; assetAddresses?: string[]; vaultAddresses?: string[]; custody?: boolean;
   failVaultAsset?: boolean; failConvertToAssets?: boolean; convertToAssets?: bigint | null;
@@ -136,7 +139,7 @@ describe("branch valuation provenance", () => {
       config: makeBranchConfig([branch]), nowSec: NOW_SEC,
       network: {
         block: { timestamp: NOW_SEC },
-        rpc: branchRpc({ balances: { [branch.token.address]: 1_000_000n }, decimals: { [branch.token.address]: 6n } }),
+        rpc: singleTokenRpc(branch.token.address, 1_000_000n, 6n),
         json: { [`${PRICES_BASE}/${key}`]: { coins: { [key]: quote } } },
       },
     });
@@ -154,7 +157,7 @@ describe("branch valuation provenance", () => {
     const branch = wbtcBranch({ priceUsd: 60_000 });
     const { result } = await runAdapter("evm-branch-balances", { ...coin, liveReservesConfig: makeBranchConfig([branch]) }, {
       config: makeBranchConfig([branch]), nowSec: NOW_SEC,
-      network: { rpc: branchRpc({ balances: { [branch.token.address]: 100_000_000n }, decimals: { [branch.token.address]: 8n } }) },
+      network: { rpc: singleTokenRpc(branch.token.address, 100_000_000n, 8n) },
     });
     expect(result.metadata?.details).toMatchObject({
       branchObservations: [expect.objectContaining({ priceObservation: {
@@ -173,10 +176,7 @@ describe("branch valuation provenance", () => {
       nowSec: NOW_SEC,
       network: {
         block: { timestamp: NOW_SEC },
-        rpc: branchRpc({
-          balances: { [branch.token.address]: 1_000_000n }, decimals: { [branch.token.address]: 6n },
-          extra: { [`${oracle}:${selector}${branch.token.address.slice(2).padStart(64, "0")}`]: WAD },
-        }),
+        rpc: singleTokenRpc(branch.token.address, 1_000_000n, 6n, { [`${oracle}:${selector}${branch.token.address.slice(2).padStart(64, "0")}`]: WAD }),
       },
     });
     expect(result.metadata?.details).toMatchObject({
@@ -189,11 +189,13 @@ describe("branch valuation provenance", () => {
 });
 
 describe("fetchEvmBranchBalancesReserves", () => {
+  const runWstEthBook = () => runBranches(makeBranchConfig([wstEthBranch()]), {
+    json: priceJson({ [assetKey("ethereum", ADDR_B)]: 2000 }),
+    rpc: singleTokenRpc(ADDR_B, WAD, 18n),
+  });
+
   it("preserves the legacy reserve result without redemption opt-in", async () => {
-    const { result, network } = await runBranches(makeBranchConfig([wstEthBranch()]), {
-      json: priceJson({ [assetKey("ethereum", ADDR_B)]: 2000 }),
-      rpc: branchRpc({ balances: { [ADDR_B]: WAD }, decimals: { [ADDR_B]: 18n } }),
-    });
+    const { result, network } = await runWstEthBook();
     expect(result.slices).toEqual([{ sourceKey: `evm-branch-balances:ethereum:${ADDR_B}`, name: "wstETH", pct: 100, risk: "low" }]);
     expect(result.metadata).not.toHaveProperty("redemption");
     expect(network.rpcCalls.filter((c) => c.method === "eth_call").map((c) => c.selector))
@@ -278,7 +280,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     const b1 = "0x00000000000000000000000000000000000000b1";
     const { result } = await runBranches(
       makeBranchConfig([{ name: "M by M^0 (via UsualM wrapper)", holder: "0x00000000000000000000000000000000000000a1", token: { chain: "ethereum", address: b1, decimals: 18 }, risk: "low", priceUsd: 1 }]),
-      { rpc: branchRpc({ balances: { [b1]: 50_000_000n }, decimals: { [b1]: 6n } }) },
+      { rpc: singleTokenRpc(b1, 50_000_000n, 6n) },
       { validate: false },
     );
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "branch-token-decimals-mismatch", effect: "fatal" }));
@@ -289,7 +291,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     const b1 = "0x00000000000000000000000000000000000000b1";
     const { result } = await runBranches(
       makeBranchConfig([{ name: "Non-ERC20 branch", holder: "0x00000000000000000000000000000000000000a1", token: { chain: "ethereum", address: b1, decimals: 6 }, risk: "low", priceUsd: 1 }]),
-      { rpc: branchRpc({ balances: { [b1]: 1_000_000n }, decimals: { [b1]: null } }) },
+      { rpc: singleTokenRpc(b1, 1_000_000n, null) },
     );
     expect(result.slices).toEqual([{ sourceKey: `evm-branch-balances:ethereum:${b1}`, name: "Non-ERC20 branch", pct: 100, risk: "low" }]);
     expect(result.warnings).toEqual([expect.objectContaining({ code: "branch-token-decimals-unavailable", effect: "info" })]);
@@ -400,7 +402,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     }], { chain: "berachain" }), {
       chains: { berachain: BERACHAIN_RPC_URL },
       json: priceJson({ [assetKey("berachain", priceToken)]: 75_000 }),
-      rpc: branchRpc({ balances: { [receiptToken]: WAD }, decimals: { [receiptToken]: 18n } }),
+      rpc: singleTokenRpc(receiptToken, WAD, 18n),
     });
     expect(result.slices).toEqual([{ sourceKey: `evm-branch-balances:berachain:${receiptToken}`, name: "Receipt token", pct: 100, risk: "high" }]);
   });
@@ -411,10 +413,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
     });
     const { result } = await runBranches(config, {
       json: priceJson({ [assetKey("ethereum", ADDR_B)]: 2000 }),
-      rpc: branchRpc({
-        balances: { [ADDR_B]: WAD }, decimals: { [ADDR_B]: 18n },
-        extra: { "0xf949982b91c8c61e952b3ba942cbbfaef5386684:0xc52861f2": 5_000_000_000_000_000n },
-      }),
+      rpc: singleTokenRpc(ADDR_B, WAD, 18n, { "0xf949982b91c8c61e952b3ba942cbbfaef5386684:0xc52861f2": 5_000_000_000_000_000n }),
     }, { validate: false });
     expect(result.metadata).toMatchObject({
       branchCount: 1, freshnessMode: "not-applicable", redemption: { feeBps: 50 }, details: { proofKind: "onchain-branch-balances" },
@@ -470,7 +469,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
         [`${PRICES_BASE}/${assetKey("ethereum", ADDR_B)}`]: { coins: {} },
         ...priceJson({ [assetKey("ethereum", usdcUnderlying)]: 1.0 }),
       },
-      rpc: branchRpc({ balances: { [ADDR_B]: 50_000_000n }, decimals: { [ADDR_B]: 6n } }),
+      rpc: singleTokenRpc(ADDR_B, 50_000_000n, 6n),
     });
     expect(result.slices).toEqual([{ sourceKey: `evm-branch-balances:ethereum:${ADDR_B}`, name: "USDC branch", pct: 100, risk: "low", coinId: "usdc-circle" }]);
     expect(result.warnings).toEqual([expect.objectContaining({ code: "defillama-quote-missing", effect: "degraded" })]);
@@ -479,7 +478,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
   it("fails closed when an underlying price substitution has not been reviewed", async () => {
     const { result } = await runBranches(makeBranchConfig([usdcBranch()]), {
       json: { [`${PRICES_BASE}/${assetKey("ethereum", ADDR_B)}`]: { coins: {} } },
-      rpc: branchRpc({ balances: { [ADDR_B]: 50_000_000n }, decimals: { [ADDR_B]: 6n } }),
+      rpc: singleTokenRpc(ADDR_B, 50_000_000n, 6n),
     });
     expect(result.metadata?.unknownExposurePct).toBe(100);
     expect(result.slices.some((s) => s.coinId === "usdc-circle")).toBe(false);
@@ -499,7 +498,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       makeBranchConfig([{ ...usdcBranch(), name: "Hashnote USYC", coinId: "usyc-hashnote", underlyingPrice1to1: true }]),
       {
         json: { [`${PRICES_BASE}/${assetKey("ethereum", ADDR_B)}`]: { coins: {} }, [`${PRICES_BASE}/${assetKey("ethereum", usycUnderlying)}`]: { coins: {} } },
-        rpc: branchRpc({ balances: { [ADDR_B]: 1_000_000n }, decimals: { [ADDR_B]: 6n } }),
+        rpc: singleTokenRpc(ADDR_B, 1_000_000n, 6n),
       },
       { ctx: { db } },
     );
@@ -513,7 +512,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       risk: "medium", coinId: "usde-ethena", depType: "wrapper",
     }]), {
       json: priceJson({ [assetKey("ethereum", ADDR_B)]: 1.23 }),
-      rpc: branchRpc({ balances: { [ADDR_B]: 50n * WAD }, decimals: { [ADDR_B]: 18n } }),
+      rpc: singleTokenRpc(ADDR_B, 50n * WAD, 18n),
     });
     expect(result.warnings).toBeUndefined();
     expect(result.slices).toEqual([{
@@ -524,7 +523,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
   it.each([[1.02, "none"], [0.9, "warn"], [0.4, "throw"]] as const)("handles a USD-pegged wrapper price of %s (%s)", async (price, outcome) => {
     const run = runBranches(makeBranchConfig([usdcBranch()]), {
       json: priceJson({ [assetKey("ethereum", ADDR_B)]: price }),
-      rpc: branchRpc({ balances: { [ADDR_B]: 50_000_000n }, decimals: { [ADDR_B]: 6n } }),
+      rpc: singleTokenRpc(ADDR_B, 50_000_000n, 6n),
     });
     if (outcome === "throw") {
       await expect(run).rejects.toThrow(/extreme depeg/);
@@ -548,16 +547,18 @@ describe("fetchEvmBranchBalancesReserves", () => {
     expect(network.rpcCalls).toEqual([]);
   });
 
+  const runWbtcWithDebt = (debt: bigint) => runBranches(
+    makeBranchConfig([wbtcBranch({ holder: ADDR_A, token: { chain: "ethereum", address: ADDR_B, decimals: 8 } })], {
+      params: { debtSelector: "0x18160ddd", debtDecimals: 18, census: REVIEWED_CENSUS },
+    }),
+    {
+      json: priceJson({ [assetKey("ethereum", ADDR_B)]: 60000 }),
+      rpc: singleTokenRpc(ADDR_B, 100_000_000n, 8n, { [`${ADDR_A}:totalSupply()`]: debt }),
+    },
+  );
+
   it("emits collateralizationRatio metadata when a debtSelector is configured", async () => {
-    const { result } = await runBranches(
-      makeBranchConfig([wbtcBranch({ holder: ADDR_A, token: { chain: "ethereum", address: ADDR_B, decimals: 8 } })], {
-        params: { debtSelector: "0x18160ddd", debtDecimals: 18, census: REVIEWED_CENSUS },
-      }),
-      {
-        json: priceJson({ [assetKey("ethereum", ADDR_B)]: 60000 }),
-        rpc: branchRpc({ balances: { [ADDR_B]: 100_000_000n }, decimals: { [ADDR_B]: 8n }, extra: { [`${ADDR_A}:totalSupply()`]: 50_000n * WAD } }),
-      },
-    );
+    const { result } = await runWbtcWithDebt(50_000n * WAD);
     expect(result.metadata?.totalDebtUsd).toBe(50000);
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.2, 2);
     expect(result.warnings?.some((w) => w.code === "undercollateralized") ?? false).toBe(false);
@@ -570,14 +571,14 @@ describe("fetchEvmBranchBalancesReserves", () => {
   ] as const)("withholds collateral when the configured liability read is %s", async (_label, debt) => {
     await expect(runBranches(
       makeBranchConfig([usdcBranch({ priceUsd: 1 })], { params: { debtSelector: "0x18160ddd", debtDecimals: 18 } }),
-      { rpc: branchRpc({ balances: { [ADDR_B]: 100_000_000n }, decimals: { [ADDR_B]: 6n }, extra: { [`${ADDR_A}:totalSupply()`]: debt } }) },
+      { rpc: singleTokenRpc(ADDR_B, 100_000_000n, 6n, { [`${ADDR_A}:totalSupply()`]: debt }) },
     )).rejects.toThrow(/configured liability read/);
   });
 
   it("publishes observed zero debt without an undefined or infinite coverage quotient", async () => {
     const { result } = await runBranches(
       makeBranchConfig([usdcBranch({ priceUsd: 1 })], { params: { debtSelector: "0x18160ddd", debtDecimals: 18 } }),
-      { rpc: branchRpc({ balances: { [ADDR_B]: 100_000_000n }, decimals: { [ADDR_B]: 6n }, extra: { [`${ADDR_A}:totalSupply()`]: 0n } }) },
+      { rpc: singleTokenRpc(ADDR_B, 100_000_000n, 6n, { [`${ADDR_A}:totalSupply()`]: 0n }) },
     );
     expect(result.metadata?.totalDebtUsd).toBe(0);
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
@@ -595,10 +596,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
       }], { params: { debtSelector: "0x18160ddd", debtContract: usdn, debtDecimals: 18, census: REVIEWED_CENSUS } }),
       {
         json: priceJson({ [assetKey("ethereum", wstEth)]: 2879.58 }),
-        rpc: branchRpc({
-          balances: { [wstEth]: 729_665_660_446_827_366_025n }, decimals: { [wstEth]: 18n },
-          extra: { [`${usdn}:totalSupply()`]: 1_256_625_428_863_930_548_011_778n },
-        }),
+        rpc: singleTokenRpc(wstEth, 729_665_660_446_827_366_025n, 18n, { [`${usdn}:totalSupply()`]: 1_256_625_428_863_930_548_011_778n }),
       },
     );
     expect(result.slices).toEqual([{ sourceKey: `evm-branch-balances:ethereum:${wstEth}`, name: "wstETH-backed USDN vault", pct: 100, risk: "medium" }]);
@@ -608,15 +606,7 @@ describe("fetchEvmBranchBalancesReserves", () => {
   });
 
   it("emits an undercollateralized warning when collateralizationRatio < 1.0", async () => {
-    const { result } = await runBranches(
-      makeBranchConfig([wbtcBranch({ holder: ADDR_A, token: { chain: "ethereum", address: ADDR_B, decimals: 8 } })], {
-        params: { debtSelector: "0x18160ddd", debtDecimals: 18, census: REVIEWED_CENSUS },
-      }),
-      {
-        json: priceJson({ [assetKey("ethereum", ADDR_B)]: 60000 }),
-        rpc: branchRpc({ balances: { [ADDR_B]: 100_000_000n }, decimals: { [ADDR_B]: 8n }, extra: { [`${ADDR_A}:totalSupply()`]: 80_000n * WAD } }),
-      },
-    );
+    const { result } = await runWbtcWithDebt(80_000n * WAD);
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(0.75, 2);
     expect(result.warnings?.find((w) => w.code === "undercollateralized")).toMatchObject({ severity: "warning" });
   });
@@ -626,17 +616,14 @@ describe("fetchEvmBranchBalancesReserves", () => {
       makeBranchConfig([usdcBranch()], { params: { debtSelector: "0x18160ddd", debtDecimals: 18, census: REVIEWED_CENSUS } }),
       {
         json: priceJson({ [assetKey("ethereum", ADDR_B)]: 0.9 }),
-        rpc: branchRpc({ balances: { [ADDR_B]: 100_000_000n }, decimals: { [ADDR_B]: 6n }, extra: { [`${ADDR_A}:totalSupply()`]: 100n * WAD } }),
+        rpc: singleTokenRpc(ADDR_B, 100_000_000n, 6n, { [`${ADDR_A}:totalSupply()`]: 100n * WAD }),
       },
     );
     expect(result.warnings?.map((w) => w.code)).toEqual(["wrapper-depeg-detected", "undercollateralized"]);
   });
 
   it("skips debt reconciliation when debtSelector is omitted", async () => {
-    const { result, network } = await runBranches(makeBranchConfig([wstEthBranch()]), {
-      json: priceJson({ [assetKey("ethereum", ADDR_B)]: 2000 }),
-      rpc: branchRpc({ balances: { [ADDR_B]: WAD }, decimals: { [ADDR_B]: 18n } }),
-    });
+    const { result, network } = await runWstEthBook();
     expect(result.metadata?.collateralizationRatio).toBeUndefined();
     expect(result.metadata?.totalDebtUsd).toBeUndefined();
     expect(network.rpcCalls.filter((c) => c.method === "eth_call").map((c) => c.selector))
@@ -671,6 +658,19 @@ function usualNetwork(options: { failedBalance?: string; failedPrice?: string; r
 
 const runUsual = (network: AdapterNetworkSpec) =>
   runAdapter("evm-branch-balances", "usd0-usual", { config: usd0Config, network, nowSec: CENSUS_NOW_SEC });
+
+const singleBranchUsd0Census = (reviewedAt: string) => ({
+  ...usd0Config,
+  params: { ...usd0Config.params, branches: [usd0Params.branches[0]], census: { ...REVIEWED_CENSUS, reviewedAt } },
+}) as LiveReservesConfig;
+
+type BranchBook = Parameters<typeof adaptBranchBalanceReserves>[0];
+const adaptUsd0Balances = (
+  branch: BranchBook["balances"][number]["branch"], balances: BranchBook["balances"],
+  overrides: Partial<Pick<BranchBook, "censusComplete" | "liabilityUsd">> = {},
+) => adaptBranchBalanceReserves({
+  adapterKey: "evm-branch-balances", priceMap: new Map([[branch.name, 1]]), balances, ...overrides,
+});
 
 describe("branch reserve census and unavailable residual", () => {
   it("replays XUSD's pinned ten-token basket separately from its historical, undated DOC quote", async () => {
@@ -842,24 +842,17 @@ describe("branch reserve census and unavailable residual", () => {
 
   it("preserves a partial book without a denominator as unknown, not a normalized known-only mix", () => {
     const branch = usd0Params.branches[0];
-    const result = adaptBranchBalanceReserves({
-      adapterKey: "evm-branch-balances", priceMap: new Map([[branch.name, 1]]),
-      balances: [{ branch, balanceRaw: 10n ** BigInt(branch.token.decimals) }, { branch: usd0Params.branches[1], balanceRaw: null }],
-    });
+    const result = adaptUsd0Balances(branch, [{ branch, balanceRaw: 10n ** BigInt(branch.token.decimals) }, { branch: usd0Params.branches[1], balanceRaw: null }]);
     expect(result.slices).toEqual([UNKNOWN_SLICE]);
     expect(result.metadata).toMatchObject({ unknownExposurePct: 100, unknownExposureUnavailableReason: "partial-book-without-residual-bound" });
   });
 
   it.each([undefined, 20, 100, 1000])("never uses liabilities %s to bound a partial collateral book", (liabilityUsd) => {
     const branch = usd0Params.branches[0];
-    const result = adaptBranchBalanceReserves({
-      adapterKey: "evm-branch-balances", priceMap: new Map([[branch.name, 1]]),
-      balances: [
+    const result = adaptUsd0Balances(branch, [
         { branch, balanceRaw: 40n * 10n ** BigInt(branch.token.decimals), observedDecimals: BigInt(branch.token.decimals) },
         { branch: usd0Params.branches[1], balanceRaw: null },
-      ],
-      censusComplete: true, liabilityUsd,
-    });
+      ], { censusComplete: true, liabilityUsd });
     expect(result.slices).toEqual([UNKNOWN_SLICE]);
     expect(result.metadata?.unknownExposurePct).toBe(100);
     expect(result.metadata?.details).toMatchObject({ knownReserveValueUsd: 40, residualUsd: null, contextualObservationsOnly: true });
@@ -873,9 +866,7 @@ describe("branch reserve census and unavailable residual", () => {
     ["2025-10-02", Date.parse("2025-10-02T00:00:00Z") / 1000 + V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec, true],
     ["2025-10-02", Date.parse("2025-10-02T00:00:00Z") / 1000 + V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec + 1, false],
   ] as const)("gates reviewed census %s at %s", async (reviewedAt, nowSec, admitted) => {
-    const config = { ...usd0Config, params: { ...usd0Config.params,
-      branches: [usd0Params.branches[0]], census: { kind: "reviewed-roster", reviewedAt, sourceUrls: ["https://example.com/census"] },
-    } } as LiveReservesConfig;
+    const config = singleBranchUsd0Census(reviewedAt);
     const { result } = await runAdapter("evm-branch-balances", "usd0-usual", { config, network: { ...usualNetwork(), block: { timestamp: nowSec } }, nowSec });
     expect(result.metadata?.censusComplete).toBe(admitted);
     expect(result.metadata?.collateralizationRatio).toBe(admitted ? 0.1 : undefined);
@@ -883,9 +874,7 @@ describe("branch reserve census and unavailable residual", () => {
   });
 
   it("does not let an elapsed current review certify an observation pinned before that review", async () => {
-    const config = { ...usd0Config, params: { ...usd0Config.params,
-      branches: [usd0Params.branches[0]], census: { kind: "reviewed-roster", reviewedAt: "2026-10-01", sourceUrls: ["https://example.com/census"] },
-    } } as LiveReservesConfig;
+    const config = singleBranchUsd0Census("2026-10-01");
     const { result } = await runAdapter("evm-branch-balances", "usd0-usual", {
       config, network: { ...usualNetwork(), block: { timestamp: Date.parse("2026-10-01T12:00:00Z") / 1000 } }, nowSec: CENSUS_NOW_SEC,
     });
@@ -896,10 +885,7 @@ describe("branch reserve census and unavailable residual", () => {
 
   it("does not claim zero unknown exposure from an uncertified configured roster", () => {
     const branch = usd0Params.branches[0];
-    const result = adaptBranchBalanceReserves({
-      adapterKey: "evm-branch-balances", priceMap: new Map([[branch.name, 1]]),
-      balances: [{ branch, balanceRaw: 10n ** BigInt(branch.token.decimals) }],
-    });
+    const result = adaptUsd0Balances(branch, [{ branch, balanceRaw: 10n ** BigInt(branch.token.decimals) }]);
     expect(result.metadata?.censusComplete).toBe(false);
     expect(result.metadata?.unknownExposurePct).toBeUndefined();
     expect(result.metadata?.unknownExposureUnavailableReason).toBe("configured-branches-not-certified-census");

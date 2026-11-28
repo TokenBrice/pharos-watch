@@ -23,7 +23,7 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { CHAIN_MATURITY_REVIEWS_V1 } from "../../shared/data/safety-score-v9/chain-maturity-reviews-v1.ts";
+import { resolveChainMaturityAdmissionsAt } from "../../shared/data/safety-score-v9/chain-maturity-reviews-v1.ts";
 import { NOTICE_STALE_DAYS } from "../../shared/lib/coin-state.ts";
 import { DEX_COVERAGE_WAIVERS } from "../../shared/lib/dex-deployment-coverage.ts";
 import {
@@ -393,11 +393,13 @@ function venueRiskExpiries(entries, horizonMs) {
   });
 }
 
-export function buildDatedReviewRegistries(horizonMs) {
+export function buildDatedReviewRegistries(horizonMs, nowMs = Date.now()) {
   return [
     {
       registry: "Chain-maturity reviews (CHAIN_MATURITY_REVIEWS_V1)",
-      entries: CHAIN_MATURITY_REVIEWS_V1.map((entry) => ({ id: entry.chainSlug, expiresAt: entry.nextReviewAt })),
+      entries: resolveChainMaturityAdmissionsAt(Math.floor(nowMs / 1000)).reviews
+        .filter((entry) => entry.state !== "failed" && entry.state !== "pending")
+        .map((entry) => ({ id: entry.chainSlug, expiresAt: entry.nextReviewAt })),
     },
     {
       registry: "Stablecoin publication waivers (STABLECOIN_PUBLICATION_WAIVERS)",
@@ -541,7 +543,7 @@ export function analyzeDatedReviewExpiries(registries, nowMs = Date.now(), looka
  */
 export function collectDatedReviewExpiries(nowMs = Date.now(), lookaheadDays = EXPIRY_LOOKAHEAD_DAYS) {
   const horizonMs = nowMs + lookaheadDays * DAY_MS;
-  return analyzeDatedReviewExpiries(buildDatedReviewRegistries(horizonMs), nowMs, lookaheadDays);
+  return analyzeDatedReviewExpiries(buildDatedReviewRegistries(horizonMs, nowMs), nowMs, lookaheadDays);
 }
 
 /**

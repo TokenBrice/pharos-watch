@@ -75,6 +75,11 @@ function mockFinalizedAt(finalized: number, timestamp: number): void {
     ({ number: number === "finalized" ? finalized : number, timestamp, hash: HASH }));
 }
 
+function mockMissingFinalizedHead(): void {
+  vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+    number === "finalized" ? null : { number, timestamp: CLOCK - 60, hash: HASH });
+}
+
 describe("reviewed economic supply observation", () => {
   it("journals typed body rejection and bounded exact leaf provenance without changing old IDs", () => {
     const payload: SupplyAttributionJournalV1Payload = { schemaVersion: 1, lane: "supply-attribution", assetId: "alpha", attemptId: "attempt", sourceId: "reviewed.economic-deployment-partition.v1", sourceOriginClass: "issuer-disclosure-plus-onchain", baseInputGenerationId: "input", sourceGeneration: "source", registryFingerprint: "a".repeat(64), routeInventoryDigest: null, attemptCode: "supply-attribution.collector.attempted", admissionCode: admissionCodeForSupplyAttributionRejection("observer-body-over-cap"), fallbackCode: "supply-attribution.fallback.aggregate-only", rejectionCode: "observer-body-over-cap", attemptedAtSec: CLOCK, completedAtSec: CLOCK, scoringClockSec: CLOCK, sourceObservedAtSec: null, failedRouteId: "route", contentSha256: null };
@@ -140,8 +145,7 @@ describe("reviewed economic supply observation", () => {
   it("retains the reviewed lag fallback when finalized proof is unavailable", async () => {
     const f = fixture();
     f.plan.deployments[0]!.read = { kind: "evm-total-supply", safeBlockLag: 2, pinPolicy: "finalized-preferred" };
-    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
-      number === "finalized" ? null : { number, timestamp: CLOCK - 60, hash: HASH });
+    mockMissingFinalizedHead();
     expect(await f.run()).toMatchObject({ status: "accepted", attribution: {
       observations: [expect.objectContaining({ anchor: "100" })],
     } });
@@ -550,8 +554,7 @@ describe("reviewed economic supply observation", () => {
 
   it.each(["missing", "identity", "count", "code", "finalized head unavailable"])("rejects an unavailable or unauthenticated pending %s read", async failure => {
     const f = pendingFixture();
-    if (failure === "finalized head unavailable") vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
-      number === "finalized" ? null : { number, timestamp: CLOCK - 60, hash: HASH });
+    if (failure === "finalized head unavailable") mockMissingFinalizedHead();
     else vi.mocked(evmRpc.fetchEvmRpcBatch).mockImplementation(async (_chain, calls) =>
       failure === "missing" ? null : calls[0]!.method === "eth_getCode" ?
         [failure === "code" ? "0x6001" : "0x6000", word(failure === "count" ? 2n : 1n)] :
@@ -684,8 +687,7 @@ describe("reviewed economic supply observation", () => {
 
   it("rejects an unavailable finalized OFT head without reading a synthetic zero holding", async () => {
     const f = oftFixture();
-    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
-      number === "finalized" ? null : { number, timestamp: CLOCK - 60, hash: HASH });
+    mockMissingFinalizedHead();
     expect(await f.run()).toEqual({
       status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: f.plan.deployments[0]!.deploymentKey,
     });
@@ -745,7 +747,7 @@ describe("reviewed economic supply observation", () => {
       .toBeLessThan(vi.mocked(evmRpc.fetchEvmRpcBatch).mock.invocationCallOrder[0]!);
   });
 
-  it.each([false, true])("caps the shared CCIP holding pin at the actual finalized head for liability=%s instead of rejecting it", async liability => {
+  function ccipFixture(liability: boolean) {
     const f = pendingFixture(), [canonical, receipt] = f.plan.deployments;
     const pool = f.plan.escrows[0]!.account;
     const side = (row: typeof canonical, chainSelector: string, tokenPoolAddress: string) => ({
@@ -762,6 +764,11 @@ describe("reviewed economic supply observation", () => {
     if (liability) {
       f.plan.accountingFamily = "independent-liability"; f.plan.escrows = []; f.plan.liabilityInFlightSource = source;
     } else f.plan.escrows[0]!.inFlightSource = source;
+    return f;
+  }
+
+  it.each([false, true])("caps the shared CCIP holding pin at the actual finalized head for liability=%s instead of rejecting it", async liability => {
+    const f = ccipFixture(liability);
     vi.mocked(evmRpc.fetchEvmBlockNumber).mockResolvedValue(110);
     vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => ({
       number: number === "finalized" ? 99 : number, timestamp: CLOCK - 60, hash: HASH,
@@ -775,25 +782,9 @@ describe("reviewed economic supply observation", () => {
   });
 
   it.each([false, true])("rejects an unavailable finalized CCIP head for liability=%s without assuming no pending messages", async liability => {
-    const f = pendingFixture(), [canonical, receipt] = f.plan.deployments;
-    const pool = f.plan.escrows[0]!.account;
-    const side = (row: typeof canonical, chainSelector: string, tokenPoolAddress: string) => ({
-      chainId: row!.chainId, chainSelector, tokenAddress: row!.address!, tokenPoolAddress,
-      tokenPoolRuntimeCodeSha256: sha256Hex("0x6000"), decimals: 6,
-    });
-    const source: CcipPendingRead = {
-      kind: "evm-ccip-pending", sourceId: "ccip", chainId: "ethereum", finality: "finalized", amountDecimals: 6,
-      lanes: [{ id: "eth-base", version: "1.6", source: side(canonical, "1", pool),
-        destination: side(receipt, "2", `0x${"4".repeat(40)}`), onRampAddress: `0x${"5".repeat(40)}`,
-        offRampAddress: `0x${"6".repeat(40)}`, onRampRuntimeCodeSha256: sha256Hex("0x6000"),
-        offRampRuntimeCodeSha256: sha256Hex("0x6000"), sourceStartBlock: 100 }],
-    };
-    if (liability) {
-      f.plan.accountingFamily = "independent-liability"; f.plan.escrows = []; f.plan.liabilityInFlightSource = source;
-    } else f.plan.escrows[0]!.inFlightSource = source;
-    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
-      number === "finalized" ? null : { number, timestamp: CLOCK - 60, hash: HASH });
-    expect(await f.run()).toEqual({ status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: canonical!.deploymentKey });
+    const f = ccipFixture(liability);
+    mockMissingFinalizedHead();
+    expect(await f.run()).toEqual({ status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: f.plan.deployments[0]!.deploymentKey });
     expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
   });
 
@@ -816,8 +807,7 @@ describe("reviewed economic supply observation", () => {
     if (liability) {
       f.plan.liabilityInFlightSource = f.plan.escrows[0]!.inFlightSource;
       f.plan.escrows = []; f.plan.accountingFamily = "independent-liability";
-    } else vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
-      number === "finalized" ? null : { number, timestamp: CLOCK - 60, hash: HASH });
+    } else mockMissingFinalizedHead();
     expect(await f.run()).toEqual({
       status: "rejected", rejectionCode: liability ? "route-inventory-unavailable" : "deployment-state-unavailable", failedRouteId: liability ? null : canonical!.deploymentKey,
     });
@@ -1149,10 +1139,15 @@ describe("nonce-authenticated Curve LayerZero pending history", () => {
     expect(await observeCurveLzPending(f.input)).toMatchObject({ status: "accepted", amount: "1000000" });
   });
 
-  it("resumes contiguous bounded history and admits zero only after all four streams finish", async () => {
+  function longCurveHistoryFixture() {
     const f = curveFixture();
     f.input.headers[0]!.number = 30000; f.input.headers[1]!.number = 30000;
-    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => ({ number: number === "finalized" ? 30000 : number, timestamp: CLOCK - 60, hash: HASH }));
+    mockFinalizedAt(30000, CLOCK - 60);
+    return f;
+  }
+
+  it("resumes contiguous bounded history and admits zero only after all four streams finish", async () => {
+    const f = longCurveHistoryFixture();
     let result = await observeCurveLzPending(f.input);
     for (let attempt = 0; attempt < 8 && result.status === "rejected"; attempt++) {
       expect(result.reason).toBe("history-incomplete");
@@ -1162,25 +1157,22 @@ describe("nonce-authenticated Curve LayerZero pending history", () => {
     expect(result).toMatchObject({ status: "accepted", amount: "0" });
   });
 
-  it("rejects a missing source nonce rather than treating a partial event book as complete", async () => {
-    const f = curveFixture(); f.send(0, 2n);
-    expect(await observeCurveLzPending(f.input)).toMatchObject({ status: "rejected", reason: "missing-nonce" });
-  });
-
-  it("rejects a replayed nonce in another valid log position", async () => {
-    const f = curveFixture(); f.send(0); f.send(0, 1n, 1);
-    expect(await observeCurveLzPending(f.input)).toMatchObject({ status: "rejected", reason: "replayed-nonce" });
-  });
-
-  it("rejects replayed consumption of an already issued nonce", async () => {
-    const f = curveFixture(); f.send(0); f.receive(0, "Issued"); f.receive(0, "Issued", 1n, 1);
-    expect(await observeCurveLzPending(f.input)).toMatchObject({ status: "rejected", reason: "replayed-or-missing-nonce" });
+  it.each([
+    ["rejects a missing source nonce rather than treating a partial event book as complete", (f: ReturnType<typeof curveFixture>) => f.send(0, 2n), "missing-nonce"],
+    ["rejects a replayed nonce in another valid log position", (f: ReturnType<typeof curveFixture>) => {
+      f.send(0); f.send(0, 1n, 1);
+    }, "replayed-nonce"],
+    ["rejects replayed consumption of an already issued nonce", (f: ReturnType<typeof curveFixture>) => {
+      f.send(0); f.receive(0, "Issued"); f.receive(0, "Issued", 1n, 1);
+    }, "replayed-or-missing-nonce"],
+  ] as const)("%s", async (_title, replay, reason) => {
+    const f = curveFixture();
+    replay(f);
+    expect(await observeCurveLzPending(f.input)).toMatchObject({ status: "rejected", reason });
   });
 
   it("retains a bounded catch-up checkpoint without publishing a partial pending quantity", async () => {
-    const f = curveFixture();
-    f.input.headers[0]!.number = 30000; f.input.headers[1]!.number = 30000;
-    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) => ({ number: number === "finalized" ? 30000 : number, timestamp: CLOCK - 60, hash: HASH }));
+    const f = longCurveHistoryFixture();
     const first = await observeCurveLzPending(f.input);
     expect(first).toMatchObject({ status: "rejected", reason: "history-incomplete" });
     if (first.status !== "rejected" || !first.checkpoint) throw new Error("Expected catch-up checkpoint");

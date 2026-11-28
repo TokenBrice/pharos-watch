@@ -1,8 +1,9 @@
 name: Ops Follow-up Reminders
 
-# Checks daily for open `ops:followup` issues whose `Due: YYYY-MM-DD` line has passed and comments
-# at most once a week on each (the six-day marker window below), so the issue author gets a GitHub
-# notification within a day of the date (docs/process/agent-artifacts.md#follow-up-issues).
+# Checks daily for open `ops:followup`, `ops:calendar`, and `ops:upstream-wait` issues whose
+# `Due: YYYY-MM-DD` line has passed and comments at most once a week on each (the six-day marker
+# window below), so the issue author gets a GitHub notification within a day of the date
+# (docs/process/agent-artifacts.md#follow-up-issues).
 
 on:
   schedule:
@@ -29,10 +30,15 @@ jobs:
           marker='<!-- ops-followup-overdue -->'
           today=$(date -u +%F)
           recent=$(date -u -d '6 days ago' +%FT%TZ)
-          gh issue list --label ops:followup --state open --limit 200 --json number,body,comments \
-            | jq -r --arg today "$today" --arg recent "$recent" --arg marker "$marker" '
-                .[]
-                | ((.body // "") | capture("(?m)^Due:\\s*(?<due>\\d{4}-\\d{2}-\\d{2})") | .due) as $due
+          {
+            for label in ops:followup ops:calendar ops:upstream-wait; do
+              gh issue list --label "$label" --state open --limit 200 --json number,body,comments
+            done
+          } | jq -sr --arg today "$today" --arg recent "$recent" --arg marker "$marker" '
+                (add // [])
+                | unique_by(.number)
+                | .[]
+                | ((.body // "") | capture("(?m)^Due:[ \\t]*(?<due>\\d{4}-\\d{2}-\\d{2})[ \\t\\r]*$") | .due) as $due
                 | select($due != null and $due <= $today)
                 | select([.comments[] | select((.body | contains($marker)) and .createdAt >= $recent)] | length == 0)
                 | "\(.number) \($due)"' \

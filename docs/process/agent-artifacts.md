@@ -30,17 +30,37 @@ A campaign README, per-artifact rows (path/kind/owner/status/dates/source/destin
 
 ### Follow-up issues
 
-Agents run with memory off, so an open loop that outlives the session goes in a GitHub issue, never only in a final message or scratch. When the session ends, file one issue per loop the next session must pick up: work deferred or left partial, a dated or event-gated check, or an owner decision still unanswered at the end. Issues record follow-ups, never plans: ask decisions while the owner is in the session, keep plans, audits and proposals in `agents/`, and open a tracking issue only when the owner asks for one. A plan under review is not an open loop. Root [Do this last](../../AGENTS.md#do-this-last) makes filing at session end a standing authorization. Issues are public: write them as if published, with no row-level D1 data, chat IDs, partner or commercial detail, security gaps (use a private advisory) or credentials. Labels: `ops:followup` (a dated or event-gated check), `ops:decision` (only a decision left unanswered when the session ends), `ops:campaign` (only owner-approved multi-PR work the owner asked to track); plain defects keep `bug`. Use a milestone only when a campaign spans several PRs. The body must stand alone after the session ends and `agents/` is cleaned:
+Agents run with memory off, so truly required post-session loops belong in GitHub issues rather than only in a final message or scratch — **default to `Follow-ups: none`** and file only loops that would silently slip without a ticket. Root [Do this last](../../AGENTS.md#do-this-last) makes filing at session end a standing authorization **only** within this bar:
+
+- **File:** (1) unmonitored post-deploy checks or soaks on high-risk Worker/D1/ingestion/methodology changes whose proving window falls after the session, only when no owning issue is open (`.github/workflows/post-deploy-first-execution.yml` automates only `sync-stablecoins`, `sync-dex-liquidity`, and `compute-safety-score-v9` within 6h of deploy; see [Independent Production Monitors](../deployment-process.md#independent-production-monitors)); (2) confirmed, material out-of-scope defects (`bug`) that cannot be fixed in-session; (3) hard external deadlines (statutory dates, scheduled issuer shutdowns, key rotations) or 4–12w experiment readouts not tracked by any repo calendar (`ops:calendar`); (4) confirmed material blockers waiting on external vendors, issuers, or upstream protocols that would silently slip (`ops:upstream-wait`); (5) owner decisions still unanswered when the session ends (`ops:decision`).
+- **Do not file:**
+  - Items already tracked by automated standing trackers or machine-checked calendars (`#945` Safety Score expiry sweep, `#1302` Agent maintenance candidates, `npm run digest:curation`, `reviewBy`/`expiresAtSec`/`nextReviewAt` registries, `ci:nightly-red`, `cron-liveness`, `worker-memory-monitor`, and `.github/workflows/post-deploy-first-execution.yml` for its three listed jobs). Record special renewal caveats (such as immutable checkpoint keys) in the registry entry's note or owning doc instead of opening a duplicate issue.
+  - Close-and-replace spin-offs or child tickets while a parent stays open: if an existing issue still has remaining soak/acceptance/7d clauses, keep it open and advance its `Due:`.
+  - Split-date tickets for one feature or multi-PR rollout: keep **one** issue per theme/rollout and advance `Due:` to the earliest remaining gate; separate issues only for genuinely unrelated domains.
+  - Review/council polish, optional refactors, unverified hypotheses, or unrequested plans/next waves (`agents/`). Ask decisions in-session; open `ops:campaign` only when the owner asks to track multi-PR work.
+
+Do not mix buildable fixes with passive external waits or post-deploy verification in one issue — finish and close the buildable part cleanly, and open a separate dated issue only when an unmonitored soak or external wait independently clears the bar above.
+
+Issues are public: write them as if published, with no row-level D1 data, chat IDs, partner or commercial detail, security gaps (use a private advisory) or credentials. Labels:
+
+- `ops:followup`: a dated or event-gated operational check carrying `Due: YYYY-MM-DD`.
+- `ops:calendar`: pure future-dated calendar triggers (statutory dates, scheduled issuer shutdowns, 4–12w experiment readouts) carrying `Due: YYYY-MM-DD`; `.github/workflows/ops-followups.yml` reminds on them, and clearance passes auto-skip them until within 7 days of `Due:`.
+- `ops:upstream-wait`: issues blocked on external vendors, issuers, or upstream protocols carrying `Due: YYYY-MM-DD`; subject to exponential backoff (`+14d` -> `+30d` -> forced owner decision: codify limitation & close, or quarterly `+90d` re-check).
+- `ops:decision`: only a decision left unanswered when the session ends.
+- `ops:campaign`: only owner-approved multi-PR work the owner asked to track (use a milestone only when a campaign spans several PRs).
+- `bug`: plain defects.
+
+The body must stand alone after the session ends and `agents/` is cleaned:
 
 ```
-Due: YYYY-MM-DD          (required with ops:followup; read by .github/workflows/ops-followups.yml)
+Due: YYYY-MM-DD          (required with ops:followup, ops:calendar, and ops:upstream-wait; read by .github/workflows/ops-followups.yml)
 Origin: PR #N / commit / ADR-N
 Check: exact query, command or URL that answers it
 Done when: closing condition
 Evidence: agents/<path> (local, may be gone)
 ```
 
-The daily reminder reads only `ops:followup` issues with a `Due:` line, so every one carries it: an event-gated check takes the date of its next re-check, and a dated check gets its own issue because a bundle of unrelated items cannot carry one date. Before opening an issue, search (`gh issue list --state all --search "<terms>"`) and add evidence as a comment on the existing one instead of a duplicate; move its `Due:` when the check is rescheduled. Close with the PR (`Closes #N`) or a comment naming the evidence; distill durable truth into its owning doc first. Do not duplicate CI-failure issues or user intake.
+The daily reminder (`.github/workflows/ops-followups.yml`) reads open `ops:followup`, `ops:calendar`, and `ops:upstream-wait` issues with a `Due:` line, so every issue carrying one of those labels includes one: an event-gated check takes the date of its next re-check, and an issue with stepped gates (e.g. 1d then 7d) carries the earliest remaining date and advances `Due:` as each gate passes. Before opening an issue, search (`gh issue list --state all --search "<terms>"`) and add evidence as a comment on the existing one instead of a duplicate; move its `Due:` when rescheduled. Close with the PR (`Closes #N`) or a comment naming the evidence; distill durable truth into its owning doc first. Do not duplicate CI-failure issues or user intake.
 
 ## Pinned On-Chain Evidence
 

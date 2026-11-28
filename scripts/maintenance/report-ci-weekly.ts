@@ -2,8 +2,8 @@
 /**
  * Render the weekly CI report: lane p50/p90 against the report-only lane
  * budgets, the PR failure rate by failing lane, the slowest test files, the
- * test files added in the window, the test/production byte ratio and
- * advisory route-context budget breaches.
+ * test files added in the window, the test/production byte ratio, advisory
+ * route-context budget breaches, and 7-day GitHub issue hygiene.
  *
  * Every remote read stays in `.github/workflows/weekly-validation.yml`
  * (`gh api`, nightly artifact download, `git log`), so this module only parses
@@ -39,15 +39,15 @@ import {
 } from "../lib/change-contract-routing.ts";
 import { PR_LANES, PR_PREPARE_BUDGET_SECONDS } from "../lib/pr-lanes.mts";
 
-const USAGE = `Usage: node --experimental-strip-types scripts/maintenance/report-ci-weekly.ts --runs <runs.json> --jobs <jobs.json> --since <ISO> [--timings <test-timings.json>] [--added-test-log <git-log.txt>] [--until <ISO>] [--run-url <url>] [--repo-root <dir>] [--output <report.md>]
+const USAGE = `Usage: node --experimental-strip-types scripts/maintenance/report-ci-weekly.ts --runs <runs.json> --jobs <jobs.json> --since <ISO> [--timings <test-timings.json>] [--added-test-log <git-log.txt>] [--issues <issues.json>] [--until <ISO>] [--run-url <url>] [--repo-root <dir>] [--output <report.md>]
 
 Renders the weekly CI report from inputs the weekly workflow already fetched.
 --runs/--jobs are the GitHub runs and jobs of "Pull Request Checks"; --timings
 is the newest nightly test-timings artifact; --added-test-log is
 \`git log --diff-filter=A --no-renames --diff-merges=first-parent --name-only\`
 for the window, so the census is commit-dated and a merge reports what its
-branch added. Missing optional inputs render as unavailable evidence, never as
-zero.`;
+branch added; --issues is the version-1 7-day GitHub issue snapshot. Missing
+optional inputs render as unavailable evidence, never as zero.`;
 
 /** Per-file budget: a test file slower than this on the nightly run is flagged. */
 export const SLOW_TEST_FILE_SECONDS = 10;
@@ -55,6 +55,23 @@ const REPORTED_SLOW_FILES = 10;
 const REPORTED_ADDED_FILES = 10;
 const CODE_EXTENSIONS = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"]);
 const FAILED_RUN_CONCLUSIONS = new Set(["failure", "timed_out", "startup_failure"]);
+const STANDING_TRACKER_LABELS = new Set(["ci:weekly-report", "ci:nightly-red"]);
+const STANDING_TRACKER_TITLES = new Set([
+  "Safety Score curation expiry sweep",
+  "Agent maintenance candidates",
+  "Worker capacity headroom",
+  "Scheduled delivery incident",
+  "Post-deploy first-execution failure",
+]);
+const CALENDAR_DEFER_WINDOW_MS = 7 * 86_400_000;
+const TRACKED_ISSUE_LABELS = [
+  "ops:followup",
+  "ops:calendar",
+  "ops:upstream-wait",
+  "ops:decision",
+  "bug",
+] as const;
+export type TrackedIssueLabel = (typeof TRACKED_ISSUE_LABELS)[number];
 /**
  * The added-file count must not be read as a merge-report: `git log --since`
  * prunes by the commit that added each path (`--diff-merges=first-parent` makes
@@ -117,6 +134,44 @@ interface RouteBudgetMeasurement extends Pick<RouteContext, "class" | "status"> 
   bytes: number;
 }
 
+export interface WindowOpenedIssue {
+  number: number;
+  createdAt: string;
+  labels: string[];
+}
+
+export interface WindowClosedIssue {
+  number: number;
+  closedAt: string;
+  labels: string[];
+}
+
+export interface OpenIssueSnapshot {
+  number: number;
+  title: string;
+  labels: string[];
+  due?: string | null;
+}
+
+export interface IssueHygieneInput {
+  version: 1;
+  openedInWindow: WindowOpenedIssue[];
+  closedInWindow: WindowClosedIssue[];
+  openNow: OpenIssueSnapshot[];
+}
+
+export interface IssueHygieneSummary {
+  opened: number;
+  closed: number;
+  net: number;
+  openTotal: number;
+  standingTrackers: number;
+  calendarOpen: number;
+  upstreamWaitOpen: number;
+  actionableOpen: number;
+  byLabel: Record<TrackedIssueLabel, number>;
+}
+
 export interface WeeklyReportInput {
   since: string;
   until: string;
@@ -128,6 +183,7 @@ export interface WeeklyReportInput {
   addedTestSizes: Record<string, number>;
   codeBytes: CodeByteSummary | null;
   routeBudgets?: RouteBudgetMeasurement[] | null;
+  issues?: IssueHygieneInput | null;
   unavailable: UnavailableInput[];
   notes: string[];
 }
@@ -146,6 +202,7 @@ export interface WeeklyReport extends FailureCensus {
   addedUnmeasured: number;
   codeBytes: CodeByteSummary | null;
   routeBudgets: RouteBudgetMeasurement[] | null;
+  issueHygiene: IssueHygieneSummary | null;
   unavailable: UnavailableInput[];
   notes: string[];
 }
@@ -374,6 +431,163 @@ export function parseTestTimings(payload: unknown): { generatedAt: string; files
   return { generatedAt: typeof record.generatedAt === "string" ? record.generatedAt : "unknown", files: durations };
 }
 
+function parseIssueNumber(raw: unknown, label: string): number {
+  if (!Number.isInteger(raw) || (raw as number) <= 0) throw new Error(`${label}.number must be a positive integer`);
+  return raw as number;
+}
+
+function parseIssueTimestamp(raw: unknown, label: string): string {
+  if (typeof raw !== "string" || !Number.isFinite(Date.parse(raw))) throw new Error(`${label} must be an ISO timestamp`);
+  return raw;
+}
+
+function parseIssueLabels(raw: unknown, label: string): string[] {
+  if (!Array.isArray(raw) || raw.some((item) => typeof item !== "string")) {
+    throw new Error(`${label}.labels must be a string array`);
+  }
+  return raw as string[];
+}
+
+function parseIssueDueDate(raw: unknown, label: string): string | null | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === null) return null;
+  if (typeof raw !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    throw new Error(`${label}.due must be YYYY-MM-DD or null`);
+  }
+  const ms = Date.parse(`${raw}T00:00:00Z`);
+  if (!Number.isFinite(ms) || new Date(ms).toISOString().slice(0, 10) !== raw) {
+    // Treat an impossible calendar date in an issue body as undated so one typo
+    // leaves that issue actionable without discarding the whole hygiene snapshot.
+    return null;
+  }
+  return raw;
+}
+
+export function parseIssueHygiene(payload: unknown): IssueHygieneInput {
+  const record = payload as {
+    version?: unknown;
+    openedInWindow?: unknown;
+    closedInWindow?: unknown;
+    openNow?: unknown;
+  } | null;
+  if (!record || typeof record !== "object" || Array.isArray(record)) {
+    throw new Error("issues input must be a JSON object");
+  }
+  if (record.version !== 1) throw new Error("issues input must declare version 1");
+  if (!Array.isArray(record.openedInWindow)) throw new Error("issues input must declare an openedInWindow array");
+  if (!Array.isArray(record.closedInWindow)) throw new Error("issues input must declare a closedInWindow array");
+  if (!Array.isArray(record.openNow)) throw new Error("issues input must declare an openNow array");
+
+  const openedInWindow = record.openedInWindow.map((entry, index) => {
+    const item = entry as Partial<WindowOpenedIssue> | null;
+    const loc = `openedInWindow[${index}]`;
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error(`${loc} must be an object`);
+    return {
+      number: parseIssueNumber(item.number, loc),
+      createdAt: parseIssueTimestamp(item.createdAt, `${loc}.createdAt`),
+      labels: parseIssueLabels(item.labels, loc),
+    };
+  });
+  const closedInWindow = record.closedInWindow.map((entry, index) => {
+    const item = entry as Partial<WindowClosedIssue> | null;
+    const loc = `closedInWindow[${index}]`;
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error(`${loc} must be an object`);
+    return {
+      number: parseIssueNumber(item.number, loc),
+      closedAt: parseIssueTimestamp(item.closedAt, `${loc}.closedAt`),
+      labels: parseIssueLabels(item.labels, loc),
+    };
+  });
+  const openNow = record.openNow.map((entry, index) => {
+    const item = entry as Partial<OpenIssueSnapshot> | null;
+    const loc = `openNow[${index}]`;
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error(`${loc} must be an object`);
+    if (typeof item.title !== "string") throw new Error(`${loc}.title must be a string`);
+    const due = parseIssueDueDate(item.due, loc);
+    return {
+      number: parseIssueNumber(item.number, loc),
+      title: item.title,
+      labels: parseIssueLabels(item.labels, loc),
+      ...(due !== undefined ? { due } : {}),
+    };
+  });
+  return { version: 1, openedInWindow, closedInWindow, openNow };
+}
+
+function dedupeByNumber<T extends { number: number }>(items: readonly T[]): T[] {
+  const seen = new Set<number>();
+  const unique: T[] = [];
+  for (const item of items) {
+    if (seen.has(item.number)) continue;
+    seen.add(item.number);
+    unique.push(item);
+  }
+  return unique;
+}
+
+function isStandingTracker(issue: OpenIssueSnapshot): boolean {
+  return (
+    issue.labels.some((label) => STANDING_TRACKER_LABELS.has(label)) ||
+    STANDING_TRACKER_TITLES.has(issue.title.trim())
+  );
+}
+
+export function summarizeIssueHygiene(
+  data: IssueHygieneInput,
+  since: string,
+  until: string,
+): IssueHygieneSummary {
+  const sinceMs = Date.parse(since);
+  const untilMs = Date.parse(until);
+  if (!Number.isFinite(sinceMs) || !Number.isFinite(untilMs) || untilMs < sinceMs) {
+    throw new Error("issue hygiene window must have valid ascending since/until timestamps");
+  }
+  const inWindow = (timestamp: string): boolean => {
+    const ms = Date.parse(timestamp);
+    return Number.isFinite(ms) && ms >= sinceMs && ms <= untilMs;
+  };
+  const opened = dedupeByNumber(data.openedInWindow).filter((issue) => inWindow(issue.createdAt)).length;
+  const closed = dedupeByNumber(data.closedInWindow).filter((issue) => inWindow(issue.closedAt)).length;
+  const openIssues = dedupeByNumber(data.openNow);
+  let standingTrackers = 0;
+  let calendarOpen = 0;
+  let upstreamWaitOpen = 0;
+  const byLabel: Record<TrackedIssueLabel, number> = {
+    "ops:followup": 0,
+    "ops:calendar": 0,
+    "ops:upstream-wait": 0,
+    "ops:decision": 0,
+    bug: 0,
+  };
+  for (const issue of openIssues) {
+    const labels = new Set(issue.labels);
+    for (const label of TRACKED_ISSUE_LABELS) {
+      if (labels.has(label)) byLabel[label] += 1;
+    }
+    const dueMs = issue.due ? Date.parse(`${issue.due}T00:00:00Z`) : Number.NaN;
+    const isDeferredCalendar = labels.has("ops:calendar") && Number.isFinite(dueMs) && dueMs > untilMs + CALENDAR_DEFER_WINDOW_MS;
+    if (isStandingTracker(issue)) {
+      standingTrackers += 1;
+    } else if (isDeferredCalendar) {
+      calendarOpen += 1;
+    } else if (labels.has("ops:upstream-wait")) {
+      upstreamWaitOpen += 1;
+    }
+  }
+  const openTotal = openIssues.length;
+  return {
+    opened,
+    closed,
+    net: opened - closed,
+    openTotal,
+    standingTrackers,
+    calendarOpen,
+    upstreamWaitOpen,
+    actionableOpen: openTotal - standingTrackers - calendarOpen - upstreamWaitOpen,
+    byLabel,
+  };
+}
+
 export function buildWeeklyReport(input: WeeklyReportInput): WeeklyReport {
   const census = buildFailureCensus(input.runs, input.jobs);
   const { rows, excludedLaneJobs } = buildLaneBudgets(input.runs, input.jobs);
@@ -398,6 +612,7 @@ export function buildWeeklyReport(input: WeeklyReportInput): WeeklyReport {
     addedUnmeasured: added.unmeasured,
     codeBytes: input.codeBytes,
     routeBudgets: input.routeBudgets ?? null,
+    issueHygiene: input.issues ? summarizeIssueHygiene(input.issues, input.since, input.until) : null,
     unavailable: input.unavailable,
     notes: input.notes,
   };
@@ -518,6 +733,22 @@ export function renderWeeklyReport(report: WeeklyReport): string {
       }
     }
   }
+  lines.push("", "## Issue hygiene (7d)", "");
+  if (report.issueHygiene === null) {
+    lines.push("Unavailable — no GitHub issue hygiene snapshot was supplied for this window.");
+  } else {
+    const hygiene = report.issueHygiene;
+    const netSign = hygiene.net > 0 ? `+${hygiene.net}` : `${hygiene.net}`;
+    lines.push(
+      `Opened ${hygiene.opened}, closed ${hygiene.closed} (currently closed, latest closure in window; net ${netSign}); ${hygiene.openTotal} open total (${hygiene.actionableOpen} actionable, ${hygiene.standingTrackers} standing tracker(s), ${hygiene.calendarOpen} calendar >7d, ${hygiene.upstreamWaitOpen} upstream-wait).`,
+      "",
+      "| Label | Open issues |",
+      "|---|---:|",
+    );
+    for (const label of TRACKED_ISSUE_LABELS) {
+      lines.push(`| \`${label}\` | ${hygiene.byLabel[label]} |`);
+    }
+  }
   if (report.unavailable.length > 0) {
     lines.push("", "## Unavailable inputs", "");
     for (const entry of report.unavailable) lines.push(`- ${entry.section}: \`${entry.reason}\``);
@@ -592,6 +823,7 @@ export function main(argv: readonly string[] = processArgv.slice(2)): number {
   const { values } = parseStrictCliArgs(argv, {
     options: {
       "added-test-log": { type: "string" },
+      issues: { type: "string" },
       jobs: { type: "string" },
       "measure-route-budgets": { type: "boolean" },
       output: { type: "string" },
@@ -670,6 +902,18 @@ export function main(argv: readonly string[] = processArgv.slice(2)): number {
     unavailable.push({ section: "route-context-budgets", reason: `route-context:unavailable:${error instanceof Error ? error.message : "unknown"}` });
   }
 
+  let issues: IssueHygieneInput | null = null;
+  const issuesInput = readOptionalInput(typeof values.issues === "string" ? values.issues : undefined, "issues");
+  if (issuesInput.text === null) {
+    unavailable.push({ section: "issue-hygiene", reason: issuesInput.reason ?? "issues:missing" });
+  } else {
+    try {
+      issues = parseIssueHygiene(JSON.parse(issuesInput.text));
+    } catch (error) {
+      unavailable.push({ section: "issue-hygiene", reason: `issues:invalid:${error instanceof Error ? error.message : "unknown"}` });
+    }
+  }
+
   const report = buildWeeklyReport({
     since,
     until,
@@ -683,6 +927,7 @@ export function main(argv: readonly string[] = processArgv.slice(2)): number {
       : measureAddedTestSizes(parseAddedTestFiles(addedTestLog).map((entry) => entry.file), root),
     codeBytes,
     routeBudgets,
+    issues,
     unavailable,
     notes,
   });

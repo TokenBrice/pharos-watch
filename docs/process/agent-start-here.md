@@ -48,7 +48,7 @@ For authorized separate checkouts, use [verified worktree bootstrap](../scripts.
 
 ## 7. Handoff and Finish
 
-Report changed files/findings, exercised checks and operational acceptance when applicable. File unresolved work and pending acceptance as [follow-up issues](./agent-artifacts.md#follow-up-issues) per root [Do this last](../../AGENTS.md#do-this-last), and report their numbers. For cross-session/coordinated campaigns, reconcile task outcomes and retain evidence under the [campaign closeout contract](./agent-artifacts.md#campaign-index-and-handoff).
+Report changed files/findings, exercised checks and operational acceptance when applicable. File only loops that meet the bar in [follow-up issues](./agent-artifacts.md#follow-up-issues) per root [Do this last](../../AGENTS.md#do-this-last) (otherwise report `Follow-ups: none`). For cross-session/coordinated campaigns, reconcile task outcomes and retain evidence under the [campaign closeout contract](./agent-artifacts.md#campaign-index-and-handoff).
 
 ## 8. Commit And Release
 

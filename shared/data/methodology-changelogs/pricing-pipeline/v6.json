@@ -31,7 +31,7 @@
     "version": "6.97",
     "title": "Clocked Curve StableSwap-NG spot quotes for active NAV tokens with two-clock freshness and R8 isolation",
     "date": "2026-11-26",
-    "effectiveAt": 1795723200,
+    "effectiveAt": 1795731034,
     "summary": "Active NAV tokens with already-captured pinned Curve StableSwap-NG state now emit clocked direct_api spot quotes at zero extra RPC cost, solving missing-timestamp gaps left by unclocked Curve REST prices. Quotes enforce exact Vyper checked uint256 get_dy sells against an upstream-clocked independent non-NAV counter USD mark, two-clock freshness (<= 600 s capture age and < 4,500 s read-time freshness) across DEX price, challenger, depeg, DEWS, /api/dex-liquidity, and /api/risk-check readers, and an explicit integrity-vs-eligibility R8 quarantine split.",
     "impact": [
       "Zero-extra-RPC clocked Curve StableSwap-NG spot quoting (`curve-stableswap-rates.ts`): reuses pinned on-chain `get_balances()`, `stored_rates()`, `A()`, `fee()`, and `offpeg_fee_multiplier()` to simulate raw-token `$10K` sells with checked `uint256` arithmetic (withholding on overflow, `$100` micro-probe, `<= 500 bps` max sell impact, never reusing the scaled conservative execution model and never mutating `priceMeasured`). Stamps per-chain post-confirmed-header `captureEvaluatedAtSec` with zero future skew and requires an independent non-NAV counter USD mark with explicit `observedAtMode: \"upstream\"`, dating the observation at `min(blockTimestamp, quoteMarkObservedAt)`.",

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
+import { YIELD_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { PlacedProjectTapeResultSchema as TapeResult } from "@shared/types/placed-executor";
 import { projectTape } from "../project-tape";
@@ -40,7 +41,7 @@ function baseTables(): MockTableConfig[] {
     { match: "FROM cache WHERE key", rows: [] },
     { match: "INDEXED BY idx_tape_source_key", rows: [] },
     { match: "INDEXED BY idx_tape_type_ts", rows: [] },
-    { match: "UPDATE tape_events SET ts = ?, payload_json = ?", rows: [] },
+    { match: "UPDATE tape_events SET ts = ?", rows: [] },
     { match: MATCH_DEPEG_OPEN_PEAK, rows: [] },
     { match: MATCH_DEPEG_OPENED, rows: [] },
     { match: MATCH_DEPEG_RESOLVED, rows: [] },
@@ -63,6 +64,25 @@ function dbWithOverride(override: MockTableConfig): MockD1Database {
     override,
     ...baseTables().filter((entry) => entry.match !== override.match && entry.match !== "FROM cache WHERE key"),
   ]) as MockD1Database;
+}
+
+function depegRow(overrides: Record<string, unknown>) {
+  return {
+    id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
+    direction: "below", peak_deviation_bps: -800, started_at: SEC, ended_at: null,
+    peg_reference: 1, source: "live", methodology_version: "5.0", ...overrides,
+  };
+}
+
+function safetyRow(overrides: Record<string, unknown>) {
+  return {
+    stablecoin_id: "usdt-tether", recorded_at: SEC, methodology_version: "5.0",
+    transition_kind: "organic-grade-change", model: "v8", identity_schema_version: 1,
+    policy_id: null, policy_digest: null, evaluation_build_digest: null,
+    base_input_generation_id: null, model_publication_generation_id: null,
+    source_table: "safety_grade_history", source_row_id: `usdt-tether:${SEC}`,
+    row_sort_id: `legacy:usdt-tether:${SEC}`, ...overrides,
+  };
 }
 
 describe("projectTape", () => {
@@ -114,32 +134,8 @@ describe("projectTape", () => {
     const db = dbWithOverride({
       match: MATCH_DEPEG_OPENED,
       rows: [
-        {
-          id: 1,
-          stablecoin_id: "usdt-tether",
-          symbol: "USDT",
-          peg_type: "peggedUSD",
-          direction: "below",
-          peak_deviation_bps: -2600, // critical (>=2500)
-          started_at: SEC,
-          ended_at: null,
-          peg_reference: 1,
-          source: "live",
-          methodology_version: "5.0",
-        },
-        {
-          id: 2,
-          stablecoin_id: "dai-makerdao",
-          symbol: "DAI",
-          peg_type: "peggedUSD",
-          direction: "below",
-          peak_deviation_bps: -150, // notice (<300)
-          started_at: SEC + 10,
-          ended_at: null,
-          peg_reference: 1,
-          source: "live",
-          methodology_version: "5.0",
-        },
+        depegRow({ id: 1, peak_deviation_bps: -2600 }), // critical (>=2500)
+        depegRow({ id: 2, stablecoin_id: "dai-makerdao", symbol: "DAI", peak_deviation_bps: -150, started_at: SEC + 10 }), // notice (<300)
       ],
     });
 
@@ -159,23 +155,7 @@ describe("projectTape", () => {
   it("projects depeg.resolved as severity=info", async () => {
     const db = dbWithOverride({
       match: MATCH_DEPEG_RESOLVED,
-      rows: [
-        {
-          id: 1,
-          stablecoin_id: "usdt-tether",
-          symbol: "USDT",
-          peg_type: "peggedUSD",
-          direction: "below",
-          peak_deviation_bps: -800,
-          started_at: SEC,
-          ended_at: SEC + 600,
-          recovery_price: 1,
-          peg_reference: 1,
-          source: "live",
-          close_reason: "recovered-primary",
-          methodology_version: "5.0",
-        },
-      ],
+      rows: [depegRow({ ended_at: SEC + 600, recovery_price: 1, close_reason: "recovered-primary" })],
     });
     await projectTape(db);
     const inserts = tapeInsertBindsForType(db, "depeg.resolved");
@@ -186,21 +166,7 @@ describe("projectTape", () => {
   it("emits depeg.peak_worsened when an open row's magnitude exceeds the last-seen peak", async () => {
     const dbBaseline = dbWithOverride({
       match: MATCH_DEPEG_OPEN_PEAK,
-      rows: [
-        {
-          id: 7,
-          stablecoin_id: "usdc-circle",
-          symbol: "USDC",
-          peg_type: "peggedUSD",
-          direction: "below",
-          peak_deviation_bps: -1500,
-          started_at: SEC,
-          ended_at: null,
-          peg_reference: 1,
-          source: "live",
-          methodology_version: "5.0",
-        },
-      ],
+      rows: [depegRow({ id: 7, stablecoin_id: "usdc-circle", symbol: "USDC", peak_deviation_bps: -1500 })],
     });
     await projectTape(dbBaseline);
     expect(tapeInsertBindsForType(dbBaseline, "depeg.peak_worsened")).toHaveLength(0);
@@ -212,21 +178,7 @@ describe("projectTape", () => {
       },
       {
         match: MATCH_DEPEG_OPEN_PEAK,
-        rows: [
-          {
-            id: 7,
-            stablecoin_id: "usdc-circle",
-            symbol: "USDC",
-            peg_type: "peggedUSD",
-            direction: "below",
-            peak_deviation_bps: -2700, // grew past 1500 → critical (>=2500)
-            started_at: SEC,
-            ended_at: null,
-            peg_reference: 1,
-            source: "live",
-            methodology_version: "5.0",
-          },
-        ],
+        rows: [depegRow({ id: 7, stablecoin_id: "usdc-circle", symbol: "USDC", peak_deviation_bps: -2700 })], // critical (>=2500)
       },
       { match: MATCH_DEPEG_OPENED, rows: [] },
       { match: MATCH_DEPEG_RESOLVED, rows: [] },
@@ -291,28 +243,7 @@ describe("projectTape", () => {
   it("projects score.downgraded landing on F as severity=critical", async () => {
     const db = dbWithOverride({
       match: MATCH_SAFETY,
-      rows: [
-        {
-          stablecoin_id: "usdt-tether",
-          recorded_at: SEC,
-          grade: "F",
-          score: 10,
-          prev_grade: "B",
-          prev_score: 70,
-          methodology_version: "5.0",
-          transition_kind: "organic-grade-change",
-          model: "v8",
-          identity_schema_version: 1,
-          policy_id: null,
-          policy_digest: null,
-          evaluation_build_digest: null,
-          base_input_generation_id: null,
-          model_publication_generation_id: null,
-          source_table: "safety_grade_history",
-          source_row_id: `usdt-tether:${SEC}`,
-          row_sort_id: `legacy:usdt-tether:${SEC}`,
-        },
-      ],
+      rows: [safetyRow({ grade: "F", score: 10, prev_grade: "B", prev_score: 70 })],
     });
     await projectTape(db);
     const inserts = tapeInsertBindsForType(db, "score.downgraded");
@@ -323,28 +254,7 @@ describe("projectTape", () => {
   it("projects score.upgraded as severity=info", async () => {
     const db = dbWithOverride({
       match: MATCH_SAFETY,
-      rows: [
-        {
-          stablecoin_id: "usdt-tether",
-          recorded_at: SEC,
-          grade: "A-",
-          score: 88,
-          prev_grade: "B+",
-          prev_score: 81,
-          methodology_version: "5.0",
-          transition_kind: "organic-grade-change",
-          model: "v8",
-          identity_schema_version: 1,
-          policy_id: null,
-          policy_digest: null,
-          evaluation_build_digest: null,
-          base_input_generation_id: null,
-          model_publication_generation_id: null,
-          source_table: "safety_grade_history",
-          source_row_id: `usdt-tether:${SEC}`,
-          row_sort_id: `legacy:usdt-tether:${SEC}`,
-        },
-      ],
+      rows: [safetyRow({ grade: "A-", score: 88, prev_grade: "B+", prev_score: 81 })],
     });
     await projectTape(db);
     const inserts = tapeInsertBindsForType(db, "score.upgraded");
@@ -401,42 +311,63 @@ describe("projectTape", () => {
     ).all());
   });
 
-  it("reconciles the provisional yield v8.55 clock on upgrade without replacing or reviving its Tape row", async () => {
+  it("inserts new methodology bumps and reconciles drifted clocks/payloads in place without steady-state or dry-run writes", async () => {
     const { db, sqlite } = fixtures.open();
     await projectMethodologyBumps(db);
-    const source = sqlite.prepare(
-      "SELECT * FROM tape_events WHERE source_table = 'methodology:yield' AND source_row_id = '8.55'",
+    const getRow = (table: string, ver: string) => sqlite.prepare(
+      "SELECT * FROM tape_events WHERE source_table = ? AND source_row_id = ?",
+    ).get(table, ver)!;
+    const y855 = getRow("methodology:yield", "8.55");
+    const p697 = getRow("methodology:pricing-pipeline", "6.97");
+    const drift = sqlite.prepare(
+      "UPDATE tape_events SET event_id = ?, ts = ?, title = ?, summary = ?, severity = ?, payload_json = ?, suppressed_at = ?, suppression_reason = ? WHERE id = ?",
     );
-    const fresh = source.get()!;
     const oldTs = 1_795_046_400_000;
-    const oldId = String(fresh.event_id).replace(/^\d+/, String(oldTs));
-    const provisional = sqlite.prepare(`
-      UPDATE tape_events SET event_id = ?, ts = ?, payload_json = ?, suppressed_at = ?, suppression_reason = ?
-       WHERE id = ?
-    `);
-    const oldPayload = JSON.stringify({ effectiveAt: oldTs / 1000, impact: ["Pending deployment"] });
-    const read = () => queryTapeEvents(db, {
+    const oldId = String(y855.event_id).replace(/^\d+/, String(oldTs));
+    const oldPayload = JSON.stringify({ effectiveAt: oldTs / 1000, impact: ["Pending"] });
+    const pOldId = String(p697.event_id).replace(/^\d+/, "1795723200000");
+    sqlite.exec("DELETE FROM tape_events WHERE source_table = 'methodology:yield' AND source_row_id = '8.56'");
+    drift.run(oldId, oldTs, "Old title", "Old summary", "warning", oldPayload, null, null, y855.id!);
+    drift.run(pOldId, 1_795_723_200_000, p697.title, p697.summary, p697.severity, oldPayload, null, null, p697.id!);
+
+    const prepare = vi.spyOn(db, "prepare");
+    const updates = () => prepare.mock.calls.filter(([sql]) => sql.startsWith("UPDATE tape_events")).length;
+    expect(await projectMethodologyBumps(db, { dryRun: true })).toEqual({ projected: 1, advanced: null });
+    expect(updates()).toBe(0);
+    expect(getRow("methodology:yield", "8.55")).toMatchObject({ ts: oldTs, title: "Old title", payload_json: oldPayload });
+
+    expect(await projectMethodologyBumps(db)).toEqual({ projected: 1, advanced: null });
+    expect(updates()).toBe(2);
+    expect(getRow("methodology:yield", "8.56")).toMatchObject({ ts: 1_795_053_600_000 });
+    expect(getRow("methodology:yield", "8.55")).toEqual({ ...y855, event_id: oldId });
+    expect(getRow("methodology:pricing-pipeline", "6.97")).toEqual({ ...p697, event_id: pOldId });
+
+    prepare.mockClear();
+    expect(await projectMethodologyBumps(db)).toEqual({ projected: 0, advanced: null });
+    expect(updates()).toBe(0);
+
+    drift.run(oldId, oldTs, y855.title, y855.summary, y855.severity, oldPayload, SEC, "editorial-suppression", y855.id!);
+    expect(await projectMethodologyBumps(db)).toEqual({ projected: 0, advanced: null });
+    expect(getRow("methodology:yield", "8.55")).toEqual({
+      ...y855, event_id: oldId, suppressed_at: SEC, suppression_reason: "editorial-suppression",
+    });
+    const visible = await queryTapeEvents(db, {
       filters: { typeExact: ["methodology.bumped:yield"], since: 1_795_013_063_000, until: 1_795_053_600_000 },
       limit: 3, cursor: null, includeTotal: false,
     });
-    sqlite.exec("DELETE FROM tape_events WHERE source_table = 'methodology:yield' AND source_row_id = '8.56'");
-    provisional.run(oldId, oldTs, oldPayload, null, null, fresh.id!);
+    expect(visible.rows.map((row) => row.methodology_version)).toEqual(["8.56"]);
 
-    await projectMethodologyBumps(db, { dryRun: true });
-    expect(source.get()).toMatchObject({ ts: oldTs, payload_json: oldPayload });
-    expect(await projectMethodologyBumps(db)).toEqual({ projected: 1, advanced: null });
-    const { rows } = await read();
-    expect(rows.map((row) => [row.methodology_version, row.ts]))
-      .toEqual([["8.56", 1_795_053_600_000], ["8.55", 1_795_013_063_000]]);
-    expect(JSON.parse(rows[0]!.payload_json)).toMatchObject({ effectiveAt: 1_795_053_600 });
-    expect(source.get()).toEqual({ ...fresh, event_id: oldId });
-
-    provisional.run(oldId, oldTs, oldPayload, SEC, "editorial-suppression", fresh.id!);
-    expect(await projectMethodologyBumps(db)).toEqual({ projected: 0, advanced: null });
-    expect(source.get()).toEqual({
-      ...fresh, event_id: oldId, suppressed_at: SEC, suppression_reason: "editorial-suppression",
-    });
-    expect((await read()).rows.map((row) => row.methodology_version)).not.toContain("8.55");
+    const entries = YIELD_METHODOLOGY_CHANGELOG as Array<(typeof YIELD_METHODOLOGY_CHANGELOG)[number]>;
+    entries.push({ ...entries[0]!, version: "0.0-invalid", effectiveAt: 0 });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      expect(await projectMethodologyBumps(db)).toEqual({ projected: 0, advanced: null });
+      expect(getRow("methodology:yield", "0.0-invalid")).toBeUndefined();
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("Skipping methodology entry yield v0.0-invalid"));
+    } finally {
+      entries.pop();
+      warn.mockRestore();
+    }
   });
 
   it("emits cemetery.entry.added on first observation", async () => {

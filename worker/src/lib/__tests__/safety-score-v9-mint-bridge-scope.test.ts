@@ -97,6 +97,10 @@ function mintControl(
   };
 }
 
+function immutableMintLogic(): NonNullable<MintAuthorityProfile["upgradeability"]> {
+  return { model: "immutable", canChangeMintLogic: false, sources: [] };
+}
+
 function mintProfile(
   overrides: Partial<MintAuthorityProfile> = {},
 ): MintAuthorityProfile {
@@ -146,6 +150,10 @@ function bridgeProfile(
     routes,
     ...overrides,
   };
+}
+
+function baseRepresentationProfile(overrides: Partial<BridgeRouteRiskProfile>): BridgeRouteRiskProfile {
+  return bridgeProfile([representationRoute(BASE_ROUTE)], overrides);
 }
 
 function meta(
@@ -344,6 +352,10 @@ function nativeDustFixture(share = 1e-5) {
  * helpers read are populated; everything else stays absent so a future field cannot
  * be silently satisfied by a fixture default.
  */
+function boundedBridgeCap(amount: number) {
+  return { kind: "bounded" as const, bound: { amount, unit: "supply-fraction" as const } };
+}
+
 function overlayEntry(
   controlId: string,
   capSemantics: StructuredBridgeOverlayEntry["overlay"]["capSemantics"],
@@ -571,7 +583,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     const metadata = meta("fixture-root-mint", {
       mintAuthority: mintProfile({
         controls: [mintControl({ deploymentRefs: [ARBITRUM_ROUTE] })],
-        upgradeability: { model: "immutable", canChangeMintLogic: false, sources: [] },
+        upgradeability: immutableMintLogic(),
       }),
       bridgeRouteRisk: bridgeProfile(routes),
     });
@@ -602,7 +614,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
           mintControl({ label: "Capped issuance permission", directMintAbility: "cap-limited", canRaiseCap: true }),
           mintControl({ label: "Unbounded issuance permission" }),
         ],
-        upgradeability: { model: "immutable", canChangeMintLogic: false, sources: [] },
+        upgradeability: immutableMintLogic(),
       }),
       bridgeRouteRisk: bridgeProfile([route(ARBITRUM_ROUTE)]),
     });
@@ -625,7 +637,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       mintAuthority: mintProfile({
         reconciliation: "periodic",
         supervision: "attestation-only",
-        upgradeability: { model: "immutable", canChangeMintLogic: false, sources: [] },
+        upgradeability: immutableMintLogic(),
         controls: [
           mintControl({ deploymentRefs: [BASE_ROUTE], authorityType: "multisig", threshold: 3, signerCount: 5 }),
           mintControl({ deploymentRefs: [ETHEREUM_ROUTE], authorityType: "multisig", threshold: 2, signerCount: 5 }),
@@ -657,24 +669,27 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     }
   });
 
-  it("keeps a deployment-bound authority global when the supply partition does not reconcile", () => {
+  it.each<[string, string, string[], ReturnType<typeof supplyByRoute>]>([
+    [
+      "keeps a deployment-bound authority global when the supply partition does not reconcile",
+      "fixture-unreconciled-native-control", [ARBITRUM_ROUTE],
+      { optimism: {
+        current: 10_000_000, circulatingPrevDay: 10_000_000,
+        circulatingPrevWeek: 10_000_000, circulatingPrevMonth: 10_000_000,
+      } },
+    ],
+    [
+      "keeps an authority reaching every reconciled deployment global",
+      "fixture-root-reaching-native-control", [ARBITRUM_ROUTE, BASE_ROUTE], {},
+    ],
+  ])("%s", (_title, assetId, deploymentRefs, extraSupply) => {
     const routes = [route(ARBITRUM_ROUTE), route(BASE_ROUTE)];
-    const metadata = meta("fixture-unreconciled-native-control", {
-      mintAuthority: mintProfile({
-        controls: [mintControl({ deploymentRefs: [ARBITRUM_ROUTE] })],
-      }),
+    const metadata = meta(assetId, {
+      mintAuthority: mintProfile({ controls: [mintControl({ deploymentRefs })] }),
       bridgeRouteRisk: bridgeProfile(routes),
     });
     const { compiled } = compileFixture(metadata, {
-      chainSupplyByChain: {
-        ...supplyByRoute(routes),
-        optimism: {
-          current: 10_000_000,
-          circulatingPrevDay: 10_000_000,
-          circulatingPrevWeek: 10_000_000,
-          circulatingPrevMonth: 10_000_000,
-        },
-      },
+      chainSupplyByChain: { ...supplyByRoute(routes), ...extraSupply },
     });
     const mint = controlsFor(compiled, metadata.id).find((control) =>
       control.controlKey.startsWith("mint-meta:"),
@@ -687,28 +702,6 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       materialSupplyShare: null,
     });
   });
-
-  it("keeps an authority reaching every reconciled deployment global", () => {
-    const routes = [route(ARBITRUM_ROUTE), route(BASE_ROUTE)];
-    const metadata = meta("fixture-root-reaching-native-control", {
-      mintAuthority: mintProfile({
-        controls: [mintControl({ deploymentRefs: [ARBITRUM_ROUTE, BASE_ROUTE] })],
-      }),
-      bridgeRouteRisk: bridgeProfile(routes),
-    });
-    const { compiled } = compileFixture(metadata);
-    const mint = controlsFor(compiled, metadata.id).find((control) =>
-      control.controlKey.startsWith("mint-meta:"),
-    );
-
-    expect(mint).toMatchObject({
-      deploymentKey: `asset:${metadata.id}`,
-      scope: "global",
-      economicLossScope: "global-claim",
-      materialSupplyShare: null,
-    });
-  });
-
 
   it("scopes the USDP Token-2022 upgrade authority to its 5.81% Solana deployment", () => {
     const metadata = ACTIVE_META_BY_ID.get("usdp-paxos");
@@ -839,7 +832,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
 
   it("fails closed on disagreement between structured bridge cap bounds while matching bounds stay bounded", () => {
     const metadata = meta("fixture-matching-bridge-caps", {
-      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
+      bridgeRouteRisk: baseRepresentationProfile({
         controls: [
           bridgeControl({
             id: "bounded-bridge-cap-a",
@@ -868,15 +861,15 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     // the bound must lose the bound entirely instead of adopting either side's.
     expect(
       mergedBridgeCapSemantics([
-        overlayEntry("bounded-bridge-cap-a", { kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } }),
-        overlayEntry("bounded-bridge-cap-b", { kind: "bounded", bound: { amount: 2, unit: "supply-fraction" } }),
+        overlayEntry("bounded-bridge-cap-a", boundedBridgeCap(1)),
+        overlayEntry("bounded-bridge-cap-b", boundedBridgeCap(2)),
       ]),
     ).toEqual({ kind: "unbounded", bound: null });
 
     expect(
       mergedBridgeCapSemantics([
-        overlayEntry("bounded-bridge-cap-a", { kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } }),
-        overlayEntry("bounded-bridge-cap-b", { kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } }),
+        overlayEntry("bounded-bridge-cap-a", boundedBridgeCap(1)),
+        overlayEntry("bounded-bridge-cap-b", boundedBridgeCap(1)),
       ]),
     ).toEqual({ kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } });
   });
@@ -1003,7 +996,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
 
   it("quarantines shadowed representation bridge-mint with route and control attribution", () => {
     const metadata = meta("fixture-shadowed-bridge-mint", {
-      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
+      bridgeRouteRisk: baseRepresentationProfile({
         controls: [
           bridgeControl({
             id: "admin-only-shadow",
@@ -1033,7 +1026,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
   it("rejects a structured bridge control that references an unknown route", () => {
     const unknownRoute = "base:0x4444444444444444444444444444444444444444";
     const metadata = meta("fixture-unknown-bridge-route", {
-      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
+      bridgeRouteRisk: baseRepresentationProfile({
         controls: [
           bridgeControl({
             id: "unknown-route-control",
@@ -1081,7 +1074,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       affectedDeployments: [BASE_ROUTE], unavoidableDelaySec: 3_600,
     });
     const metadata = meta("alpha", {
-      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
+      bridgeRouteRisk: baseRepresentationProfile({
         reviewedAt: "2026-10-01",
         controls: [bridgeControl({
           controllerChain: "ethereum", controllerAddress: ETHEREUM_ROUTE.split(":")[1],
@@ -1104,7 +1097,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     "does not certify a multichain bridge inventory with %s review evidence",
     (state) => {
       const metadata = meta("alpha", state === "missing" ? {} : {
-        bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], { controls: [] }),
+        bridgeRouteRisk: baseRepresentationProfile({ controls: [] }),
       });
       const adapted = adaptBridgeFixture(
         metadata, null, { ethereum: { current: 80 }, base: { current: 20 } }, SCOPE_CLOCK,
@@ -1132,7 +1125,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
 
     const mergedAuthorityFor = (covering: BridgeRouteControl) => {
       const metadata = meta("fixture-validator-quorum-merge", {
-        bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
+        bridgeRouteRisk: baseRepresentationProfile({
           controls: [covering, dvnControl([BASE_ROUTE])],
         }),
       });
@@ -1142,7 +1135,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
 
     it("compiles a validator-capability-only control as a known validator-quorum authority", () => {
       const metadata = meta("fixture-validator-quorum-known", {
-        bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
+        bridgeRouteRisk: baseRepresentationProfile({
           controls: [
             bridgeControl({ id: "fixture-route-minter", routeRefs: [BASE_ROUTE], canRaiseCap: true }),
             dvnControl([BASE_ROUTE]),
@@ -1204,7 +1197,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       // still landed on `unknown`.
       const modelFor = (authorityType: BridgeRouteControl["authorityType"]) => {
         const metadata = meta(`fixture-authority-${authorityType}`, {
-          bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
+          bridgeRouteRisk: baseRepresentationProfile({
             controls: [bridgeControl({ id: "fixture-typed-control", routeRefs: [BASE_ROUTE], authorityType })],
           }),
         });
@@ -1604,7 +1597,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       capSemantics: { kind: "unbounded", bound: null }, claimImpairment: "unbounded",
     });
     const metadata = meta(assetId, {
-      bridgeRouteRisk: BridgeRouteRiskProfileSchema.parse(bridgeProfile([representationRoute(BASE_ROUTE)], {
+      bridgeRouteRisk: BridgeRouteRiskProfileSchema.parse(baseRepresentationProfile({
         controls: [bridgeControl({ executionScope: scope, canRaiseCap: true })],
         scopedQuestions: [{
           controlRef: "fixture-bridge-control", subject: "execution-scope",
@@ -1633,7 +1626,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
 
   it("does not soften an unnamed unresolved bridge sibling with a resolved contributor's question", () => {
     const metadata = meta("fixture-bridge-question-unnamed-sibling", {
-      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
+      bridgeRouteRisk: baseRepresentationProfile({
         controls: [
           bridgeControl({ capabilities: ["pause"] }),
           bridgeControl({ id: "unnamed", authorityType: "unknown" }),
@@ -1655,7 +1648,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     const profile = metadata.mintAuthority!;
     profile.controls = [profile.controls![0]!];
     profile.economicCapSemantics = "bounded";
-    profile.upgradeability = { model: "immutable", canChangeMintLogic: false, sources: [] };
+    profile.upgradeability = immutableMintLogic();
     delete profile.review.scopedQuestions;
     const path = profile.controls[0]!.executionScope!.paths[0]!;
     path.reach = unknownField === "reach" ? "unknown" : "root";
@@ -1697,7 +1690,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     const profile = metadata.mintAuthority!;
     profile.controls = [profile.controls![0]!];
     profile.reconciliation = "none";
-    profile.upgradeability = { model: "immutable", canChangeMintLogic: false, sources: [] };
+    profile.upgradeability = immutableMintLogic();
     const before = compileFixture(metadata, { clockSec: SCOPE_CLOCK }).compiled.assets[0]!;
     const scope = profile.controls[0]!.executionScope!;
     scope.paths.push({

@@ -4,9 +4,11 @@
  * Source: the `*-version.ts` constants in `shared/lib/`. Each domain exposes a
  * changelog of `{ version, title, date, effectiveAt, summary, ... }` entries.
  *
- * Pattern: first-observation. Each bounded changelog is driven through the
- * static-catalog projector, which probes source identities through the unique
- * Tape source-key index and emits only entries not yet present.
+ * Pattern: first-observation plus in-place clock/payload reconciliation. Each
+ * bounded changelog is driven through the static-catalog projector to insert
+ * unseen entries, then reconciled against existing `tape_events` rows so
+ * post-deploy `effectiveAt` re-dates update `ts` and `payload_json` without
+ * replacing `event_id` permalinks or reviving suppressed rows.
  *
  * The event type slug is `methodology.bumped:<domain>` per the wire grammar
  * in §3.3 of the implementation plan; `<domain>` is a short lowercase tag.
@@ -37,6 +39,7 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 import type { MethodologyChangelogEntry } from "@shared/types/editorial-content";
 
+import { runWithOverloadRetry } from "../d1-overload-retry";
 import { batchExecute } from "../db";
 import {
   buildTapeEventId,
@@ -123,16 +126,44 @@ const METHODOLOGY_DOMAINS: readonly MethodologyDomain[] = [
   },
 ];
 
+interface ExistingMethodologyRow {
+  event_id: string;
+  source_row_id: string;
+  ts: number;
+  title: string;
+  summary: string | null;
+  severity: string;
+  payload_effective_at: number | null;
+  payload_date: string | null;
+  payload_chars: number | null;
+}
+
+const METHODOLOGY_TRANSITION = "updated";
+
+function hasValidEffectiveAt(entry: MethodologyChangelogEntry): boolean {
+  return Number.isSafeInteger(entry.effectiveAt) && entry.effectiveAt > 0;
+}
+
+function validChangelogEntries(spec: MethodologyDomain): MethodologyChangelogEntry[] {
+  const valid: MethodologyChangelogEntry[] = [];
+  for (const entry of spec.changelog) {
+    if (!hasValidEffectiveAt(entry)) {
+      console.warn(
+        `[project-tape] Skipping methodology entry ${spec.domain} v${entry.version}: invalid effectiveAt (${String(entry.effectiveAt)})`,
+      );
+      continue;
+    }
+    valid.push(entry);
+  }
+  return valid;
+}
+
 function buildMethodologyEvent(
   spec: MethodologyDomain,
   entry: MethodologyChangelogEntry,
 ): TapeEventInsert {
   const type = `methodology.bumped:${spec.domain}`;
-  const tsSec = Number.isFinite(entry.effectiveAt) && entry.effectiveAt > 0
-    ? entry.effectiveAt
-    : Math.floor(Date.now() / 1000);
-  const tsMs = tsSec * 1000;
-  const transition = "updated";
+  const tsMs = entry.effectiveAt * 1000;
 
   return {
     eventId: buildTapeEventId({
@@ -140,7 +171,7 @@ function buildMethodologyEvent(
       type,
       sourceTable: `methodology:${spec.domain}`,
       sourceRowId: entry.version,
-      transition,
+      transition: METHODOLOGY_TRANSITION,
     }),
     type,
     severity: severityForMethodologyBump(entry.version),
@@ -162,7 +193,7 @@ function buildMethodologyEvent(
     },
     sourceTable: `methodology:${spec.domain}`,
     sourceRowId: entry.version,
-    transition,
+    transition: METHODOLOGY_TRANSITION,
     sourceUrl: spec.href,
     methodologyVersion: entry.version,
   };
@@ -173,24 +204,68 @@ export async function projectMethodologyBumps(
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
   let total = 0;
+  const validByDomain: Array<{ spec: MethodologyDomain; entries: MethodologyChangelogEntry[] }> = [];
   for (const spec of METHODOLOGY_DOMAINS) {
+    const entries = validChangelogEntries(spec);
+    if (entries.length === 0) continue;
+    validByDomain.push({ spec, entries });
     const result = await projectStaticCatalogEntries(db, {
-      entries: spec.changelog,
+      entries,
       buildEvent: (entry) => buildMethodologyEvent(spec, entry),
     }, options);
     total += result.projected;
-    if (spec.domain === "yield" && options?.dryRun !== true) {
-      const corrected = spec.changelog.find((entry) => entry.version === "8.55");
-      if (corrected) {
-        const event = buildMethodologyEvent(spec, corrected);
-        // Main projected the provisional clock into an already-linked permalink.
-        await batchExecute(db, [db.prepare(
-          `UPDATE tape_events SET ts = ?, payload_json = ?
-            WHERE source_table = ? AND source_row_id = ? AND transition = ? AND type = ? AND ts = ?`,
-        ).bind(event.ts, JSON.stringify(event.payload), event.sourceTable, event.sourceRowId,
-          event.transition, event.type, 1_795_046_400_000)]);
+  }
+
+  if (options?.dryRun !== true && validByDomain.length > 0) {
+    const existingResults = await runWithOverloadRetry(
+      () =>
+        db.batch<ExistingMethodologyRow>(
+          validByDomain.map(({ spec }) =>
+            db.prepare(
+              `SELECT event_id, source_row_id, ts, title, summary, severity,
+                      CASE WHEN json_valid(payload_json) THEN json_extract(payload_json, '$.effectiveAt') END AS payload_effective_at,
+                      CASE WHEN json_valid(payload_json) THEN json_extract(payload_json, '$.date') END AS payload_date,
+                      length(payload_json) AS payload_chars
+                 FROM tape_events INDEXED BY idx_tape_source_key
+                WHERE source_table = ? AND transition = ? AND type = ?`,
+            ).bind(`methodology:${spec.domain}`, METHODOLOGY_TRANSITION, `methodology.bumped:${spec.domain}`),
+          ),
+        ),
+      3,
+    );
+    const updates: D1PreparedStatement[] = [];
+    for (let index = 0; index < validByDomain.length; index += 1) {
+      const { spec, entries } = validByDomain[index]!;
+      const existingRows = existingResults[index]?.results ?? [];
+      if (existingRows.length === 0) continue;
+      const existingByVersion = new Map(existingRows.map((row) => [row.source_row_id, row]));
+      for (const entry of entries) {
+        const existing = existingByVersion.get(entry.version);
+        if (!existing) continue;
+        const event = buildMethodologyEvent(spec, entry);
+        const expectedPayloadJson = JSON.stringify(event.payload);
+        const expectedPayloadChars = Array.from(expectedPayloadJson).length;
+        if (
+          existing.ts !== event.ts ||
+          existing.title !== event.title ||
+          existing.summary !== event.summary ||
+          existing.severity !== event.severity ||
+          existing.payload_effective_at !== entry.effectiveAt ||
+          existing.payload_date !== entry.date ||
+          existing.payload_chars !== expectedPayloadChars
+        ) {
+          updates.push(
+            db.prepare(
+              `UPDATE tape_events SET ts = ?, title = ?, summary = ?, severity = ?, payload_json = ? WHERE event_id = ?`,
+            ).bind(event.ts, event.title, event.summary, event.severity, expectedPayloadJson, existing.event_id),
+          );
+        }
       }
     }
+    if (updates.length > 0) {
+      await batchExecute(db, updates);
+    }
   }
+
   return { projected: total, advanced: null };
 }

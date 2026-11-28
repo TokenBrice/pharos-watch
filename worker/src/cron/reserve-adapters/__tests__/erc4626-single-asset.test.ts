@@ -584,12 +584,14 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(result.metadata).not.toHaveProperty("sboldSpWithdrawableRaw");
   });
 
+  const runStusds = () => runSyrupWith({ source: "stusds-unused-funds", ...STUSDS_WIRING });
+  const installStusds = (options: Parameters<typeof stusdsHandlers>[0]) =>
+    installErc4626Network({ idleBalance: 100_000_000n, extraHandlers: [stusdsHandlers(options)] });
+
   it("scores stUSDS unused funds instead of the encumbered idle balance", async () => {
     // Debt 50M x 1.2 = 60M plus 5M owed in auction leaves 35M withdrawable.
-    installErc4626Network({ idleBalance: 100_000_000n, extraHandlers: [
-      stusdsHandlers({ art: 50_000_000n, rate: 12n * RAY / 10n, dueRad: 5_000_000n * RAY }),
-    ] });
-    const result = await runSyrupWith({ source: "stusds-unused-funds", ...STUSDS_WIRING });
+    installStusds({ art: 50_000_000n, rate: 12n * RAY / 10n, dueRad: 5_000_000n * RAY });
+    const result = await runStusds();
     expect(nonInfoWarnings(result.warnings)).toEqual([]);
     expect(result.metadata).toMatchObject({
       idleUnderlyingBalanceRaw: "100000000",
@@ -600,20 +602,19 @@ describe("fetchErc4626SingleAssetReserves", () => {
     });
   });
 
-  it("accrues the Jug rate to the read block before netting stUSDS debt", async () => {
-    // A 1%-per-second duty one second stale lifts 50M x 1.0 to 50.5M of debt.
-    installErc4626Network({ idleBalance: 100_000_000n, extraHandlers: [
-      stusdsHandlers({ art: 50_000_000n, rate: RAY, duty: RAY + RAY / 100n, rhoOffsetSec: 1n }),
-    ] });
-    const result = await runSyrupWith({ source: "stusds-unused-funds", ...STUSDS_WIRING });
-    expect(result.metadata).toMatchObject({ redemptionCapacityRaw: "49500000", redemptionCapacitySource: "stusds-unused-funds" });
+  // At 1% duty per second, 50M accrues to 50.5M after one second and 51,515,050 after three.
+  it.each([
+    ["accrues the Jug rate to the read block before netting stUSDS debt", 1n, "49500000"],
+    ["compounds a multi-second Jug accrual before netting stUSDS debt", 3n, "48484950"],
+  ])("%s", async (_title, rhoOffsetSec, redemptionCapacityRaw) => {
+    installStusds({ art: 50_000_000n, rate: RAY, duty: RAY + RAY / 100n, rhoOffsetSec });
+    const result = await runStusds();
+    expect(result.metadata).toMatchObject({ redemptionCapacityRaw, redemptionCapacitySource: "stusds-unused-funds" });
   });
 
   it("publishes zero stUSDS capacity at full utilization rather than the idle balance", async () => {
-    installErc4626Network({ idleBalance: 100_000_000n, extraHandlers: [
-      stusdsHandlers({ art: 100_000_000n, rate: RAY }),
-    ] });
-    const result = await runSyrupWith({ source: "stusds-unused-funds", ...STUSDS_WIRING });
+    installStusds({ art: 100_000_000n, rate: RAY });
+    const result = await runStusds();
     expect(result.metadata).toMatchObject({
       idleUnderlyingBalanceRaw: "100000000",
       redemptionCapacityRaw: "0",
@@ -635,15 +636,6 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(rpowRay(2n * RAY, 20_000n)).toBeNull();
   });
 
-  it("compounds a multi-second Jug accrual before netting stUSDS debt", async () => {
-    // 1% per second for 3 seconds: 50M x 1.030301 = 51,515,050 of debt.
-    installErc4626Network({ idleBalance: 100_000_000n, extraHandlers: [
-      stusdsHandlers({ art: 50_000_000n, rate: RAY, duty: RAY + RAY / 100n, rhoOffsetSec: 3n }),
-    ] });
-    const result = await runSyrupWith({ source: "stusds-unused-funds", ...STUSDS_WIRING });
-    expect(result.metadata).toMatchObject({ redemptionCapacityRaw: "48484950", redemptionCapacitySource: "stusds-unused-funds" });
-  });
-
   it.each([
     ["a missing Clipper Due() word", { dropDue: true }],
     ["a Jug rho in the future", { rhoOffsetSec: -10n }],
@@ -653,7 +645,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
         "dropDue" in fault && call?.data === "0x08bf162f" ? jsonResponse({ result: "0x" }) : undefined,
       stusdsHandlers({ art: 10_000_000n, rate: RAY, ...("rhoOffsetSec" in fault ? { rhoOffsetSec: fault.rhoOffsetSec } : {}) }),
     ] });
-    const result = await runSyrupWith({ source: "stusds-unused-funds", ...STUSDS_WIRING });
+    const result = await runStusds();
     expect(nonInfoWarnings(result.warnings)).toEqual([
       expect.objectContaining({ code: "stusds-unused-funds-unavailable", severity: "warning" }),
     ]);
@@ -661,10 +653,8 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("withholds stUSDS capacity on an implausible Jug accrual age instead of publishing zero", async () => {
-    installErc4626Network({ idleBalance: 100_000_000n, extraHandlers: [
-      stusdsHandlers({ art: 10_000_000n, rate: RAY, rhoOffsetSec: 400n * 86_400n }),
-    ] });
-    const result = await runSyrupWith({ source: "stusds-unused-funds", ...STUSDS_WIRING });
+    installStusds({ art: 10_000_000n, rate: RAY, rhoOffsetSec: 400n * 86_400n });
+    const result = await runStusds();
     expect(nonInfoWarnings(result.warnings)).toEqual([
       expect.objectContaining({ code: "stusds-unused-funds-unavailable", severity: "warning" }),
     ]);
@@ -672,16 +662,16 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("withholds stUSDS capacity on a wiring mismatch instead of falling back to idle USDS", async () => {
-    installErc4626Network({ idleBalance: 100_000_000n, extraHandlers: [
-      stusdsHandlers({ art: 10_000_000n, rate: RAY, vat: "0x1111111111111111111111111111111111111111" }),
-    ] });
-    const result = await runSyrupWith({ source: "stusds-unused-funds", ...STUSDS_WIRING });
+    installStusds({ art: 10_000_000n, rate: RAY, vat: "0x1111111111111111111111111111111111111111" });
+    const result = await runStusds();
     expect(nonInfoWarnings(result.warnings)).toEqual([
       expect.objectContaining({ code: "stusds-wiring-mismatch", severity: "warning" }),
     ]);
     expect(result.metadata).not.toHaveProperty("redemptionCapacityRaw");
     expect(result.metadata).not.toHaveProperty("stusdsUnusedFundsRaw");
   });
+
+  const runMorpho = (source: "morpho-vault-v1" | "morpho-vault-v2") => runSyrupWith({ source, chainId: 1 });
 
   it.each(MORPHO_SUCCESS_CASES)("uses $source Read API liquidity rather than idle underlying balance", async ({ source, version, statePath, penalties, metadata }) => {
     const net = installErc4626Network({
@@ -710,7 +700,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
 
   it.each([30_000_000n, 0n])("does not promote donated MetaMorpho V1 wallet assets above API liquidity %s", async (liquidityRaw) => {
     installErc4626Network({ idleBalance: 50_000_000, json: morphoReadJson({ version: "v1", withdrawable: liquidityRaw.toString() }) });
-    const result = await runSyrupWith({ source: "morpho-vault-v1", chainId: 1 });
+    const result = await runMorpho("morpho-vault-v1");
     expect(result.metadata).toMatchObject({
       idleUnderlyingBalanceRaw: "50000000", redemptionCapacityRaw: liquidityRaw.toString(), redemptionCapacitySource: "morpho-vault-v1-liquidity",
     });
@@ -721,7 +711,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
       idleBalance: 50_000_000,
       json: morphoReadJson({ version: "v1", overrides: { "https://api.morpho.org/v0/vaults-v1/1:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b/state": { data: null } } }),
     });
-    const result = await runSyrupWith({ source: "morpho-vault-v1", chainId: 1 });
+    const result = await runMorpho("morpho-vault-v1");
     expect(result.metadata).not.toHaveProperty("redemptionCapacityRaw");
     expect(result.metadata).toMatchObject({ redemption: { capacityKind: "documented-eventual" } });
   });
@@ -767,7 +757,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
         ], cursor: null } },
       }),
     });
-    const peerOk = await runSyrupWith({ source: "morpho-vault-v2", chainId: 1 });
+    const peerOk = await runMorpho("morpho-vault-v2");
     expect(nonInfoWarnings(peerOk.warnings)).toEqual([]);
     expect(peerOk.metadata).toMatchObject({ redemptionCapacityRaw: "30000000", morphoVaultV2LiquidityUsd: 30 });
 
@@ -786,7 +776,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
           overrides: { "https://api.morpho.org/v0/vaults-v2/1:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b/withdrawal-options": { data: { chain_id: 8453, vault_address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", adapter_penalties: [] } } },
         }),
       });
-      const r = await runSyrupWith({ source: "morpho-vault-v2", chainId: 1 });
+      const r = await runMorpho("morpho-vault-v2");
       expect(nonInfoWarnings(r.warnings)).toEqual([]);
       expect(r.metadata?.redemptionCapacityRaw).toBe("30000000");
       expect(r.metadata).not.toHaveProperty("morphoVaultV2LiquidityUsd");
@@ -815,7 +805,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
         },
       }),
     });
-    const ok = await runAdapterWithFakeTimers(() => runSyrupWith({ source: "morpho-vault-v2", chainId: 1 }));
+    const ok = await runAdapterWithFakeTimers(() => runMorpho("morpho-vault-v2"));
     expect(attempts).toBe(2);
     expect(ok.metadata?.redemptionCapacityRaw).toBe("30000000");
 
@@ -824,7 +814,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
       idleBalance: 25_000_000n, liquidityAdapter: 1,
       json: morphoReadJson({ version: "v2", overrides: { [stateUrl]: () => { failAttempts += 1; return { status: 503, json: { error: "down" } }; } } }),
     });
-    const failed = await runAdapterWithFakeTimers(() => runSyrupWith({ source: "morpho-vault-v2", chainId: 1 }));
+    const failed = await runAdapterWithFakeTimers(() => runMorpho("morpho-vault-v2"));
     expect(failAttempts).toBe(2);
     expect(nonInfoWarnings(failed.warnings)).toEqual([expect.objectContaining({ code: "morpho-vault-v2-liquidity-unavailable" })]);
   });
@@ -929,7 +919,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
     adapter, idle, reason, capacityUsd,
   }) => {
     const net = installErc4626Network({ idleBalance: idle, liquidityAdapter: adapter, json: morphoReadJson({ version: "v2" }) });
-    const result = await runSyrupWith({ source: "morpho-vault-v2", chainId: 1 });
+    const result = await runMorpho("morpho-vault-v2");
     expect(net.requests.some((r) => r.url.startsWith("https://api.morpho.org"))).toBe(false);
     expect(result.warnings).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: `morpho-vault-v2-liquidity-adapter-${reason}` }),
