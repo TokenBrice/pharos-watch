@@ -223,6 +223,8 @@ describe("core stablecoin aggregate universe", () => {
       expect(isEarlierSupplyPerimeter(id, at), id).toBe(false);
       expect(isEarlierSupplyPerimeter(id, at - (at % 86_400)), id).toBe(true);
     }
+    // The provisional Wave 2 / CADC fence must still classify a packet just before it as old.
+    expect(isEarlierSupplyPerimeter("cadd-cad-digital", Date.parse("2026-11-28T12:37:59Z") / 1000)).toBe(true);
   });
 
   it("registers the listing-policy v2 market-wide perimeter entry and chart marker from the cutover constant", () => {
