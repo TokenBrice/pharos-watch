@@ -114,6 +114,19 @@ const makeCoverage = (overrides: Partial<ExitRouteObservationCoverage> = {}): Ex
   ...overrides,
 });
 
+const threePoolWithMeasurements = (measuredExecutions: ReturnType<typeof curveStableSwapMeasuredProfiles>) =>
+  retainedPool("25171c4c-1877-449a-9f88-45a9f153ee31", "curve", "ethereum", 160_047_206, "DAI-USDC-USDT", "curve-stableswap-high-a", "dl", {
+    ammExecutionModel: curveThreePoolAmmModel(), measuredExecutions, measuredExecutionPhysicalPoolId: POOL_3,
+  });
+
+const coveredPools = (
+  retained: number, eligible: number, capability: number, overrides: Partial<ExitRouteObservationCoverage> = {},
+) => makeCoverage({
+  retainedPoolCount: retained, observationCount: eligible, scoreEligibleObservationCount: eligible,
+  scoreEligiblePoolCount: eligible, scoreEligibleCapabilityPoolCount: capability,
+  evidenceCounts: { "measured-executable-depth": eligible }, ...overrides,
+});
+
 describe("P4 DEX exit route observations", () => {
   it("falls back Solana and Tron pools to shaped evidence outside the strict denominator", () => {
     const result = observe([
@@ -324,11 +337,7 @@ describe("P4 DEX exit route observations", () => {
 
   it("keeps the 3pool reserve model score-facing until the atomic packet matures", () => {
     const run = (successfulCycles: number, quoteAgeSec = 60) =>
-      observe([retainedPool("25171c4c-1877-449a-9f88-45a9f153ee31", "curve", "ethereum", 160_047_206, "DAI-USDC-USDT", "curve-stableswap-high-a", "dl", {
-        ammExecutionModel: curveThreePoolAmmModel(),
-        measuredExecutions: curveStableSwapMeasuredProfiles(T_3POOL - quoteAgeSec, successfulCycles),
-        measuredExecutionPhysicalPoolId: POOL_3,
-      })], T_3POOL, "usdt-tether");
+      observe([threePoolWithMeasurements(curveStableSwapMeasuredProfiles(T_3POOL - quoteAgeSec, successfulCycles))], T_3POOL, "usdt-tether");
 
     const immature = run(2);
     expect(immature.coverage).toMatchObject({
@@ -367,11 +376,7 @@ describe("P4 DEX exit route observations", () => {
       ...mixedProfiles[1]!.observationHistory!,
       completeProducerCycleCount: 2, successfulObservationCount: 2, consecutiveSuccessCount: 2,
     };
-    const mixed = observe([retainedPool("25171c4c-1877-449a-9f88-45a9f153ee31", "curve", "ethereum", 160_047_206, "DAI-USDC-USDT", "curve-stableswap-high-a", "dl", {
-      ammExecutionModel: curveThreePoolAmmModel(),
-      measuredExecutions: mixedProfiles,
-      measuredExecutionPhysicalPoolId: POOL_3,
-    })], T_3POOL, "usdt-tether");
+    const mixed = observe([threePoolWithMeasurements(mixedProfiles)], T_3POOL, "usdt-tether");
     expect(mixed.observations.map((o) => o.output.trackedAssetIds)).toEqual([["dai-makerdao"], ["usdc-circle"]]);
     expect(mixed.observations.every((o) => o.evidenceKind === "reserve-based-amm-simulation")).toBe(true);
   });
@@ -446,9 +451,7 @@ describe("P4 DEX exit route observations", () => {
 
   it("rejects a partial or provenance-drifted 3pool packet instead of masking it with reserves", () => {
     const profiles = curveStableSwapMeasuredProfiles(T_3POOL - 60, 3);
-    const pool = retainedPool("25171c4c-1877-449a-9f88-45a9f153ee31", "curve", "ethereum", 160_047_206, "DAI-USDC-USDT", "curve-stableswap-high-a", "dl", {
-      ammExecutionModel: curveThreePoolAmmModel(), measuredExecutions: [profiles[0]!], measuredExecutionPhysicalPoolId: POOL_3,
-    });
+    const pool = threePoolWithMeasurements([profiles[0]!]);
     const partial = observe([pool], T_3POOL, "usdt-tether");
     expect(partial.observations).toEqual([]);
     expect(partial.coverage.unsupportedReasons.invalidAtomicMeasuredPacket).toBe(1);
@@ -506,28 +509,21 @@ describe("P4 DEX exit route observations", () => {
   });
 
   it("excludes route-selection overflow from the budget-accounting denominator only", () => {
-    const overflowOnly = makeCoverage({
-      retainedPoolCount: 283, observationCount: 24, scoreEligibleObservationCount: 24,
-      scoreEligiblePoolCount: 24, scoreEligibleCapabilityPoolCount: 283, unsupportedPoolCount: 259,
-      evidenceCounts: { "measured-executable-depth": 24 }, unsupportedReasons: { routeObservationPayloadOverflow: 259 },
+    const overflowOnly = coveredPools(283, 24, 283, {
+      unsupportedPoolCount: 259,
+      unsupportedReasons: { routeObservationPayloadOverflow: 259 },
     });
     expect(isDexExitRouteCoverageComplete(overflowOnly)).toBe(false);
     expect(isDexExitRouteCoverageWithinRouteBudget(overflowOnly)).toBe(true);
 
-    const gated = makeCoverage({
-      retainedPoolCount: 12, observationCount: 4, scoreEligibleObservationCount: 4,
-      scoreEligiblePoolCount: 4, scoreEligibleCapabilityPoolCount: 12, unsupportedPoolCount: 8,
-      evidenceCounts: { "measured-executable-depth": 4 },
+    const gated = coveredPools(12, 4, 12, {
+      unsupportedPoolCount: 8,
       unsupportedReasons: { routeObservationPayloadOverflow: 2, "executionCapabilityGate:measured-execution:quote-failed": 6 },
     });
     expect(isDexExitRouteCoverageComplete(gated)).toBe(false);
     expect(isDexExitRouteCoverageWithinRouteBudget(gated)).toBe(false);
 
-    const strictComplete = makeCoverage({
-      retainedPoolCount: 10, observationCount: 10, scoreEligibleObservationCount: 10,
-      scoreEligiblePoolCount: 10, scoreEligibleCapabilityPoolCount: 10,
-      evidenceCounts: { "measured-executable-depth": 10 },
-    });
+    const strictComplete = coveredPools(10, 10, 10);
     expect(isDexExitRouteCoverageComplete(strictComplete)).toBe(true);
     expect(isDexExitRouteCoverageWithinRouteBudget(strictComplete)).toBe(true);
     const unknownFluidStatus = {
@@ -545,9 +541,8 @@ describe("P4 DEX exit route observations", () => {
   });
 
   it("reads the route-overflow reason key the producer actually emits", () => {
-    const base = makeCoverage({
-      retainedPoolCount: 372, observationCount: 24, scoreEligibleObservationCount: 24,
-      scoreEligiblePoolCount: 24, scoreEligibleCapabilityPoolCount: 277, unsupportedPoolCount: 348,
+    const base = coveredPools(372, 24, 277, {
+      unsupportedPoolCount: 348,
       evidenceCounts: { "reserve-based-amm-simulation": 17, "measured-executable-depth": 7 },
     });
     const shaped = { "nonExecutableEvidence:defillama-pool-shaped": 8, "nonExecutableEvidence:discovery-pool-shaped": 87 };
@@ -576,9 +571,8 @@ describe("P4 DEX exit route observations", () => {
   });
 
   it("carves rotating quote-budget deferrals out of route-budget accounting", () => {
-    const base = makeCoverage({
-      retainedPoolCount: 372, observationCount: 24, scoreEligibleObservationCount: 24,
-      scoreEligiblePoolCount: 24, scoreEligibleCapabilityPoolCount: 277, unsupportedPoolCount: 348,
+    const base = coveredPools(372, 24, 277, {
+      unsupportedPoolCount: 348,
       evidenceCounts: { "reserve-based-amm-simulation": 17, "measured-executable-depth": 7 },
     });
     const shaped = { "nonExecutableEvidence:defillama-pool-shaped": 8, "nonExecutableEvidence:discovery-pool-shaped": 87, routeObservationPayloadOverflow: 250 };
@@ -592,10 +586,8 @@ describe("P4 DEX exit route observations", () => {
   });
 
   it("certifies live USDT/USDC/DAI/EURC budgeted surfaces and keeps crvUSD open", () => {
-    const usdt = makeCoverage({
-      retainedPoolCount: 1307, observationCount: 24, scoreEligibleObservationCount: 24,
-      scoreEligiblePoolCount: 24, scoreEligibleCapabilityPoolCount: 802, unsupportedPoolCount: 1283,
-      evidenceCounts: { "measured-executable-depth": 24 },
+    const usdt = coveredPools(1307, 24, 802, {
+      unsupportedPoolCount: 1283,
       unsupportedReasons: {
         "executionCapabilityGate:constant-product-v2:incomplete-exact-capture": 13,
         "executionCapabilityGate:measured-execution:target-unresolved": 461,
@@ -617,10 +609,8 @@ describe("P4 DEX exit route observations", () => {
     expect(isDexExitRouteCoverageComplete(usdt)).toBe(false);
     expect(isDexExitRouteCoverageWithinRouteBudget(usdt)).toBe(true);
 
-    const eurc = makeCoverage({
-      retainedPoolCount: 42, observationCount: 8, scoreEligibleObservationCount: 8,
-      scoreEligiblePoolCount: 8, scoreEligibleCapabilityPoolCount: 34, unsupportedPoolCount: 34,
-      evidenceCounts: { "measured-executable-depth": 8 },
+    const eurc = coveredPools(42, 8, 34, {
+      unsupportedPoolCount: 34,
       unsupportedReasons: {
         "executionCapabilityGate:measured-execution:target-unresolved": 11,
         "executionCapabilityGate:measured-execution:quote-missing": 5,
@@ -633,10 +623,8 @@ describe("P4 DEX exit route observations", () => {
     });
     expect(isDexExitRouteCoverageWithinRouteBudget(eurc)).toBe(true);
 
-    const crvusd = makeCoverage({
-      retainedPoolCount: 113, observationCount: 3, scoreEligibleObservationCount: 3,
-      scoreEligiblePoolCount: 3, scoreEligibleCapabilityPoolCount: 50, unsupportedPoolCount: 110,
-      evidenceCounts: { "measured-executable-depth": 3 },
+    const crvusd = coveredPools(113, 3, 50, {
+      unsupportedPoolCount: 110,
       unsupportedReasons: {
         "invalidMeasuredExecution:physical-pool-provenance-mismatch": 8,
         "executionCapabilityGate:curve-cryptoswap:unsupported-invariant": 13,

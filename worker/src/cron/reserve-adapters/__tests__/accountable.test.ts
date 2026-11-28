@@ -73,6 +73,8 @@ const NEUTRL_ACCOUNTABLE_TEST_CONFIG: LiveReservesConfig = {
 /** yzUSD's production config; cases that need another coin declare their own `config`. */
 const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
+const dashboardPayload = <Data extends Record<string, unknown>>(data: Data) => ({ res: "ok" as const, data });
+
 async function runAccountablePayload(config: LiveReservesConfig, data: Record<string, unknown>) {
   const primary = config.inputs.primary;
   if (primary.kind !== "http-json") {
@@ -87,12 +89,20 @@ async function runAccountablePayload(config: LiveReservesConfig, data: Record<st
   const { result } = await runAdapter("accountable", coin, {
     network: {
       json: {
-        [primary.url]: { res: "ok", data },
+        [primary.url]: dashboardPayload(data),
       },
     },
   });
   return result;
 }
+
+const validateAccountable = (result: Parameters<typeof validateAdapterOutput>[0], now?: number) =>
+  validateAdapterOutput(result, { adapter: getReserveAdapter("accountable") ?? undefined, ...(now === undefined ? {} : { now }) });
+
+const reserveBucket = (name: string, value: number | string) => ({ name, value });
+
+const runReservePayload = (config: LiveReservesConfig, collateralization: number, ts: string, reserves: Record<string, unknown>) =>
+  runAccountablePayload(config, { collateralization, ts, reserves });
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -170,11 +180,11 @@ describe("adaptAccountableDashboard", () => {
 
   it.each(ACCOUNTABLE_MAPPING_CASES)("maps $name into reserve slices", (testCase) => {
     const result = adaptAccountableDashboard(
-      { res: "ok", data: {
+      dashboardPayload({
         collateralization: testCase.collateralization,
         ts: testCase.ts,
         reserves: { [testCase.bucket]: testCase.buckets },
-      } },
+      }),
       testCase.params,
     );
     expect(result.slices).toEqual(testCase.expected);
@@ -182,21 +192,18 @@ describe("adaptAccountableDashboard", () => {
 
   it("reconciles signed reserves_split buckets without emitting negative reserve slices", () => {
     const result = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: {
-          collateralization: 1,
-          ts: "1785150653410",
-          reserves: {
-            total_reserves: 900,
-            reserves_split: [
-              { name: "Base", value: 600 },
-              { name: "Avalanche", value: 400 },
-              { name: "Ethereum", value: -100 },
-            ],
-          },
+      dashboardPayload({
+        collateralization: 1,
+        ts: "1785150653410",
+        reserves: {
+          total_reserves: 900,
+          reserves_split: [
+            reserveBucket("Base", 600),
+            reserveBucket("Avalanche", 400),
+            reserveBucket("Ethereum", -100),
+          ],
         },
-      },
+      }),
       {
         bucket: "reserves_split",
         riskMap: {
@@ -229,16 +236,12 @@ describe("adaptAccountableDashboard", () => {
 
     const { dashboardTimestamp, totalReserves, deployment } = USN_DEPLOYMENT_CAPTURE;
 
-    const result = await runAccountablePayload(config, {
-      collateralization: 1.013786,
-      ts: dashboardTimestamp,
-      reserves: {
+    const result = await runReservePayload(config, 1.013786, dashboardTimestamp, {
         interval: "live",
         verifiability: "100",
         total_reserves: totalReserves,
         deployment,
-      },
-    });
+      });
 
     const bucketTotal = Object.values(deployment).reduce((sum, value) => sum + value, 0);
     expect(result.metadata?.deploymentSnapshot).toEqual({
@@ -275,14 +278,10 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("recognizes the Hyperliquid deployment label without inheriting the older HYPE-only identity", async () => {
-    const result = await runAccountablePayload(usn.liveReservesConfig as LiveReservesConfig, {
-      collateralization: 1,
-      ts: "2026-10-06T06:00:00Z",
-      reserves: {
+    const result = await runReservePayload(usn.liveReservesConfig as LiveReservesConfig, 1, "2026-10-06T06:00:00Z", {
         total_reserves: 100,
         deployment: { "Private Credit (Fasanara FTAC)": 83.42, "Funding Rate Arb (Hyperliquid)": 16.58 },
-      },
-    });
+      });
 
     expect(result.slices).toContainEqual({
       name: "Funding Rate Arb (Hyperliquid)",
@@ -299,13 +298,9 @@ describe("adaptAccountableDashboard", () => {
 
   it.each([
     ["Noon deployment", usn.liveReservesConfig, { deployment: { "Funding Rate Arb (Hyperliquid)": 70, "Unreviewed strategy": 30 } }],
-    ["XGLD location", xgld.liveReservesConfig, { reserves_split: [{ name: "Binance", value: 70 }, { name: "Unreviewed venue", value: 30 }] }],
+    ["XGLD location", xgld.liveReservesConfig, { reserves_split: [reserveBucket("Binance", 70), reserveBucket("Unreviewed venue", 30)] }],
   ])("still degrades material unknown exposure in %s", async (_name, config, buckets) => {
-    const result = await runAccountablePayload(config as LiveReservesConfig, {
-      collateralization: 1,
-      ts: "2026-10-06T06:00:00Z",
-      reserves: { total_reserves: 100, ...buckets },
-    });
+    const result = await runReservePayload(config as LiveReservesConfig, 1, "2026-10-06T06:00:00Z", { total_reserves: 100, ...buckets });
 
     expect(result.metadata?.unknownExposurePct).toBe(30);
     expect(result.slices).toContainEqual({
@@ -333,16 +328,12 @@ describe("adaptAccountableDashboard", () => {
       },
     };
 
-    const result = await runAccountablePayload(config, {
-      collateralization: 1.01,
-      ts: "2026-03-20T00:00:00Z",
-      reserves: {
+    const result = await runReservePayload(config, 1.01, "2026-03-20T00:00:00Z", {
         type: {
           Stablecoin: 70,
           "New Bucket": 30,
         },
-      },
-    });
+      });
 
     expect(result.slices).toEqual([
       { name: "Stablecoin", pct: 70, risk: "low" },
@@ -354,7 +345,7 @@ describe("adaptAccountableDashboard", () => {
       unknownExposurePct: 30,
     });
     expect(result.metadata?.redemption).toBeUndefined();
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("accountable") ?? undefined }).valid).toBe(true);
+    expect(validateAccountable(result).valid).toBe(true);
     expect(result.warnings?.[0]).toMatchObject({
       code: "unmapped-bucket",
       effect: "degraded",
@@ -362,18 +353,15 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("maps reviewed Apyx own claims out of both sides of the reserve accounting", async () => {
-    const result = await runAccountablePayload(apxusd.liveReservesConfig as LiveReservesConfig, {
-      collateralization: 1.000102, ts: "1789502434250",
-      reserves: {
+    const result = await runReservePayload(apxusd.liveReservesConfig as LiveReservesConfig, 1.000102, "1789502434250", {
         total_reserves: 307593129.35, total_supply: 307573514.82,
         inventory: 61062157.37285687, pol: 53894639.55179605,
         reserves_split: [
-          { name: "STRC", value: 167094567.4 }, { name: "Inventory", value: 61062157.37 },
-          { name: "Protocol Owned Liquidity", value: 53894639.55 },
-          { name: "Cash & Equivalents", value: 25534632.39 }, { name: "Other", value: 7132.64 },
+          reserveBucket("STRC", 167094567.4), reserveBucket("Inventory", 61062157.37),
+          reserveBucket("Protocol Owned Liquidity", 53894639.55),
+          reserveBucket("Cash & Equivalents", 25534632.39), reserveBucket("Other", 7132.64),
         ],
-      },
-    });
+      });
     expect(result.warnings ?? []).toEqual([]);
     // This September payload is independent of the refreshed catalog composition.
     expect(result.slices).toEqual([
@@ -412,17 +400,14 @@ describe("adaptAccountableDashboard", () => {
 
     const network = installAdapterNetwork({
       json: {
-        [primary.url]: {
-          res: "ok",
-          data: {
-            collateralization: 1,
-            ts: "1784376607058",
-            reserves: {
-              total_reserves: 100, total_supply: 100, inventory: 0, pol: 0,
-              reserves_split: [{ value: 100, name: "Cash & Equivalents" }, { value: 0, name: "Inventory" }, { value: 0, name: "Protocol Owned Liquidity" }],
-            },
+        [primary.url]: dashboardPayload({
+          collateralization: 1,
+          ts: "1784376607058",
+          reserves: {
+            total_reserves: 100, total_supply: 100, inventory: 0, pol: 0,
+            reserves_split: [reserveBucket("Cash & Equivalents", 100), reserveBucket("Inventory", 0), reserveBucket("Protocol Owned Liquidity", 0)],
           },
-        },
+        }),
       },
     });
     const { result } = await runAdapter("accountable", "apxusd-apyx", {
@@ -442,31 +427,23 @@ describe("adaptAccountableDashboard", () => {
   it("fails closed when the configured reserve bucket is dropped upstream", async () => {
     const config = apxusd.liveReservesConfig as LiveReservesConfig;
 
-    await expect(runAccountablePayload(config, {
-      collateralization: 1,
-      ts: "1784376607058",
-      reserves: {
+    await expect(runReservePayload(config, 1, "1784376607058", {
         total_reserves: { value: 100, name: "Total Reserves" },
-      },
-    })).rejects.toThrow(/Unsupported Accountable bucket/);
+      })).rejects.toThrow(/Unsupported Accountable bucket/);
   });
   it("treats Unitas deployment buckets as the same high-risk strategy basket", async () => {
     const config = usdu.liveReservesConfig as LiveReservesConfig;
 
-    const result = await runAccountablePayload(config, {
-      collateralization: 1.059395,
-      ts: "1784376513803",
-      reserves: {
+    const result = await runReservePayload(config, 1.059395, "1784376513803", {
         interval: "live",
         verifiability: "100",
         total_reserves: { value: 100, name: "Total Reserves" },
         reserves_split: [
-          { value: 50.6, name: "Binance" },
-          { value: 48.3, name: "Solana" },
-          { value: 1.1, name: "BNB Smart Chain" },
+          reserveBucket("Binance", 50.6),
+          reserveBucket("Solana", 48.3),
+          reserveBucket("BNB Smart Chain", 1.1),
         ],
-      },
-    });
+      });
 
     expect(result.slices).toEqual([
       { sourceKey: "accountable:unitas:deployment:binance", name: "Binance", pct: 50.6, risk: "high" },
@@ -478,14 +455,10 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("maps XGLD's reviewed gross location labels without claiming net backing or custody", async () => {
-    const result = await runAccountablePayload(xgld.liveReservesConfig as LiveReservesConfig, {
-      collateralization: 1,
-      ts: "2026-10-06T06:00:00Z",
-      reserves: {
+    const result = await runReservePayload(xgld.liveReservesConfig as LiveReservesConfig, 1, "2026-10-06T06:00:00Z", {
         total_reserves: 100,
-        reserves_split: [{ name: "Binance", value: 98.08 }, { name: "BNB Smart Chain", value: 1.92 }],
-      },
-    });
+        reserves_split: [reserveBucket("Binance", 98.08), reserveBucket("BNB Smart Chain", 1.92)],
+      });
 
     expect(result.slices).toEqual([
       { sourceKey: "accountable:unitas:xgld:binance", name: "Binance", pct: expect.closeTo(98.08, 8), risk: "high" },
@@ -503,29 +476,22 @@ describe("adaptAccountableDashboard", () => {
     [0, /zero value: Other, SATA, STRC/],
   ])("rejects invalid Apyx reserves_split with Other at %s", async (other, error) => {
     const config = apxusd.liveReservesConfig as LiveReservesConfig;
-    await expect(runAccountablePayload(config, {
-      collateralization: 1.001022,
-      ts: "1780583904415",
-      reserves: {
+    await expect(runReservePayload(config, 1.001022, "1780583904415", {
         total_reserves: { value: other === 0 ? 180_040_870.38 : 476_302_149.26, name: "Total Reserves" },
         ...(other === 0 ? { total_supply: 180_040_870.38 / 1.001022, inventory: 0, pol: 0 } : {}),
         reserves_split: [
-          { value: other === 0 ? 0 : -296_181_048.36, name: "STRC" },
-          { value: 180_040_870.38, name: "Cash & Equivalents" },
-          { value: 0, name: "SATA" },
-          { value: other, name: "Other" },
-          ...(other === 0 ? [{ value: 0, name: "Inventory" }, { value: 0, name: "Protocol Owned Liquidity" }] : []),
+          reserveBucket("STRC", other === 0 ? 0 : -296_181_048.36),
+          reserveBucket("Cash & Equivalents", 180_040_870.38),
+          reserveBucket("SATA", 0),
+          reserveBucket("Other", other),
+          ...(other === 0 ? [reserveBucket("Inventory", 0), reserveBucket("Protocol Owned Liquidity", 0)] : []),
         ],
-      },
-    })).rejects.toThrow(error);
+      })).rejects.toThrow(error);
   });
 
   it("rejects Accountable bucket totals that materially diverge from total_reserves", () => {
     expect(() => adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: makeTimestampedYuzuPayload({ reserves_split: [{ name: "Cash & Equivalents", value: 100 }] }),
-      },
+      dashboardPayload(makeTimestampedYuzuPayload({ reserves_split: [reserveBucket("Cash & Equivalents", 100)] })),
       {
         bucket: "reserves_split",
         riskMap: { "Cash & Equivalents": "very-low" },
@@ -536,23 +502,19 @@ describe("adaptAccountableDashboard", () => {
   it("omits configured Accountable buckets from total_reserves reconciliation and reserve slices", async () => {
     const config = yusd.liveReservesConfig as LiveReservesConfig;
 
-    const result = await runAccountablePayload(config, {
-      collateralization: 1.002841,
-      ts: "1781948757311",
-      reserves: {
+    const result = await runReservePayload(config, 1.002841, "1781948757311", {
         interval: "live",
         verifiability: "100",
         total_reserves: { value: 36_193_106.94, name: "Total Reserves" },
         reserves_split: [
-          { value: 26_197_666.041081343, name: "Copper" },
-          { value: 9_990_180.9994548, name: "Fireblocks" },
-          { value: 591_806.76, name: "Insurance Fund" },
-          { value: 5_130.378053203912, name: "Binance" },
-          { value: 122.0547387685523, name: "Ethereum Chain" },
-          { value: 7.46933060805061, name: "BNB Smart Chain" },
+          reserveBucket("Copper", 26_197_666.041081343),
+          reserveBucket("Fireblocks", 9_990_180.9994548),
+          reserveBucket("Insurance Fund", 591_806.76),
+          reserveBucket("Binance", 5_130.378053203912),
+          reserveBucket("Ethereum Chain", 122.0547387685523),
+          reserveBucket("BNB Smart Chain", 7.46933060805061),
         ],
-      },
-    });
+      });
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -564,18 +526,12 @@ describe("adaptAccountableDashboard", () => {
     }));
     const totalPct = result.slices.reduce((sum, slice) => sum + slice.pct, 0);
     expect(totalPct).toBeCloseTo(100, 1);
-    expect(validateAdapterOutput(result, {
-      adapter: getReserveAdapter("accountable") ?? undefined,
-      now: Date.UTC(2026, 5, 20, 10) / 1000,
-    }).valid).toBe(true);
+    expect(validateAccountable(result, Date.UTC(2026, 5, 20, 10) / 1000).valid).toBe(true);
   });
 
   it("maps the current Yuzu Accountable exposure buckets without unknown exposure warnings", async () => {
 
-    const result = await runAccountablePayload(config, {
-      collateralization: 1.101272,
-      ts: "2026-05-11T23:13:49.469Z",
-      reserves: {
+    const result = await runReservePayload(config, 1.101272, "2026-05-11T23:13:49.469Z", {
         exposure_split: {
           "[Securitize]_VBILL_Loop": { value: 10 },
           "[Superstate]_USTB_Loop": { value: 10 },
@@ -596,8 +552,7 @@ describe("adaptAccountableDashboard", () => {
           "[Paxos]_USDG": { value: 10 },
           "[Sky]_sUSDS": { value: 10 },
         },
-      },
-    });
+      });
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -621,24 +576,17 @@ describe("adaptAccountableDashboard", () => {
       }));
     }
     expect(result.slices).toContainEqual({ name: "[Sky]_sUSDS", risk: "high", pct: 100 / 18 });
-    expect(validateAdapterOutput(result, {
-      adapter: getReserveAdapter("accountable") ?? undefined,
-      now: Date.UTC(2026, 4, 12) / 1000,
-    }).valid).toBe(true);
+    expect(validateAccountable(result, Date.UTC(2026, 4, 12) / 1000).valid).toBe(true);
   });
 
   it("links Yuzu mGLOBAL and mGLO exposures with reviewed risk labels", async () => {
 
-    const result = await runAccountablePayload(config, {
-      collateralization: 1,
-      ts: "2026-08-07T05:13:55.000Z",
-      reserves: {
+    const result = await runReservePayload(config, 1, "2026-08-07T05:13:55.000Z", {
         exposure_split: {
           "[Fasanara]_mGLOBAL_Loop": { "": 60 },
           "[Fasanara]_mGLO_Loop": { "": 40 },
         },
-      },
-    });
+      });
 
     expect(result.slices).toContainEqual(expect.objectContaining({
       name: "Fasanara mGLOBAL loop",
@@ -655,10 +603,7 @@ describe("adaptAccountableDashboard", () => {
       coinId: "mglo-midas-fasanara",
       depType: "collateral",
     });
-    expect(validateAdapterOutput(result, {
-      adapter: getReserveAdapter("accountable") ?? undefined,
-      now: Date.UTC(2026, 7, 7, 6) / 1000,
-    }).valid).toBe(true);
+    expect(validateAccountable(result, Date.UTC(2026, 7, 7, 6) / 1000).valid).toBe(true);
   });
 
   it("maps new Yuzu USDG positions without inventing token links and keeps the dust signed bucket informational", async () => {
@@ -689,32 +634,24 @@ describe("adaptAccountableDashboard", () => {
 
   it("keeps sub-material signed exposure informational while material signed exposure still degrades", async () => {
 
-    const subMaterial = await runAccountablePayload(config, {
-      collateralization: 1,
-      ts: "1787848065315",
-      reserves: {
+    const subMaterial = await runReservePayload(config, 1, "1787848065315", {
         exposure_split: {
           Liquidity_Buffer: { "": 100 },
           "[Sky]_sUSDS_Loop": { "": -4 },
         },
-      },
-    });
+      });
     expect(subMaterial.warnings).toEqual([
       expect.objectContaining({ code: "signed-negative-bucket", severity: "info", effect: "info" }),
     ]);
     expect(subMaterial.slices.map((slice) => slice.name)).toEqual(["Liquidity buffer"]);
     expect(subMaterial.metadata).toMatchObject({ signedBucketNames: ["[Sky]_sUSDS_Loop"], signedBucketValue: -4 });
 
-    const material = await runAccountablePayload(config, {
-      collateralization: 1,
-      ts: "1787848065315",
-      reserves: {
+    const material = await runReservePayload(config, 1, "1787848065315", {
         exposure_split: {
           Liquidity_Buffer: { "": 100 },
           "[Sky]_sUSDS_Loop": { "": -6 },
         },
-      },
-    });
+      });
     expect(material.warnings).toEqual([
       expect.objectContaining({ code: "signed-negative-bucket", severity: "warning", effect: "degraded" }),
     ]);
@@ -723,16 +660,12 @@ describe("adaptAccountableDashboard", () => {
 
   it("maps the new Yuzu [Re]_reUSD_LP and [Morpho]_USDC buckets with reviewed classifications", async () => {
 
-    const result = await runAccountablePayload(config, {
-      collateralization: 1.101272,
-      ts: "1781945117382",
-      reserves: {
+    const result = await runReservePayload(config, 1.101272, "1781945117382", {
         exposure_split: {
           "[Re]_reUSD_LP": { value: 30 },
           "[Morpho]_USDC": { value: 70 },
         },
-      },
-    });
+      });
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -757,24 +690,17 @@ describe("adaptAccountableDashboard", () => {
       coinId: "usdc-circle",
       depType: "collateral",
     }));
-    expect(validateAdapterOutput(result, {
-      adapter: getReserveAdapter("accountable") ?? undefined,
-      now: Date.UTC(2026, 5, 20, 10) / 1000,
-    }).valid).toBe(true);
+    expect(validateAccountable(result, Date.UTC(2026, 5, 20, 10) / 1000).valid).toBe(true);
   });
 
   it("omits the current signed Yuzu USDG loop bucket without inflating reserve composition", async () => {
 
-    const result = await runAccountablePayload(config, {
-      collateralization: 1.083117,
-      ts: "2026-08-27T00:00:00.000Z",
-      reserves: {
+    const result = await runReservePayload(config, 1.083117, "2026-08-27T00:00:00.000Z", {
         exposure_split: {
           "[Global_Dollar]_USDG_Loop": { "": -15725261.164036 },
           Liquidity_Buffer: { "": 100_000_000 },
         },
-      },
-    });
+      });
 
     expect(result.slices).toEqual([
       { sourceKey: "accountable:yuzu:deployment:liquidity-buffer", name: "Liquidity buffer", pct: 100, risk: "low", coinId: "usdt-tether", depType: "collateral" },
@@ -800,10 +726,7 @@ describe("adaptAccountableDashboard", () => {
 
   it("reconciles a timestamped Yuzu exposure split against the nearest contemporaneous timeline total", async () => {
 
-    const result = await runAccountablePayload(config, {
-      collateralization: 1.088759,
-      ts: "1787848065315",
-      reserves: {
+    const result = await runReservePayload(config, 1.088759, "1787848065315", {
         total_reserves: { value: 65_497_754.94, name: "Total Backing Assets" },
         total_supply: { value: 60_158_172.36, name: "Total TVL" },
         exposure_split_ts: "2026.08.24 07:31:16 UTC",
@@ -817,8 +740,7 @@ describe("adaptAccountableDashboard", () => {
           { ts: "1787600794262", reserves: 63_527_322.23 },
           { ts: "1787633192787", reserves: 63_507_487.14 },
         ],
-      },
-    });
+      });
 
     expect(result.metadata).toMatchObject({
       sourceTimestamp: 1_787_556_676,
@@ -1000,10 +922,7 @@ describe("adaptAccountableDashboard", () => {
   it("rejects the partial signed Yuzu exposure split when it does not reconcile to total reserves", async () => {
     expect(config.params).not.toHaveProperty("skipTotalReservesValidation");
 
-    await expect(runAccountablePayload(config, {
-      collateralization: 1.06701,
-      ts: "1781945117382",
-      reserves: {
+    await expect(runReservePayload(config, 1.06701, "1781945117382", {
         interval: "live",
         verifiability: "100",
         total_reserves: {
@@ -1027,8 +946,7 @@ describe("adaptAccountableDashboard", () => {
           "Rest_of_Assets": { "": 870_168.7445106531 },
           "[Yuzu]_yzPRIME": { "": 3_016_917.24160501 },
         },
-      },
-    })).rejects.toThrow(
+      })).rejects.toThrow(
       /Accountable exposure_split bucket total .* does not match total_reserves 44273802\.48/,
     );
   });
@@ -1055,10 +973,7 @@ describe("adaptAccountableDashboard", () => {
       name: "Protocol Owned Liquidity",
       risk: "high",
     }));
-    expect(validateAdapterOutput(result, {
-      adapter: getReserveAdapter("accountable") ?? undefined,
-      now: Date.UTC(2026, 7, 13, 12) / 1000,
-    }).valid).toBe(true);
+    expect(validateAccountable(result, Date.UTC(2026, 7, 13, 12) / 1000).valid).toBe(true);
   });
 
   it.each([0, 8.2])("keeps XSY location-only buckets conservative with Hyperevm at %s", async (value) => {
@@ -1070,28 +985,24 @@ describe("adaptAccountableDashboard", () => {
       sourceKeyMap: { ...params.sourceKeyMap, Hyperevm: "accountable:xsy:deployment:hyperevm" },
     } } : config;
 
-    const result = await runAccountablePayload(historical, {
-      collateralization: 1.03,
-      ts: "1781945117382",
-      reserves: {
+    const result = await runReservePayload(historical, 1.03, "1781945117382", {
         reserves_split: [
-          { name: "Avalanche", value: 35_000_000 },
-          { name: "Copper", value: 5_000_000 },
-          { name: "Katana", value: 3_000_000 },
-          { name: "Ethereum", value: 2_000_000 },
-          { name: "Base", value: 1_500_000 },
-          { name: "Plasma", value: 900_000 },
-          { name: "Arbitrum", value: 800_000 },
-          { name: "Monad", value: 700_000 },
-          { name: "Bybit", value: 600_000 },
-          { name: "Bnb_smartchain", value: 12.5 },
-          { name: "Hyperevm", value },
-          { name: "Hyperliquid", value: 4.1 },
-          { name: "Megaeth", value: 1.9 },
-          { name: "Sei", value: 0.1 },
+          reserveBucket("Avalanche", 35_000_000),
+          reserveBucket("Copper", 5_000_000),
+          reserveBucket("Katana", 3_000_000),
+          reserveBucket("Ethereum", 2_000_000),
+          reserveBucket("Base", 1_500_000),
+          reserveBucket("Plasma", 900_000),
+          reserveBucket("Arbitrum", 800_000),
+          reserveBucket("Monad", 700_000),
+          reserveBucket("Bybit", 600_000),
+          reserveBucket("Bnb_smartchain", 12.5),
+          reserveBucket("Hyperevm", value),
+          reserveBucket("Hyperliquid", 4.1),
+          reserveBucket("Megaeth", 1.9),
+          reserveBucket("Sei", 0.1),
         ],
-      },
-    });
+      });
 
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -1102,10 +1013,7 @@ describe("adaptAccountableDashboard", () => {
     expect(result.metadata?.unknownBucketCount).toBeUndefined();
     expect(result.metadata?.unknownExposurePct).toBeUndefined();
     expect(result.slices.every((slice) => slice.risk === "high")).toBe(true);
-    expect(validateAdapterOutput(result, {
-      adapter: getReserveAdapter("accountable") ?? undefined,
-      now: Date.UTC(2026, 5, 20, 10) / 1000,
-    }).valid).toBe(true);
+    expect(validateAccountable(result, Date.UTC(2026, 5, 20, 10) / 1000).valid).toBe(true);
   });
 
   it("maps the root-level assetBreakdown layout into reserve slices", () => {
@@ -1201,19 +1109,16 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("preserves large-parent constituents within relative rounding tolerance and rejects larger drift", () => {
-    const payload = {
-      res: "ok",
-      data: {
-        collateralization: 1,
-        ts: "1790752560155",
-        reserves: {
-          total_reserves: 1_000_000_000,
-          total_supply: 1_000_000_000,
-          nested_split: { Liquidity: { USDC: 600_000_000.125, ETH: 400_000_000 } },
-        },
-        assetBreakdown: { Liquidity: 1_000_000_000 },
+    const payload = dashboardPayload({
+      collateralization: 1,
+      ts: "1790752560155",
+      reserves: {
+        total_reserves: 1_000_000_000,
+        total_supply: 1_000_000_000,
+        nested_split: { Liquidity: { USDC: 600_000_000.125, ETH: 400_000_000 } },
       },
-    };
+      assetBreakdown: { Liquidity: 1_000_000_000 },
+    });
     const params = {
       layout: "asset-breakdown" as const,
       riskMap: { "Liquidity/USDC": "low" as const, "Liquidity/ETH": "high" as const },
@@ -1245,21 +1150,18 @@ describe("adaptAccountableDashboard", () => {
 
   it("records unknownExposurePct for unmapped asset-breakdown categories", () => {
     const result = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: {
-          collateralization: 1.01,
-          ts: "1788968760934",
-          reserves: {
-            total_reserves: { value: 100 },
-            total_supply: { value: 99 },
-          },
-          assetBreakdown: {
-            "Money Markets": { "Money Market Instruments": { value: 70 } },
-            "Undisclosed Custodian Strategy": { "Custodian Positions": { value: 30 } },
-          },
+      dashboardPayload({
+        collateralization: 1.01,
+        ts: "1788968760934",
+        reserves: {
+          total_reserves: { value: 100 },
+          total_supply: { value: 99 },
         },
-      },
+        assetBreakdown: {
+          "Money Markets": { "Money Market Instruments": { value: 70 } },
+          "Undisclosed Custodian Strategy": { "Custodian Positions": { value: 30 } },
+        },
+      }),
       {
         layout: "asset-breakdown",
         riskMap: { "Money Markets": "medium" },
@@ -1285,7 +1187,10 @@ describe("adaptAccountableDashboard", () => {
 
 
 describe("adaptAccountableDashboard collateralization reconciliation", () => {
-  const cashData = makeTimestampedYuzuPayload({ reserves_split: [{ name: "Cash & Equivalents", value: 1_000 }] });
+  const adaptCashDashboard = (payload: Parameters<typeof adaptAccountableDashboard>[0]) =>
+    adaptAccountableDashboard(payload, { bucket: "reserves_split", riskMap: { "Cash & Equivalents": "very-low" } });
+
+  const cashData = makeTimestampedYuzuPayload({ reserves_split: [reserveBucket("Cash & Equivalents", 1_000)] });
 
   it("reconciles the contradicted Apyx snapshot to a net-of-protocol-owned denominator", () => {
     const result = adaptAccountableDashboard({ ...APYX_2026_07_27_PAYLOAD }, { ...APYX_RESERVE_PARAMS });
@@ -1336,19 +1241,16 @@ describe("adaptAccountableDashboard collateralization reconciliation", () => {
   it("keeps the gross basis for feeds that report gross collateralization despite publishing protocol-owned liquidity", () => {
     // Verbatim Neutrl dashboard scalars: pol is published, but collateralization is the gross ratio.
     const result = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: {
-          collateralization: 1.033906,
-          ts: "1785450200998",
-          reserves: {
-            total_reserves: { name: "Total Reserves", value: 60_607_322.11 },
-            total_supply: { name: "Total Supply", value: 58_619_735.19 },
-            pol: 1_996_688.4539363272,
-            type_split: { Stablecoin: 60_607_322.11 },
-          },
+      dashboardPayload({
+        collateralization: 1.033906,
+        ts: "1785450200998",
+        reserves: {
+          total_reserves: { name: "Total Reserves", value: 60_607_322.11 },
+          total_supply: { name: "Total Supply", value: 58_619_735.19 },
+          pol: 1_996_688.4539363272,
+          type_split: { Stablecoin: 60_607_322.11 },
         },
-      },
+      }),
       { bucket: "type_split", riskMap: { Stablecoin: "very-low" } },
     );
 
@@ -1362,13 +1264,7 @@ describe("adaptAccountableDashboard collateralization reconciliation", () => {
   });
 
   it("fails closed with a degraded warning when the reported ratio matches no derivable denominator", () => {
-    const result = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: { ...cashData, collateralization: 0.75, reserves: { ...cashData.reserves, inventory: 100, pol: 50 } },
-      },
-      { bucket: "reserves_split", riskMap: { "Cash & Equivalents": "very-low" } },
-    );
+    const result = adaptCashDashboard(dashboardPayload({ ...cashData, collateralization: 0.75, reserves: { ...cashData.reserves, inventory: 100, pol: 50 } }));
 
     expect(result.metadata?.collateralizationBasis).toBe("unreconciled");
     expect(result.metadata).not.toHaveProperty("collateralizationRatio");
@@ -1381,13 +1277,7 @@ describe("adaptAccountableDashboard collateralization reconciliation", () => {
   });
 
   it("leaves the basis underived when the feed publishes no total_supply", () => {
-    const result = adaptAccountableDashboard(
-      {
-        res: "ok",
-        data: { ...cashData, collateralization: 0.9, reserves: { ...cashData.reserves, total_supply: undefined } },
-      },
-      { bucket: "reserves_split", riskMap: { "Cash & Equivalents": "very-low" } },
-    );
+    const result = adaptCashDashboard(dashboardPayload({ ...cashData, collateralization: 0.9, reserves: { ...cashData.reserves, total_supply: undefined } }));
 
     expect(result.metadata?.collateralizationBasis).toBe("underived");
     expect(result.metadata?.supplyUsd).toBeUndefined();
@@ -1398,13 +1288,7 @@ describe("adaptAccountableDashboard collateralization reconciliation", () => {
 
   it("rejects a malformed total_supply instead of silently dropping the denominator", () => {
     expect(() =>
-      adaptAccountableDashboard(
-        {
-          res: "ok",
-          data: { ...cashData, reserves: { ...cashData.reserves, total_supply: { name: "Total Supply", value: "n/a" } } },
-        },
-        { bucket: "reserves_split", riskMap: { "Cash & Equivalents": "very-low" } },
-      ),
+      adaptCashDashboard(dashboardPayload({ ...cashData, reserves: { ...cashData.reserves, total_supply: { name: "Total Supply", value: "n/a" } } })),
     ).toThrow(/total_supply has invalid value/);
   });
 });
