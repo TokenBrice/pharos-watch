@@ -696,14 +696,23 @@ export async function observeCcipPending(input: {
         const parsed = ReceiptSchema.safeParse(receipt);
         if (!parsed.success || parsed.data.transactionHash !== tx) fail("indexer-send-unproved");
         const row = parsed.data, height = Number(BigInt(row.blockNumber));
+        // A migrated token shares this ramp across reviewed pools: a message
+        // carried by a sibling lane's pool is that lane's evidence, proved by
+        // its own discovery. An unreviewed pool still rejects.
+        const siblings = input.source.lanes.filter(other => other !== lane && other.version === lane.version &&
+          other.onRampAddress === lane.onRampAddress && other.destination.chainSelector === lane.destination.chainSelector);
+        let sibling = false;
         const found = row.logs.some(raw => {
           if (!raw || typeof raw !== "object" || !("address" in raw) || typeof raw.address !== "string" ||
             !("topics" in raw) || !Array.isArray(raw.topics) ||
             !matchesLane({ address: raw.address.toLowerCase(), topics: raw.topics }, lane, true)) return false;
           const log = asLog(raw);
           const message = decodeSend(log, lane);
-          return log.transactionHash === tx && log.blockNumber === row.blockNumber && log.blockHash === row.blockHash && message.messageId === discovered.messageId && message.amount > 0n;
+          if (log.transactionHash !== tx || log.blockNumber !== row.blockNumber || log.blockHash !== row.blockHash || message.messageId !== discovered.messageId) return false;
+          sibling ||= message.amount === 0n && siblings.some(other => decodeSend(log, other).amount > 0n);
+          return message.amount > 0n;
         });
+        if (!found && sibling) continue;
         if (!found) fail("indexer-send-unproved");
         if (height <= sourcePin.number) {
           const header = await identityHeader(lane.source.chainId, height);
