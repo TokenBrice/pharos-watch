@@ -1,0 +1,166 @@
+name: Post-deploy First Execution
+
+on:
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: post-deploy-first-execution-publication
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+
+      - name: Read Cloudflare deployments and cron evidence
+        id: cloudflare
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          export POST_DEPLOY_EVIDENCE_DIR="$RUNNER_TEMP/post-deploy-first-execution"
+          mkdir -p "$POST_DEPLOY_EVIDENCE_DIR"
+          node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --input-type=module <<'JS'
+          import { readFileSync, writeFileSync } from "node:fs";
+          import { fetchWorkerDeployments } from "./scripts/ci/verify-worker-deployment.ts";
+
+          const fetchRead = (url, init) => fetch(url, { ...init, redirect: "error", signal: AbortSignal.timeout(30_000) });
+          const workers = ["stablecoin-api", "stablecoin-heavy"];
+          const lookbackSec = 6 * 3600;
+          const since = Math.floor(Date.now() / 1000) - lookbackSec;
+          const histories = await Promise.all(workers.map((worker) =>
+            fetchWorkerDeployments(process.env, fetchRead, worker).catch(() => null)));
+          const deployments = Object.fromEntries(workers.map((worker, index) => [worker, histories[index]]));
+          const oldestRecentActivation = Math.min(...histories.flatMap((history) => {
+            const createdOn = history?.[0]?.created_on;
+            const started = typeof createdOn === "string" ? Date.parse(createdOn) : NaN;
+            return started >= since * 1000 ? [Math.floor(started / 1000)] : [];
+          }));
+          let cronRuns = null;
+          try {
+            if (Number.isFinite(oldestRecentActivation)) {
+              const config = readFileSync("worker/wrangler.toml", "utf8");
+              const bindings = config.split(/^\[\[d1_databases\]\]\s*$/m).slice(1)
+                .map((section) => section.split(/^\[/m, 1)[0]);
+              const db = bindings.find((section) => /^binding\s*=\s*"DB"\s*$/m.test(section));
+              const id = db?.match(/^database_id\s*=\s*"([0-9a-f-]+)"\s*$/m)?.[1];
+              if (!id) throw new Error("D1 binding unavailable");
+              const account = encodeURIComponent(process.env.CLOUDFLARE_ACCOUNT_ID);
+              const response = await fetchRead(`https://api.cloudflare.com/client/v4/accounts/${account}/d1/database/${id}/query`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  sql: "SELECT job, started_at, duration_ms, status, metadata, worker_version FROM cron_runs "
+                    + "WHERE job IN ('sync-stablecoins', 'sync-dex-liquidity', 'compute-safety-score-v9') "
+                    + "AND started_at >= ? ORDER BY started_at ASC, id ASC LIMIT 200",
+                  params: [String(oldestRecentActivation)],
+                }),
+              });
+              const payload = response.ok ? await response.json() : null;
+              const query = payload?.result?.[0];
+              if (payload?.success === true && query?.success === true && Array.isArray(query.results)) {
+                cronRuns = query.results;
+              }
+            }
+          } catch {
+            // The evaluator reports unavailable evidence without exposing provider errors.
+          }
+          writeFileSync(process.env.POST_DEPLOY_EVIDENCE_DIR + "/cloudflare.json",
+            JSON.stringify({ deployments, cronRuns, lookbackSec }));
+          JS
+
+      - name: Read the public stablecoin generation
+        id: stablecoins
+        env:
+          PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          out="$RUNNER_TEMP/post-deploy-first-execution/stablecoins.json"
+          if [[ -z "$PHAROS_API_KEY" ]] || ! curl --fail --silent --connect-timeout 10 --max-time 30 \
+            -H "X-API-Key: $PHAROS_API_KEY" -H 'Cache-Control: no-cache' \
+            'https://api.pharos.watch/api/stablecoins' -o "$out"; then
+            rm -f "$out"
+          fi
+
+      - name: Evaluate saved first-execution evidence
+        id: evaluate
+        shell: bash
+        run: |
+          set -euo pipefail
+          export POST_DEPLOY_EVIDENCE_DIR="$RUNNER_TEMP/post-deploy-first-execution"
+          mkdir -p "$POST_DEPLOY_EVIDENCE_DIR"
+          verdict="$POST_DEPLOY_EVIDENCE_DIR/verdict.json"
+          node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --input-type=module > "$verdict" <<'JS'
+          import { registerHooks } from "node:module";
+          // Node type stripping leaves the existing shared imports unresolved.
+          registerHooks({
+            resolve(specifier, context, nextResolve) {
+              if (specifier === "@shared/lib/type-guards") {
+                return nextResolve(new URL("./shared/lib/type-guards.ts", import.meta.url).href, context);
+              }
+              if (specifier === "./cron-cadences" || specifier === "./time-constants") {
+                return nextResolve(specifier + ".ts", context);
+              }
+              return nextResolve(specifier, context);
+            },
+          });
+          const { runPostDeployFirstExecutionCheck } = await import("./scripts/ci/check-post-deploy-first-execution.ts");
+          runPostDeployFirstExecutionCheck(process.env.POST_DEPLOY_EVIDENCE_DIR);
+          JS
+          jq -r '.summary' "$verdict" >> "$GITHUB_STEP_SUMMARY"
+          printf 'status=%s\n' "$(jq -r '.status' "$verdict")" >> "$GITHUB_OUTPUT"
+
+      - name: Reconcile the first-execution failure issue
+        id: issue
+        if: ${{ steps.evaluate.outputs.status == 'failed' || steps.evaluate.outputs.status == 'passed' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          STATUS: ${{ steps.evaluate.outputs.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          title='Post-deploy first-execution failure'
+          verdict="$RUNNER_TEMP/post-deploy-first-execution/verdict.json"
+          issue_number=$(gh api --paginate "repos/$GH_REPO/issues?state=open&per_page=100" \
+            --jq '.[] | select(.pull_request == null and .title == "Post-deploy first-execution failure") | .number' \
+            | sed -n '1p')
+          if [[ "$STATUS" == 'failed' ]]; then
+            body="$RUNNER_TEMP/post-deploy-first-execution/issue.md"
+            jq -r '.summary' "$verdict" > "$body"
+            if [[ -n "$issue_number" ]]; then
+              gh issue edit "$issue_number" --add-label 'ops:followup' --body-file "$body"
+            else
+              gh issue create --title "$title" --label 'ops:followup' --body-file "$body"
+            fi
+          elif [[ "$STATUS" == 'passed' && -n "$issue_number" ]]; then
+            gh issue close "$issue_number" --reason completed --comment "$(jq -r '.recoveryComment' "$verdict")"
+          fi
+
+      - name: Fail on an unsuccessful first execution
+        if: ${{ !cancelled() && steps.evaluate.outputs.status == 'failed' }}
+        shell: bash
+        run: exit 1
