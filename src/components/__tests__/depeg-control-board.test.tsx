@@ -143,16 +143,18 @@ describe("DepegControlBoard", () => {
       makeRow({ id: "alert", symbol: "ALRT", activeDepeg: false, currentDeviationBps: -20 }, makeDews({ score: 50, band: "ALERT" })),
       makeRow({ id: "calm", symbol: "CALM", activeDepeg: false, currentDeviationBps: 5 }, makeDews({ score: 5, band: "CALM" })),
       makeRow({ id: "unk", symbol: "UNK", activeDepeg: false, currentDeviationBps: null }, makeDews({ score: 0, band: "CALM" })),
+      makeRow({ id: "edge", symbol: "EDGE", activeDepeg: false, currentDeviationBps: 100, admittedDeviationBps: 99.6 }, makeDews({ score: 5, band: "CALM" })),
     ]);
     const statusGroup = within(screen.getByRole("group", { name: "Filter by peg status" }));
     const visible = () => screen.getAllByRole("button", { name: /open .* depeg detail/i }).map((el) => el.getAttribute("aria-label"));
-    expect(visible()).toHaveLength(5);
-    for (const [button, expected] of [["Recent / Pending", ["Open ACT depeg detail", "Open PND depeg detail"]], ["DEWS Alert+", ["Open ALRT depeg detail"]], ["At peg", ["Open ALRT depeg detail", "Open CALM depeg detail"]]] as const) {
+    expect(visible()).toHaveLength(6);
+    // At peg compares the unrounded 99.6 bps, which rounds to the 100 bps trigger.
+    for (const [button, expected] of [["Recent / Pending", ["Open ACT depeg detail", "Open PND depeg detail"]], ["DEWS Alert+", ["Open ALRT depeg detail"]], ["At peg", ["Open ALRT depeg detail", "Open EDGE depeg detail", "Open CALM depeg detail"]]] as const) {
       fireEvent.click(statusGroup.getByRole("button", { name: button }));
       expect(visible()).toEqual(expected);
     }
     fireEvent.click(statusGroup.getByRole("button", { name: "All" }));
-    expect(visible()).toHaveLength(5);
+    expect(visible()).toHaveLength(6);
   });
 
   it("counts below-floor rows in the same filtered universe as the attention figure", () => {
@@ -189,5 +191,10 @@ describe("DepegControlBoard", () => {
     expect(getRowFor("EURC").textContent).toContain("Reference not yet updated");
     expect(getRowFor("EURC").textContent).not.toContain("25 bps");
     expect(buildDepegExportColumns(tFx).find((c) => c.header === "Current Deviation (bps)")?.accessor(fxRow, 0)).toBeNull();
+    // Inactive, the expired reference reads unknown (never clear) on the board clock and in the export.
+    const idleFx = { ...fxRow, coin: { ...fxRow.coin, activeDepeg: false }, dews: makeDews({ score: 0, band: "CALM" }) };
+    v.rerender(boardEl([idleFx], { nowSeconds: tFx }));
+    expect(within(getRowFor("EURC")).getByText("unknown")).toBeTruthy();
+    expect(buildDepegExportColumns(tFx).find((c) => c.header === "Status")?.accessor(idleFx, 0)).toBe("unknown");
   });
 });

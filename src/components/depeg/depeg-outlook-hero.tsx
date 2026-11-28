@@ -175,11 +175,14 @@ function OpenIncidentList({
             const verdict = row.ddr ? describeDdrVerdict(row.ddr, true) : { label: "—", accent: "text-muted-foreground" };
             const cap = row.marketCapUsd == null ? "—" : formatCompactUsdShort(row.marketCapUsd);
             const age = row.ageSec != null ? formatElapsedSeconds(row.ageSec) : null;
-            const qualifier = isNearParUnconfirmedOpenIncident(row.evidence, row.bps, row.pegCurrency)
-              ? "Near par"
-              : row.evidence === "unconfirmed" && row.bps != null
-                ? "Unconfirmed"
-                : null;
+            // Without the sidecar or the legacy active-events read, "unconfirmed" is only a default.
+            const qualifier = !row.evidenceRead
+              ? null
+              : isNearParUnconfirmedOpenIncident(row.evidence, row.bps, row.pegCurrency)
+                ? "Near par"
+                : row.evidence === "unconfirmed" && row.bps != null
+                  ? "Unconfirmed"
+                  : null;
             const evidenceLabel = OPEN_INCIDENT_EVIDENCE_LABELS[row.evidence];
             return (
               <li key={row.id}>

@@ -93,7 +93,7 @@ describe("DepegOutlookHero open incidents", () => {
     const rows: OpenIncidentRow[] = Array.from({ length: 7 }, (_, i) => ({
       id: `coin-${i}`, symbol: `C${i}`, pegCurrency: "USD", deviationBps: i === 0 ? -4_510 : null, bps: i === 0 ? -4_510 : null,
       referenceNote: i === 1 ? "Reference market closed" : i === 2 ? "Reference not yet updated" : null, marketCapUsd: i === 0 ? 49e6 : null,
-      exposureUsd: i === 0 ? (49e6 * 4_510) / 10_000 : null, evidence: "unconfirmed", ageSec: null, tier: null, ddr: i === 0 ? frozen : i === 3 ? noCall : null,
+      exposureUsd: i === 0 ? (49e6 * 4_510) / 10_000 : null, evidence: "unconfirmed", evidenceRead: true, ageSec: null, tier: null, ddr: i === 0 ? frozen : i === 3 ? noCall : null,
     }));
     const html = markup({ openIncidents: rows, stats: { ...observedZero, activeDepegCount: 7 } });
     expect(html).toContain("Top 5 of 7 by materiality, then holder exposure"); expect(html).toContain('href="/stablecoin/coin-0#depeg-resolver"');
@@ -105,7 +105,7 @@ describe("DepegOutlookHero open incidents", () => {
   it("splits recent/>30d, falls back at zero recent, and checks rankOpenIncidents M2/L2", () => {
     const D = 86_400, now = 1_700_000_000 + 120 * D;
     const snap = (eventId: number, d: number, e?: number): OpenIncidentSnapshot => ({ eventId, startedAt: now - d * D, escalatedAt: e ? now - e * D : null, coverage: null });
-    const inc = (id: string, bps: number | null, d: number, tier: OpenIncidentRow["tier"], ev: OpenIncidentRow["evidence"] = "outside"): OpenIncidentRow => ({ id, symbol: id.toUpperCase(), pegCurrency: "USD", deviationBps: bps == null ? null : Math.round(bps), bps, referenceNote: null, marketCapUsd: null, exposureUsd: null, evidence: ev, ageSec: d * D, tier, ddr: null });
+    const inc = (id: string, bps: number | null, d: number, tier: OpenIncidentRow["tier"], ev: OpenIncidentRow["evidence"] = "outside"): OpenIncidentRow => ({ id, symbol: id.toUpperCase(), pegCurrency: "USD", deviationBps: bps == null ? null : Math.round(bps), bps, referenceNote: null, marketCapUsd: null, exposureUsd: null, evidence: ev, evidenceRead: true, ageSec: d * D, tier, ddr: null });
     const rows = [inc("esc", -800, 45, "escalating"), inc("edge", -50.4, 2, "recent", "unconfirmed"), inc("unp", null, 2, "recent", "unconfirmed"), inc("near", -10, 2, "recent", "unconfirmed"), inc("old", -2500, 90, "long_running")];
     const v = render(<DepegOutlookHero {...baseProps} stats={{ ...observedZero, activeDepegCount: 5 }} openIncidents={rows} openIncidentMap={{ esc: snap(1, 45, 2), edge: snap(4, 2), unp: snap(5, 2), near: snap(2, 2), old: snap(3, 90) }} clockSec={now} />);
     expect(v.container.textContent).toContain("4 recent · 1 long-running (>30d)");
@@ -118,12 +118,16 @@ describe("DepegOutlookHero open incidents", () => {
     expect(v.container.textContent).toContain("No recent open incidents · 1 >30d by materiality, then holder exposure");
     fireEvent.click(screen.getByRole("button", { name: "Recent (0)" }));
     expect(v.container.textContent).toContain("No open incidents started in the last 30d or re-escalated in the last 7d");
+    v.rerender(<DepegOutlookHero {...baseProps} stats={{ ...observedZero, activeDepegCount: 1 }} openIncidents={[{ ...rows[3]!, evidenceRead: false }]} openIncidentMap={{ near: snap(2, 2) }} clockSec={now} />);
+    expect(screen.getByRole("link", { name: /^NEAR:/ }).textContent).not.toMatch(/Near par|Unconfirmed/);
     v.unmount();
+    // Age reads the live clock while the horizon clock fails closed (0).
+    expect(rankOpenIncidents([makePegSummaryCoin({ id: "near", activeDepeg: true })], [], null, { near: snap(2, 2) }, now, undefined, 0)[0]).toMatchObject({ ageSec: 2 * D, tier: null, evidenceRead: true });
 
     const ev = (id: number, stablecoinId: string, k: "trusted-off-peg" | "trusted-at-par") => ({
       id, stablecoinId, endedAt: null, priceCoverage: { intervals: k === "trusted-off-peg" ? [[now - 600, now - 60]] : [], atParIntervals: k === "trusted-at-par" ? [[now - 600, now - 60]] : [], lastObservationKind: k, lastTrustedObservationAt: now - 60, gapStartedAt: k === "trusted-at-par" ? now - 600 : null },
     }) as unknown as DepegEvent;
-    expect(rankOpenIncidents([makePegSummaryCoin({ id: "near", activeDepeg: true, currentDeviationBps: -10 }), makePegSummaryCoin({ id: "edge", activeDepeg: true, currentDeviationBps: -50.4 })], [], new Map([["near", 500e6], ["edge", 10e6]])).map((r) => [r.id, r.deviationBps])).toEqual([["edge", -50], ["near", -10]]);
+    expect(rankOpenIncidents([makePegSummaryCoin({ id: "near", activeDepeg: true, currentDeviationBps: -10 }), makePegSummaryCoin({ id: "edge", activeDepeg: true, currentDeviationBps: -50.4 })], [], new Map([["near", 500e6], ["edge", 10e6]])).map((r) => [r.id, r.deviationBps, r.evidenceRead])).toEqual([["edge", -50, false], ["near", -10, false]]);
     expect(rankOpenIncidents([makePegSummaryCoin({ id: "off", activeDepeg: true, currentDeviationBps: -200 }), makePegSummaryCoin({ id: "par", activeDepeg: true, currentDeviationBps: -5 })], [], null, undefined, now, [ev(1, "off", "trusted-off-peg"), ev(2, "par", "trusted-at-par")]).map((r) => [r.id, r.evidence])).toEqual([["off", "outside"], ["par", "inside"]]);
     // Expired FX quote at clockSec returns null deviation + "Reference not yet updated" (Tier 1 unpriced, never Tier 0 Near par).
     const fxRow = rankOpenIncidents([makePegSummaryCoin({ id: "eur-stasis", symbol: "EURS", pegCurrency: "EUR", activeDepeg: true, priceObservedAt: FX_REOPEN_QUOTE_AT, ...makeFxCurrentPeg("admitted", 25, FX_REOPEN_QUOTE_AT) } as never)], [], null, undefined, FX_REOPEN_QUOTE_AT + 7_141)[0]!;

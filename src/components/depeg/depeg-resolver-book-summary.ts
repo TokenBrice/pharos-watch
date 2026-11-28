@@ -242,7 +242,12 @@ export interface OpenIncidentRow extends RankableOpenIncidentRow {
   exposureUsd: number | null;
   /** Latest trusted observation coverage classification for this open incident. */
   evidence: OpenIncidentEvidence;
-  /** Elapsed seconds since canonical incident onset, or null when unavailable/future. */
+  /**
+   * Whether `evidence` was read from the open-incident sidecar or the legacy active-events
+   * fallback; when neither was read it is only the fail-closed default and names no qualifier.
+   */
+  evidenceRead: boolean;
+  /** Elapsed seconds since canonical incident onset on the live clock, or null when unavailable/future. */
   ageSec: number | null;
   /** Display horizon tier (`recent`, `escalating`, `long_running`), or null when unsplit. */
   tier: OpenIncidentTier | null;
@@ -282,10 +287,12 @@ export function rankOpenIncidents(
         openIncidents === undefined && activeEvents
           ? classifyOpenIncidentEvidence(activeEvents, coin.id, clockSec)
           : classifyOpenIncidentCoverage(incident?.coverage, clockSec);
+      const evidenceRead = openIncidents === undefined ? activeEvents != null : openIncidents != null;
       const tier = classifyOpenIncidentTier(incident, horizonClockSec);
+      // Age is elapsed time, so it reads the live clock; only the tier holds the horizon clock.
       const ageSec =
-        incident && horizonClockSec > 0 && Number.isFinite(incident.startedAt) && incident.startedAt <= horizonClockSec
-          ? horizonClockSec - incident.startedAt
+        incident && clockSec > 0 && Number.isFinite(incident.startedAt) && incident.startedAt <= clockSec
+          ? clockSec - incident.startedAt
           : null;
       const active = resolverRows.filter((row) => row.stablecoinId === coin.id && row.live.eventState === "active");
       const matched = incident
@@ -301,6 +308,7 @@ export function rankOpenIncidents(
         marketCapUsd,
         exposureUsd,
         evidence,
+        evidenceRead,
         ageSec,
         tier,
         ddr: matched.find(isCurrentForecast) ?? matched[0] ?? null,
