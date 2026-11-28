@@ -217,7 +217,7 @@ describe("core stablecoin aggregate universe", () => {
       ["cetes-etherfuse", "2026-11-27T10:45:23Z"], ["jltxx-jpmorgan", "2026-11-27T10:43:35Z"],
       ["mglo-midas-fasanara", "2026-11-27T16:16:22Z"],
       ...["cadd-cad-digital", "krwq-iq", "xofm-mento", "zarm-mento", "tgbp-tokenised", "cadc-cad-coin"]
-        .map((wave2) => [wave2, "2026-11-28T11:00:00Z"] as const),
+        .map((wave2) => [wave2, "2026-11-28T12:38:00Z"] as const),
     ] as const) {
       const at = Date.parse(firstObservedAt) / 1000;
       expect(isEarlierSupplyPerimeter(id, at), id).toBe(false);
