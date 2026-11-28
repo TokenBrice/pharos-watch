@@ -1,17 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  HOMEPAGE_EVIDENCE_MAX_CHARS, HOMEPAGE_EVIDENCE_METHODOLOGY, HOMEPAGE_EVIDENCE_VERSION,
+  HOMEPAGE_EVIDENCE_MAX_CHARS, HOMEPAGE_EVIDENCE_METHODOLOGY as methodology, HOMEPAGE_EVIDENCE_VERSION as version,
   mergeHomepageEvidence, parseHomepageEvidence, persistHomepageEvidence, restoreHomepageEvidence,
 } from "@/lib/homepage-evidence-persistence";
+import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { reconcileHomepageEvidence } from "@/lib/homepage-evidence";
 import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS } from "@/lib/homepage-hero-snapshot";
 import { HOMEPAGE_EVIDENCE_TEST_NOW as now, makeHomepageEvidence } from "@/test/fixtures/homepage-evidence";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 
-const encode = (snapshot = makeHomepageEvidence()) => JSON.stringify({
-  version: HOMEPAGE_EVIDENCE_VERSION, methodology: HOMEPAGE_EVIDENCE_METHODOLOGY, snapshot,
-});
+const encode = (snapshot = makeHomepageEvidence(), overrides?: { version?: number; methodology?: string }) =>
+  JSON.stringify({ version, methodology, snapshot, ...overrides });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("compact homepage evidence admission", () => {
@@ -34,9 +34,9 @@ describe("compact homepage evidence admission", () => {
     expect(reconcileHomepageEvidence(undefined, boundary, now + 1).data?.market.data).toBeNull();
   });
   it.each([
-    "{", "null", JSON.stringify({ version: 0 }), encode().replace(HOMEPAGE_EVIDENCE_METHODOLOGY, "old-methodology"),
-    encode().replace(`"version":${HOMEPAGE_EVIDENCE_VERSION}`, `"version":${HOMEPAGE_EVIDENCE_VERSION + 1}`),
-    encode().replace(`"version":${HOMEPAGE_EVIDENCE_VERSION}`, `"version":1`),
+    "{", "null", JSON.stringify({ version: 0 }), encode(undefined, { methodology: "old" }),
+    encode(undefined, { version: version + 1 }),
+    encode(undefined, { version: 1 }),
     encode().replace('"totalUsd":100', '"totalUsd":"broken"'), "x".repeat(HOMEPAGE_EVIDENCE_MAX_CHARS + 1),
   ])("tolerates corruption, schema/format and methodology changes", (raw) => { expect(parseHomepageEvidence(raw, now)).toBeNull(); });
   it("expires independent lanes without withholding a younger sibling", () => {
@@ -73,9 +73,11 @@ describe("compact homepage evidence admission", () => {
     expect(result.retainedLanes).toEqual(["incidents"]);
     expect(reconcileHomepageEvidence(failed, null, now).data?.incidents.data).toBeNull();
   });
-  it("rotates on peg:6.57 and admits split/unsplit incidents", () => {
-    expect([HOMEPAGE_EVIDENCE_VERSION, HOMEPAGE_EVIDENCE_METHODOLOGY.includes("peg:6.57")]).toEqual([2, true]);
-    expect(parseHomepageEvidence(encode().replace("peg:6.57", "peg:6.56"), now)).toBeNull();
+  it("rejects the previous peg methodology and admits split/unsplit incidents", () => {
+    const currentPeg = `peg:${DEPEG_DEWS_METHODOLOGY_VERSION}`;
+    expect(version).toBe(2);
+    expect(methodology.split(";")).toContain(currentPeg);
+    expect(parseHomepageEvidence(encode().replace(currentPeg, "peg:6.57"), now)).toBeNull();
     for (const d of [{ activeDepegCount: 17, recentActiveDepegCount: 4, longRunningActiveDepegCount: 13 }, { activeDepegCount: 17 }]) {
       const s = makeHomepageEvidence(now / 1000 - 30); s.incidents.data = d;
       expect(parseHomepageEvidence(encode(s), now)?.incidents.data).toEqual(d);
@@ -112,8 +114,7 @@ describe("asynchronous IndexedDB envelope", () => {
     await expect(restoreHomepageEvidence()).resolves.toEqual(data);
     await persistHomepageEvidence(makeHomepageEvidence(now / 1000 - 60));
     await expect(restoreHomepageEvidence()).resolves.toEqual(data);
-    expect(disk.database.transaction).toHaveBeenCalledWith("snapshots", "readwrite");
-    expect(disk.database.transaction).toHaveBeenCalledWith("snapshots", "readonly");
+    for (const mode of ["readwrite", "readonly"]) expect(disk.database.transaction).toHaveBeenCalledWith("snapshots", mode);
     expect(disk.close).toHaveBeenCalled();
   });
   it("does not write invalid publications and tolerates unavailable or corrupt storage", async () => {

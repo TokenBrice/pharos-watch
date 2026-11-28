@@ -3,6 +3,7 @@ import capture from "./fixtures/safety-score-v9-usdt-premium-capture.json";
 import { createReportCardsFixedInput, type ReportCardsFixedInputDraft } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../report-cards-v9-cache";
+import { projectKeyedExitBreakdown } from "../report-cards-v9-projection";
 import { ReportCardsV9CurrentResponseSchema } from "\@shared/types/report-cards-v9-current";
 import { SafetyScoreV9CommonModeGroupsSchema } from "@shared/types/safety-score-v9-public";
 import { projectSafetyScoreV9CommonModeGroups } from "@shared/lib/safety-score-v9/public";
@@ -81,7 +82,7 @@ describe("V9 common-mode publication", () => {
     const { pipeline, report } = replay();
     const serial = report.dependencyGraph.edges.find((edge) => edge.to === "susdt-spark" && edge.kind === "serial")!;
     expect(serial).toMatchObject({ dependencyType: "wrapper", wrapperForm: "native-staked", provenance: expect.any(Object) });
-    expect(ReportCardsV9CurrentResponseSchema.parse(report).cards).toEqual(pipeline.candidate.cards.map((card) => resolveV9PublicWitnessTexts(card)));
+    expect(ReportCardsV9CurrentResponseSchema.parse(report).cards).toEqual(pipeline.candidate.cards.map(projectKeyedExitBreakdown).map((card) => resolveV9PublicWitnessTexts(card)));
     const changed = structuredClone(report);
     changed.dependencyGraph.edges[0].to = "wrong-dependent";
     expect(ReportCardsV9CurrentResponseSchema.safeParse(changed).success).toBe(false);
