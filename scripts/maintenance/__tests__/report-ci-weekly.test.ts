@@ -16,6 +16,7 @@ import {
   laneOfJobName,
   main,
   parseAddedTestFiles,
+  parseIssueHygiene,
   parseTestTimings,
   parseWeeklyJobs,
   parseWeeklyRuns,
@@ -24,6 +25,8 @@ import {
   rankSlowTestFiles,
   renderWeeklyReport,
   summarizeCodeBytes,
+  summarizeIssueHygiene,
+  type IssueHygieneInput,
   type WeeklyJob,
   type WeeklyRun,
 } from "../report-ci-weekly.ts";
@@ -69,6 +72,41 @@ const addedLog = [
   "worker/src/cron/__tests__/late.test.ts",
   "",
 ].join("\n");
+
+const baseReport = {
+  since: "2026-10-26T00:00:00Z", until: "2026-11-02T00:00:00Z", runs, jobs,
+  timings: null, addedTestLog: null, addedTestSizes: {}, codeBytes: null, unavailable: [], notes: [],
+};
+
+const sampleIssues: IssueHygieneInput = {
+  version: 1,
+  openedInWindow: [
+    { number: 101, createdAt: "2026-10-27T12:00:00Z", labels: ["bug"] },
+    { number: 101, createdAt: "2026-10-27T12:00:00Z", labels: ["bug"] },
+    { number: 102, createdAt: "2026-10-25T23:59:59Z", labels: ["ops:followup"] },
+    { number: 103, createdAt: "2026-11-02T00:00:00Z", labels: ["ops:decision"] },
+  ],
+  closedInWindow: [
+    { number: 90, closedAt: "2026-10-28T00:00:00Z", labels: ["bug"] },
+    { number: 90, closedAt: "2026-10-28T00:00:00Z", labels: ["bug"] },
+    { number: 91, closedAt: "2026-10-29T00:00:00Z", labels: ["ops:followup"] },
+    { number: 92, closedAt: "2026-11-02T00:00:01Z", labels: [] },
+    { number: 93, closedAt: "2026-10-26T00:00:00Z", labels: [] },
+  ],
+  openNow: [
+    { number: 1, title: "Weekly CI report", labels: ["ci:weekly-report"] },
+    { number: 2, title: "Nightly validation is red", labels: ["ci:nightly-red", "ops:calendar"] },
+    { number: 3, title: "Safety Score curation expiry sweep", labels: [] },
+    { number: 4, title: "Agent maintenance candidates", labels: [] },
+    { number: 5, title: "Worker capacity headroom", labels: [] },
+    { number: 6, title: "Scheduled delivery incident", labels: [] },
+    { number: 7, title: "Q1 calendar renewal", labels: ["ops:calendar", "ops:upstream-wait"] },
+    { number: 7, title: "Q1 calendar renewal", labels: ["ops:calendar", "ops:upstream-wait"] },
+    { number: 8, title: "Wait on upstream API", labels: ["ops:upstream-wait"] },
+    { number: 9, title: "Fix parser bug", labels: ["bug", "ops:followup", "bug"] },
+    { number: 10, title: "Owner policy call", labels: ["ops:decision"] },
+  ],
+};
 
 describe("weekly CI report", () => {
   it("maps matrix job names to the lane and budget registry", () => {
@@ -181,43 +219,51 @@ describe("weekly CI report", () => {
     expect(() => parseTestTimings({ version: 1, files: { "a.test.ts": "slow" } })).toThrow(/duration/);
     expect(parseTestTimings({ version: 1, generatedAt: "2026-11-01T00:00:00Z", files: { "a.test.ts": 4_200 } }))
       .toEqual({ generatedAt: "2026-11-01T00:00:00Z", files: { "a.test.ts": 4_200 } });
+    const empty = { version: 1, openedInWindow: [], closedInWindow: [], openNow: [] };
+    for (const [bad, pattern] of [
+      [[], /object/], [{ ...empty, version: 2 }, /version 1/], [{ ...empty, openedInWindow: "bad" }, /openedInWindow/],
+      [{ ...empty, openedInWindow: [{ number: 0, createdAt: "2026-10-27T00:00:00Z", labels: [] }] }, /positive integer/],
+      [{ ...empty, closedInWindow: [{ number: 1, closedAt: "nope", labels: [] }] }, /ISO timestamp/],
+      [{ ...empty, openNow: [{ number: 1, title: 42, labels: [] }] }, /title/],
+      [{ ...empty, openNow: [{ number: 1, title: "ok", labels: [1] }] }, /labels/],
+    ] as const) expect(() => parseIssueHygiene(bad)).toThrow(pattern);
+    expect(parseIssueHygiene(sampleIssues)).toEqual(sampleIssues);
+  });
+
+  it("deduplicates and classifies 7-day issue hygiene without double-counting queues", () => {
+    expect(summarizeIssueHygiene(sampleIssues, "2026-10-26T00:00:00Z", "2026-11-02T00:00:00Z")).toEqual({
+      opened: 2, closed: 3, net: -1, openTotal: 10, standingTrackers: 6, calendarOpen: 1, upstreamWaitOpen: 1, actionableOpen: 2,
+      byLabel: { "ops:followup": 1, "ops:calendar": 2, "ops:upstream-wait": 2, "ops:decision": 1, bug: 1 },
+    });
   });
 
   it("renders unavailable evidence as a named reason, never as zero", () => {
-    const report = buildWeeklyReport({
-      since: "2026-10-26T00:00:00Z",
-      until: "2026-11-02T00:00:00Z",
-      runs,
-      jobs,
-      timings: null,
-      addedTestLog: null,
-      addedTestSizes: {},
-      codeBytes: null,
+    const markdown = renderWeeklyReport(buildWeeklyReport({
+      ...baseReport,
       unavailable: [
         { section: "slow-test-files", reason: "test-timings:missing" },
         { section: "added-test-files", reason: "added-test-files:not-supplied" },
         { section: "test-production-bytes", reason: "tracked-files:unavailable" },
+        { section: "issue-hygiene", reason: "issues:not-supplied" },
       ],
-      notes: [],
-    });
-    const markdown = renderWeeklyReport(report);
+    }));
     expect(markdown).toContain("| tests | 200 | 240 | 280 | 3 | 2 |");
     expect(markdown).toContain("Over budget at p50: v9-resource (240s vs 220s), static-guards (130s vs 120s), tests (240s vs 200s), pages-artifact (360s vs 250s)");
     expect(markdown).toContain("failure rate 66.7 %");
     expect(markdown).toContain("Unavailable — no nightly test-timings artifact");
     expect(markdown).toContain("Unavailable — the added-file log");
     expect(markdown).toContain("Unavailable — the tracked file list");
+    expect(markdown).toContain("Unavailable — no GitHub issue hygiene snapshot");
     expect(markdown).toContain("`test-timings:missing`");
+    expect(markdown).toContain("`issues:not-supplied`");
     expect(markdown).not.toContain("0 file(s) exceed");
+    expect(markdown).not.toContain("Opened 0, closed 0");
   });
 
   it("renders the measured sections and the ratio", () => {
-    const report = buildWeeklyReport({
-      since: "2026-10-26T00:00:00Z",
-      until: "2026-11-02T00:00:00Z",
+    const markdown = renderWeeklyReport(buildWeeklyReport({
+      ...baseReport,
       runUrl: "https://example.test/run/1",
-      runs,
-      jobs,
       timings: { generatedAt: "2026-11-01T00:00:00Z", files: { "scripts/__tests__/slow.test.ts": 25_000 } },
       addedTestLog: addedLog,
       addedTestSizes: { "scripts/__tests__/new.test.ts": 2_048 },
@@ -227,50 +273,35 @@ describe("weekly CI report", () => {
         { file: "src/components/a.tsx", mode: "contract", class: "local-frontend", status: "over-budget", bytes: 24_200 },
         { file: "worker/src/api/b.ts", mode: "contract", class: "worker-api", status: "within-budget", bytes: 76_000 },
       ],
-      unavailable: [],
-      notes: [],
-    });
-    const markdown = renderWeeklyReport(report);
+      issues: sampleIssues,
+    }));
     expect(markdown).toContain("Source run: https://example.test/run/1");
     expect(markdown).toContain("1 file(s) exceed the 10 s per-file budget");
     expect(markdown).toContain("| `scripts/__tests__/slow.test.ts` | 25.0 s |");
     expect(markdown).toContain("3 test file(s) added.");
     expect(markdown).toContain("2 added file(s) could not be measured");
-    // The census caveat travels with the count: it is commit-dated, not merge-dated.
     expect(markdown).toContain("Census is commit-dated:");
     expect(markdown).toContain("ratio 0.91");
     expect(markdown).toContain("2 of 3 tracked single-file route signatures");
     expect(markdown).toContain("| worker-api | 76000 | 1 | 2 |");
     expect(markdown).toMatch(/src\/components\/a.tsx[^\n]+200 B over ceiling\.[\s\S]+worker\/src\/api\/a.ts[^\n]+1 B over ceiling\./);
+    expect(markdown).toContain("## Issue hygiene (7d)");
+    expect(markdown).toContain("Opened 2, closed 3 (net -1) in the window; 10 open total (2 actionable, 6 standing tracker(s), 1 calendar, 1 upstream-wait).");
+    expect(markdown).toContain("| `ops:followup` | 1 |");
+    expect(markdown).toContain("| `ops:calendar` | 2 |");
+    expect(markdown).toContain("| `ops:upstream-wait` | 2 |");
+    expect(markdown).toContain("| `ops:decision` | 1 |");
+    expect(markdown).toContain("| `bug` | 1 |");
   });
 
   it("states the census provenance with an empty window and omits it when no log was supplied", () => {
-    const empty = renderWeeklyReport(buildWeeklyReport({
-      since: "2026-10-26T00:00:00Z",
-      until: "2026-11-02T00:00:00Z",
-      runs,
-      jobs,
-      timings: null,
-      addedTestLog: "",
-      addedTestSizes: {},
-      codeBytes: null,
-      unavailable: [],
-      notes: [],
-    }));
+    const empty = renderWeeklyReport(buildWeeklyReport({ ...baseReport, addedTestLog: "" }));
     expect(empty).toContain("No test file was added in the window.");
     expect(empty).toContain("Census is commit-dated:");
 
     const missing = renderWeeklyReport(buildWeeklyReport({
-      since: "2026-10-26T00:00:00Z",
-      until: "2026-11-02T00:00:00Z",
-      runs,
-      jobs,
-      timings: null,
-      addedTestLog: null,
-      addedTestSizes: {},
-      codeBytes: null,
+      ...baseReport,
       unavailable: [{ section: "added-test-files", reason: "added-test-files:missing" }],
-      notes: [],
     }));
     expect(missing).not.toContain("Census is commit-dated:");
   });
@@ -278,25 +309,27 @@ describe("weekly CI report", () => {
   it("wires the CLI end to end and names every missing input", () => {
     const root = mkdtempSync(join(tmpdir(), "pharos-ci-weekly-"));
     try {
-      writeFileSync(join(root, "runs.json"), JSON.stringify(runs));
-      writeFileSync(join(root, "jobs.json"), JSON.stringify(jobs));
-      writeFileSync(join(root, "report.md"), "");
-      const status = main([
-        "--runs", join(root, "runs.json"),
-        "--jobs", join(root, "jobs.json"),
-        "--since", "2026-10-26T00:00:00Z",
-        "--until", "2026-11-02T00:00:00Z",
-        "--repo-root", root,
-        "--output", join(root, "report.md"),
-      ]);
-      expect(status).toBe(0);
-      const markdown = readFileSync(join(root, "report.md"), "utf8");
-      expect(markdown).toContain("Window: 2026-10-26T00:00:00Z → 2026-11-02T00:00:00Z");
-      // The temp directory is not a checkout: the byte ratio is unavailable, not empty.
-      expect(markdown).toContain("`test-timings:not-supplied`");
-      expect(markdown).toContain("`added-test-files:not-supplied`");
-      expect(markdown).toContain("`tracked-files:unavailable:");
-      expect(markdown).toContain("`route-context:unavailable:checkout-mismatch`");
+      const runsPath = join(root, "runs.json"), jobsPath = join(root, "jobs.json"), outPath = join(root, "report.md");
+      writeFileSync(runsPath, JSON.stringify(runs));
+      writeFileSync(jobsPath, JSON.stringify(jobs));
+      const baseArgs = ["--runs", runsPath, "--jobs", jobsPath, "--since", "2026-10-26T00:00:00Z", "--until", "2026-11-02T00:00:00Z", "--repo-root", root, "--output", outPath];
+      expect(main(baseArgs)).toBe(0);
+      const missingMd = readFileSync(outPath, "utf8");
+      expect(missingMd).toContain("Window: 2026-10-26T00:00:00Z → 2026-11-02T00:00:00Z");
+      expect(missingMd).toContain("`test-timings:not-supplied`");
+      expect(missingMd).toContain("`added-test-files:not-supplied`");
+      expect(missingMd).toContain("`tracked-files:unavailable:");
+      expect(missingMd).toContain("`route-context:unavailable:checkout-mismatch`");
+      expect(missingMd).toContain("`issues:not-supplied`");
+
+      const issuesPath = join(root, "issues.json");
+      writeFileSync(issuesPath, JSON.stringify(sampleIssues));
+      expect(main([...baseArgs, "--issues", issuesPath])).toBe(0);
+      expect(readFileSync(outPath, "utf8")).toContain("Opened 2, closed 3 (net -1) in the window");
+
+      writeFileSync(issuesPath, JSON.stringify({ version: 9 }));
+      expect(main([...baseArgs, "--issues", issuesPath])).toBe(0);
+      expect(readFileSync(outPath, "utf8")).toContain("`issues:invalid:issues input must declare version 1`");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
