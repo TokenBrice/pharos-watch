@@ -1,7 +1,7 @@
 import { startOfUtcDaySec } from "./time-buckets";
 import { CHAIN_META } from "../types/chain-identity";
 import type { StablecoinMeta } from "../types/stablecoin-meta-schemas";
-import type { SupplyUnavailableReason } from "../types/supply";
+import type { SupplyObservedAtKind, SupplyUnavailableReason } from "../types/supply";
 import { PUBLIC_RPC_URLS, SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
 import { chainSupplyReconciles } from "./chains/circulating";
 import { HYPEREVM_HISTORY_RPC_URL } from "./evm-rpc-capabilities";
@@ -178,6 +178,16 @@ function isStateClockedPreferredNativePlan(meta: Pick<StablecoinMeta, "id">): bo
   return requiresOnchainSupplyStateClock(meta.id) && prefersOnChainSupplyMcap(meta) && !isKinesisWrapperSupplyId(meta.id);
 }
 
+/**
+ * State-clocked preferred plans whose reader already pinned every leg before packets carried
+ * `supplyObservedAtKind` (Pricing v7.1), so their unmarked publication still names a pinned clock.
+ * ZCHF and EURI stamped the run clock before v7.1 and the Wave 2 checkpoints published DefiLlama
+ * rows, so any later enrollment admits only a packet the pinned reader marked.
+ */
+const UNMARKED_PINNED_STATE_CLOCK_PLAN_IDS: ReadonlySet<string> = new Set([
+  "buidl-blackrock", "eurc-circle", "eurcv-societe-generale-forge", "brla-brla-digital", "wm-m0",
+]);
+
 /** Clocked and pinned native plans must carry an original observation clock, never cache write timestamps. */
 export function requiresOriginalSupplyObservedAt(meta: Pick<StablecoinMeta, "id">): boolean {
   return isPinnedNativeSharesWorkflow(meta)
@@ -222,6 +232,7 @@ interface StrictNativeSupplyPacketLike {
   price?: number | null;
   supplySource?: string;
   supplyObservedAt?: number | null;
+  supplyObservedAtKind?: SupplyObservedAtKind;
   supplyUnavailableReason?: string;
   circulating?: Record<string, number>;
   circulatingNative?: number | null;
@@ -285,8 +296,9 @@ function hasReconciledPinnedNativeSharesPacket(
 
 /**
  * Shared roster, chain-ID, allowed-zero, peg-bucket and clock check for strict native supply plans.
- * State-clocked preferred plans get the original-clock check only: their source is gated by
+ * State-clocked preferred plans get the original pinned-clock check only: their source is gated by
  * isAdmittedCanonicalNativeSupplySource and their roster by the curated-aggregate restore check.
+ * A valid timestamp alone is not a state clock: the packet must carry the pinned reader's marker.
  */
 export function hasReconciledStrictNativeSupplyPacket(
   asset: StrictNativeSupplyPacketLike,
@@ -296,7 +308,10 @@ export function hasReconciledStrictNativeSupplyPacket(
   if (!meta) return false;
   if (isPinnedNativeSharesWorkflow(meta)) return hasReconciledPinnedNativeSharesPacket(asset, meta, nowSec);
   const spec = STRICT_CANONICAL_NATIVE_SPEC_BY_ID[meta.id];
-  if (!spec) return !isStateClockedPreferredNativePlan(meta) || hasValidOriginalSupplyObservedAt(asset.supplyObservedAt, nowSec);
+  if (!spec) {
+    return !isStateClockedPreferredNativePlan(meta) || (hasValidOriginalSupplyObservedAt(asset.supplyObservedAt, nowSec)
+      && (asset.supplyObservedAtKind === "pinned-state" || UNMARKED_PINNED_STATE_CLOCK_PLAN_IDS.has(meta.id)));
+  }
   if (asset.supplySource !== spec.supplySource || asset.supplyUnavailableReason) return false;
   if (!hasValidOriginalSupplyObservedAt(asset.supplyObservedAt, nowSec)) return false;
   const buckets = Object.entries(asset.circulating ?? {});

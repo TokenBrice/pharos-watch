@@ -521,7 +521,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
         chainCirculating: { Ethereum: { current: 3_120_000, chainId: "ethereum" } },
       });
       expect(susds?.priceSource).toBeUndefined();
-      expect(susds?.supplyObservedAt).toBe(observedAt);
+      expect([susds?.supplyObservedAt, susds?.supplyObservedAtKind]).toEqual([observedAt, "pinned-state"]);
     } else {
       expect(result).toEqual([
         ...withheld,

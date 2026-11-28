@@ -420,7 +420,13 @@ describe("missing detail price enrichment", () => {
         expect(proj({ ...dBase, currentCirculatingUSD: cadd.circulating, currentSupplySource: supplySource,
           currentSupplyObservedAt: supplySource === "defillama" ? NOW - 60 : undefined }, cadd.id).circulating).toEqual({});
       }
-      expect(proj(await ovJson(makeDb({ ...cadd, supplySource: "onchain-total-supply", supplyObservedAt: NOW - 90 }), cadd.id, makeResponse(hist)), cadd.id).supplyObservedAt).toBe(NOW - 90);
+      // A valid run-second clock is not a state clock: only the pinned reader's marker admits a v7.1 enrollee (ZCHF);
+      // BRLA's reader was pinned before the marker existed.
+      const native = { supplySource: "onchain-total-supply", supplyObservedAt: NOW - 90 };
+      const zchf = { id: "zchf-frankencoin", circulating: { peggedCHF: 9_000 }, ...native };
+      for (const [row, clock] of [[{ ...cadd, ...native, supplyObservedAtKind: "pinned-state" }, NOW - 90], [zchf, null],
+        [{ ...zchf, supplyObservedAtKind: "pinned-state" }, NOW - 90], [{ ...native, id: "brla-brla-digital", circulating: { peggedREAL: 9_000 } }, NOW - 90],
+      ] as const) expect(proj(await ovJson(makeDb(row), row.id, makeResponse(hist)), row.id).supplyObservedAt).toBe(clock);
     });
 
     it("ignores a provider-supplied unavailability marker when canonical supply is observed", async () => {

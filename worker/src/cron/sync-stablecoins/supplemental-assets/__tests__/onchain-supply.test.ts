@@ -1303,13 +1303,14 @@ describe("discovery native supply aggregates", () => {
     );
   });
 
-  it.each(["euri-banking-circle", "zchf-frankencoin"])("stamps %s at its EIP-1898 block clock and withholds a stale header", async (id) => {
+  it.each(["euri-banking-circle", "zchf-frankencoin"])("stamps and marks %s at its EIP-1898 block clock and withholds a stale header", async (id) => {
     const meta = TRACKED_META_BY_ID.get(id)!;
     const now = Math.floor(Date.now() / 1000);
     vi.mocked(evmRpc.fetchEvmUint256AtBlock).mockResolvedValue(10n ** 24n);
     for (const [age, observedAt] of [[25, now - 25], [301, undefined]] as const) {
       vi.mocked(evmRpc.fetchEvmBlockHeader).mockResolvedValue({ number: 123, hash: BLOCK_HASH, timestamp: now - age });
-      expect((await fetchCuratedAggregateOnChainMcap(meta, 1.1, buildChainRpcs()))?.observedAt).toBe(observedAt);
+      const result = await fetchCuratedAggregateOnChainMcap(meta, 1.1, buildChainRpcs());
+      expect([result?.observedAt, result?.observedAtKind]).toEqual([observedAt, observedAt && "pinned-state"]);
     }
   });
 

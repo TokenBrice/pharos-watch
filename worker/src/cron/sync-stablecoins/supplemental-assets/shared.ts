@@ -279,6 +279,7 @@ export function buildSupplementalAsset(input: {
   mcap: number | null;
   supplySource: string;
   supplyObservedAt?: number | null;
+  supplyObservedAtKind?: PeggedAsset["supplyObservedAtKind"];
   supplyPerimeter?: PeggedAsset["supplyPerimeter"];
   chainCirculating?: PeggedAsset["chainCirculating"];
   circulatingPrevDay?: number | null;
@@ -305,6 +306,7 @@ export function buildSupplementalAsset(input: {
     priceSyncedAt: priceResolution ? nowSec : (input.priceSyncedAt ?? null),
     supplySource: input.supplySource,
     supplyObservedAt: input.supplyObservedAt ?? null,
+    ...(input.supplyObservedAtKind && input.supplyObservedAt != null ? { supplyObservedAtKind: input.supplyObservedAtKind } : {}),
     circulatingNative: input.circulatingNative,
     valuationPriceUsd: input.valuationPriceUsd,
     valuationObservedAtSec: input.valuationObservedAtSec,
@@ -337,6 +339,7 @@ export async function resolveCuratedAggregateSupplementalSupply(
   mcap: number;
   supplySource: string;
   supplyObservedAt: number | null;
+  supplyObservedAtKind?: PeggedAsset["supplyObservedAtKind"];
   chainCirculating: PeggedAsset["chainCirculating"];
 } & SupplyQuantityFields | null> {
   const priceResolution = admitCommodityValuation(meta, resolveSupplementalPrice(priceData, cgData, meta.geckoId), evidence);
@@ -352,6 +355,7 @@ export async function resolveCuratedAggregateSupplementalSupply(
     valuationObservedAtSec: priceResolution.observedAt,
     supplySource: aggregate.supplySource,
     supplyObservedAt: aggregate.observedAt ?? null,
+    ...(aggregate.observedAtKind ? { supplyObservedAtKind: aggregate.observedAtKind } : {}),
     chainCirculating: toPublicChainCirculating(aggregate.chainCirculating),
   };
 }
@@ -370,6 +374,7 @@ export async function fetchCommodityTokens(
       mcap: number | null;
       supplySource: string;
       supplyObservedAt?: number | null;
+      supplyObservedAtKind?: PeggedAsset["supplyObservedAtKind"];
       chainCirculating?: PeggedAsset["chainCirculating"];
     } & SupplyQuantityFields>;
   },

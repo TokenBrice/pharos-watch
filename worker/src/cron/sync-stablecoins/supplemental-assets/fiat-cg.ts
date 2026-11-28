@@ -306,6 +306,7 @@ export async function fetchFiatCoinGeckoTokens(
         const attachPartition = !needsClassScope && !preferOnChainMcap && !!mcap;
         let supplySource: string = "coingecko-fallback";
         let supplyObservedAt = mcap && meta.geckoId ? cgData[meta.geckoId]?.last_updated_at ?? null : null;
+        let supplyObservedAtKind: PeggedAsset["supplyObservedAtKind"];
         let chainCirculating: PeggedAsset["chainCirculating"] = {};
         let supplyPerimeter: PeggedAsset["supplyPerimeter"];
         let circulatingNative: number | undefined;
@@ -319,6 +320,7 @@ export async function fetchFiatCoinGeckoTokens(
             circulatingNative = aggregateOnChainMcap.nativeSupply;
             supplySource = aggregateOnChainMcap.supplySource;
             supplyObservedAt = aggregateOnChainMcap.observedAt ?? null;
+            supplyObservedAtKind = aggregateOnChainMcap.observedAtKind;
             chainCirculating = toPublicChainCirculating(aggregateOnChainMcap.chainCirculating);
             supplyPerimeter = aggregateOnChainMcap.supplyPerimeter;
           }
@@ -331,6 +333,7 @@ export async function fetchFiatCoinGeckoTokens(
             circulatingNative = onChainMcap.nativeSupply;
             supplySource = onChainMcap.supplySource;
             supplyObservedAt = onChainMcap.observedAt ?? null;
+            supplyObservedAtKind = onChainMcap.observedAtKind;
             chainCirculating = toPublicChainCirculating(onChainMcap.chainCirculating);
           }
         }
@@ -411,6 +414,7 @@ export async function fetchFiatCoinGeckoTokens(
           mcap,
           supplySource,
           supplyObservedAt,
+          supplyObservedAtKind,
           supplyPerimeter,
           circulatingNative,
           valuationPriceUsd: circulatingNative == null ? null : priceForSupply,

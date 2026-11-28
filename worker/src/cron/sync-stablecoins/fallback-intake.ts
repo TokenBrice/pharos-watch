@@ -207,6 +207,8 @@ export async function overlayFallbackCuratedAggregateSupply(
     asset.circulating = { [pegKey]: onChainMcap.mcap };
     asset.supplySource = onChainMcap.supplySource;
     asset.supplyObservedAt = onChainMcap.observedAt ?? null;
+    if (onChainMcap.observedAtKind) asset.supplyObservedAtKind = onChainMcap.observedAtKind;
+    else delete asset.supplyObservedAtKind;
     delete asset.circulatingNative;
     delete asset.valuationPriceUsd;
     delete asset.valuationObservedAtSec;
