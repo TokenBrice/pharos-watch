@@ -597,7 +597,9 @@ function assertPreviousReaderSource() {
   // Bluechip retirement: report-card-grade.ts drops its comment on the retired vendor grade enum; comment-only, no schema changed (substituting origin/main restores 5a7816d1…).
   // PR-4 Canton onboarding: chain-identity.ts adds `canton` and `canton-network` alias (additive chain identity only; no public card/breakdown/trace schema changed; substituting origin/main restores 7f0a6279…).
   // X Layer CCIP archive route (#2325): chain-identity.ts adds the `xlayer` Alchemy RPC name only (no public card/breakdown/trace schema changed; substituting origin/main restores d7886218…).
-  if (hash.digest("hex") !== "a4ed387bacd2d3239d7549e694cd1424b60d6d6f928b6bf4a9aa5a4bd1b1707f") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // v10.58 adds optional conversion and payout facts. The frozen reader rejects the new public fields.
+  // The DEX observation adds an optional reserve-model identity; existing observations parse identically.
+  if (hash.digest("hex") !== "78a67cbd421448394592d8e66817256a6696acb9d55f266034d85100fce44465") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {
@@ -625,6 +627,12 @@ export async function previousReader() {
     const { SafetyScoreV9CurrentResponseSchema } = await import("../safety-score-v9-publication-response");
     // The frozen strict breakdown had no v10.48 admittedScoreCeiling field.
     const card = current.superRefine((value, ctx) => {
+      const exit = value.breakdowns?.exit;
+      const capacity = exit?.primaryRoute?.capacity;
+      if (capacity?.payoutAssets !== undefined || capacity?.inputCapacityUsd !== undefined || capacity?.costEvidence !== undefined ||
+        exit?.alternatives.some((route) => route.payoutAssets !== undefined || route.conversion !== undefined)) {
+        ctx.addIssue({ code: "custom", message: "Pre-dust Exit breakdowns have no payout or conversion fields" });
+      }
       if (value.breakdowns?.backing.components.some((component) => component.admittedScoreCeiling !== undefined)) {
         ctx.addIssue({ code: "custom", message: "Pre-dust breakdown components have no admittedScoreCeiling" });
       }

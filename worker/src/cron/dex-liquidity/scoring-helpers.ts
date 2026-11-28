@@ -1,3 +1,5 @@
+import { admitFluidSwapStatus } from "@shared/lib/fluid-swap-status";
+import { poolSwapsUsable } from "./fluid-swap-status";
 import { directUsdVenueKeys, getDexGroupLineage, getDexObservationLineage, readDexPriceLineage } from "./price-lineage";
 import { retainedPoolVolumeSanityRejection } from "./pool-volume-sanity";
 import type { CurveBasePoolOverlapEvidence } from "./process-pool-protocol-enrichment";
@@ -165,6 +167,10 @@ export function rebuildMetricsFromPools(
   const pairs = new Set<string>();
 
   let totalTvlUsd = 0;
+  let usablePoolCount = 0;
+  let pausedPoolCount = 0;
+  let unknownPoolCount = 0;
+  let usableTvlUsd = 0;
   let qualityAdjustedTvl = 0;
   let effectiveTvl = 0;
   let balanceRatioWeightedSum = 0;
@@ -191,6 +197,13 @@ export function rebuildMetricsFromPools(
     pairs.add(pool.symbol);
 
     totalTvlUsd += pool.tvlUsd;
+    if (!poolSwapsUsable(pool)) {
+      if (pool.extra?.fluidSwapStatus?.status === "paused") pausedPoolCount++;
+      else unknownPoolCount++;
+      continue;
+    }
+    usablePoolCount++;
+    usableTvlUsd += pool.tvlUsd;
     const poolQualityAdjustedTvl = getPoolExtraNumber(pool.extra, "qualityAdjustedTvl");
     const poolEffectiveTvl = getPoolExtraNumber(pool.extra, "effectiveTvl");
     if (fallbackCounters && poolQualityAdjustedTvl == null) fallbackCounters.rebuildQualityAdjustedTvlFallback++;
@@ -234,9 +247,10 @@ export function rebuildMetricsFromPools(
   }
 
   let hhi = 0;
-  if (totalTvlUsd > 0) {
+  if (usableTvlUsd > 0) {
     for (const pool of pools) {
-      const share = pool.tvlUsd / totalTvlUsd;
+      if (!poolSwapsUsable(pool)) continue;
+      const share = pool.tvlUsd / usableTvlUsd;
       hhi += share * share;
     }
   }
@@ -249,6 +263,10 @@ export function rebuildMetricsFromPools(
   return {
     totalTvlUsd,
     poolCount: pools.length,
+    usablePoolCount,
+    pausedPoolCount,
+    unknownPoolCount,
+    usableTvlUsd,
     chains,
     pairs,
     protocolTvl,
@@ -720,7 +738,9 @@ export function aggregateProtocolSources(
 export function projectRetainedPoolPrice(
   pool: LiquidityMetrics["topPools"][number],
   stablecoinId?: string,
+  nowSec = Math.floor(Date.now() / 1000),
 ): DexPriceObs | null {
+  if (pool.project === "fluid" && admitFluidSwapStatus(pool.extra?.fluidSwapStatus, nowSec).status !== "active") return null;
   const tvl = Math.min(pool.tvlUsd, pool.priceEvidenceTvlUsd ?? pool.tvlUsd);
   if (typeof pool.price !== "number" || !Number.isFinite(pool.price) || pool.price <= 0 ||
       !Number.isFinite(tvl) || tvl <= 0) return null;
@@ -1562,6 +1582,7 @@ export function buildDexPriceObservationsFromRetainedPools(
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>,
   exactPriceEvidenceByStablecoin?: Map<string, DexPriceObs[]>,
   logRejections = true,
+  nowSec = Math.floor(Date.now() / 1000),
 ): Map<string, DexPriceObs[]> {
   const observations = new Map<string, DexPriceObs[]>();
 
@@ -1589,6 +1610,7 @@ export function buildDexPriceObservationsFromRetainedPools(
     for (const pool of pools) {
       if (
         isBlockedDexId(pool.project) ||
+        (pool.project === "fluid" && admitFluidSwapStatus(pool.extra?.fluidSwapStatus, nowSec).status !== "active") ||
         !Number.isFinite(pool.tvlUsd) ||
         pool.tvlUsd < DEX_PRICE_OBSERVATION_MIN_TVL_USD
       ) {
@@ -1596,7 +1618,7 @@ export function buildDexPriceObservationsFromRetainedPools(
       }
 
       if (typeof pool.price === "number" && Number.isFinite(pool.price) && pool.price > 0) {
-        const priceEvidence = projectRetainedPoolPrice(pool, stablecoinId);
+        const priceEvidence = projectRetainedPoolPrice(pool, stablecoinId, nowSec);
         if (!priceEvidence) {
           rejectedPriceEvidenceCount++;
           continue;
@@ -1632,6 +1654,8 @@ export function buildDexPriceObservationsFromRetainedPools(
   for (const [stablecoinId, evidence] of exactPriceEvidenceByStablecoin ?? []) {
     const tickerPrices = evidence.filter((observation) =>
       observation.sourceFamily === "cg_tickers" && observation.tvl === 0 &&
+      // An exchange-level Fluid ticker cannot identify the pool whose swap state was checked.
+      normalizeProtocol(observation.protocol) !== "fluid" &&
       dexPriceEvidenceWeight(observation) >= CG_TICKER_PRICE_MIN_VOLUME_USD &&
       Number.isFinite(observation.price) && observation.price > 0
     );

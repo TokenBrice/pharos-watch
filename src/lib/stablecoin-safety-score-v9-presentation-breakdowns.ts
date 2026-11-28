@@ -10,7 +10,7 @@ import { formatV9PresentationUsd as compactUsd } from "@shared/lib/format";
 import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import { resolveV9EffectiveScoringWeight } from "@shared/types/safety-score-v9-public-causes";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
-import { describeExitRouteVenue, describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
+import { describeExitPayout, describeExitRouteVenue, describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 import { resolveControlComponentRoles } from "@/lib/pillar-evidence-strips";
 import { V9_UNADMITTED_RESERVE_COMPONENT_KEY } from "@/lib/reserve-score-admission";
 import type { ControlComponentRole } from "@shared/lib/classification";
@@ -190,6 +190,16 @@ function costLabel(cost: number | null): string {
 
 
 
+function selectedExitCapacityLine(capacity: NonNullable<SafetyScoreV9ExitBreakdown["primaryRoute"]>["capacity"]): string {
+  if (!capacity) return describeExitPayout(null);
+  const input = compactUsd(capacity.inputCapacityUsd ?? capacity.executableUsd);
+  const basis = capacity.inputCapacityUsd === undefined ? "credited"
+    : capacity.evidenceKind === "reserve-based-amm-simulation" ? "modeled input" : "input";
+  const settlement = capacity.settlementDelaySec === 0 ? "" :
+    ` within ${formatWholeUnitDurationSeconds(capacity.settlementDelaySec, { minUnit: "minute" })}`;
+  return `${describeExitPayout(capacity.payoutAssets)} · ${input} of ${compactUsd(capacity.requestedNotionalUsd)} ${basis} · ${costLabel(capacity.maxCostBps)} ceiling${settlement}`;
+}
+
 function parseBackingBreakdown(
   breakdown: SafetyScoreV9BackingBreakdown,
 ): StablecoinSafetyScoreV9PillarBreakdown {
@@ -289,6 +299,12 @@ function excludedRouteReason(
 function alternativeRouteDetail(
   alternative: SafetyScoreV9ExitBreakdown["alternatives"][number],
 ): string | null {
+  if (alternative.conversion) {
+    const { inputCapacityUsd, maxCostBps, evidenceKind } = alternative.conversion;
+    const capacity = inputCapacityUsd === null || maxCostBps === null ? "Conversion size unavailable"
+      : `${fullUsd(inputCapacityUsd)} of input within ${costLabel(maxCostBps)}`;
+    return `${capacity} · ${humanizeSafetyScoreV9Value(evidenceKind)} · Payout retains exposure to the input asset`;
+  }
   const isRedemption =
     alternative.routeFamily === "issuer-redemption" ||
     alternative.routeFamily === "eventual-redemption";
@@ -299,7 +315,7 @@ function alternativeRouteDetail(
       : alternative.settlementDelaySec === undefined
         ? "24h/eventual redemption horizon"
         : `${formatWholeUnitDurationSeconds(alternative.settlementDelaySec, { minUnit: "minute" })} redemption horizon`;
-  const parts: string[] = [];
+  const parts: string[] = alternative.payoutAssets ? [`Pays ${describeExitPayout(alternative.payoutAssets)}`] : [];
   if (alternative.rawSameNotionalCostBps !== null) parts.push(`${costLabel(alternative.rawSameNotionalCostBps)} raw same-notional cost`);
   if (alternative.capacity) {
     parts.push(
@@ -340,7 +356,7 @@ export function exitReasonFallback(
   }
   if (primary?.capsApplied.includes("immaterial-executable-capacity")) {
     return primary.capacity
-      ? `The selected ${primary.label} route cleared only ${fullUsd(primary.capacity.executableUsd)} of the ${fullUsd(primary.capacity.requestedNotionalUsd)} stress request, below the material-capacity floor.`
+      ? `The score credited ${fullUsd(primary.capacity.executableUsd)} of the ${fullUsd(primary.capacity.requestedNotionalUsd)} stress request to the selected ${primary.label} route, below the material-capacity floor.`
       : `The selected ${primary.label} route remained below the material-capacity floor.`;
   }
   const measured = breakdown.alternatives.find((route) => route.capacity != null);
@@ -406,7 +422,9 @@ function parseExitBreakdown(
         value: `${multiplierLabel(dimension.factor)}x${dimension.cause == null ? "" : ` · ${causeLabel(dimension.cause)}`}` });
     }
     context.push({ key: "capacity-method", label: "Capacity evidence tier", value: humanizeSafetyScoreV9Value(primaryRoute.capacityEvidenceTier) });
-    context.push({ key: "raw-cost", label: "Raw same-notional cost", value: costLabel(primaryRoute.rawSameNotionalCostBps) });
+    if (primaryRoute.capacity?.costEvidence === "measured" || primaryRoute.rawSameNotionalCostBps !== primaryRoute.capacity?.maxCostBps) {
+      context.push({ key: "raw-cost", label: "Raw same-notional cost", value: costLabel(primaryRoute.rawSameNotionalCostBps) });
+    }
   }
   if (breakdown.stressRequest !== null) {
     context.push({
@@ -418,16 +436,21 @@ function parseExitBreakdown(
   if (primaryRoute?.capacity) {
     const capacity = primaryRoute.capacity;
     const selectedVenue = capacity.protocol ?? primaryRoute.label;
+    const cost = capacity.costEvidence === "measured" ? `${costLabel(capacity.executionCostBps)} execution cost / ` : "";
+    const inputLabel = capacity.evidenceKind === "reserve-based-amm-simulation" ? "modeled input" : "input";
     context.push(
+      { key: "selected-route-payout", label: "Payout", value: describeExitPayout(capacity.payoutAssets) },
       {
         key: "selected-route-capacity",
         label: "Selected route capacity",
-        value: `${fullUsd(capacity.executableUsd)} of ${fullUsd(capacity.requestedNotionalUsd)} executable on selected ${selectedVenue} route`,
+        value: capacity.inputCapacityUsd === undefined
+          ? `${fullUsd(capacity.executableUsd)} of ${fullUsd(capacity.requestedNotionalUsd)} credited on selected ${selectedVenue} route`
+          : `${fullUsd(capacity.inputCapacityUsd)} of ${fullUsd(capacity.requestedNotionalUsd)} ${inputLabel} on selected ${selectedVenue} route`,
       },
       {
         key: "selected-route-bound",
         label: "Horizon / execution cost",
-        value: `${formatWholeUnitDurationSeconds(capacity.settlementDelaySec, { minUnit: "minute" })} / ${costLabel(capacity.executionCostBps)} observed / ${capacity.maxCostBps.toFixed(0)} bps bound`,
+        value: `${formatWholeUnitDurationSeconds(capacity.settlementDelaySec, { minUnit: "minute" })} / ${cost}${costLabel(capacity.maxCostBps)} ceiling`,
       },
     );
     if (capacity.chain !== null || capacity.poolId !== null) {
@@ -462,17 +485,7 @@ function parseExitBreakdown(
         venueLabel: describeExitRouteVenue(primaryRoute),
         primaryRouteScore: primaryRoute.score,
         redundancyCredit,
-        capacityLine: primaryRoute.capacity === undefined || primaryRoute.capacity === null
-          ? null
-          : `${compactUsd(primaryRoute.capacity.executableUsd)}${
-              primaryRoute.capacity.completionRatio < 1
-                ? ` of ${compactUsd(primaryRoute.capacity.requestedNotionalUsd)}`
-                : ""
-            } at ${costLabel(primaryRoute.capacity.executionCostBps)}${
-              primaryRoute.capacity.settlementDelaySec === 0
-                ? ""
-                : ` within ${formatWholeUnitDurationSeconds(primaryRoute.capacity.settlementDelaySec, { minUnit: "minute" })}`
-            }`,
+        capacityLine: selectedExitCapacityLine(primaryRoute.capacity),
       };
 
   return {

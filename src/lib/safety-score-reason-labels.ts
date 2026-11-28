@@ -1,4 +1,5 @@
 import { SAFETY_SCORE_GAP_CAUSE_LABELS } from "@shared/lib/classification";
+import type { SafetyScoreExitPayoutAssets } from "@shared/types/safety-score-v9-public-breakdowns";
 import type { V9QualityPillar } from "@shared/types/safety-score-v9";
 import type { V9LocalAuthorityExposure } from "@shared/types/safety-score-v9-public";
 import { normalizeChain, prettifyProtocol } from "@/lib/dex-display-constants";
@@ -24,6 +25,10 @@ export function formatLocalAuthorityExposure(exposure: V9LocalAuthorityExposure)
   const coverage = exposure.coveredShare === null ? "across overlapping deployments"
     : `on ${formatLocalAuthorityShare(exposure.coveredShare)} of supply`;
   return `Local admins: ${uniform ? "" : "as low as "}${Number(exposure.worstQuality.toFixed(1))} ${coverage}, priced in the score rather than this Control number.`;
+}
+
+export function describeExitPayout(assets: SafetyScoreExitPayoutAssets | null | undefined): string {
+  return assets?.map((asset) => asset.symbol ?? asset.key.replace(/^fiat:/, "")).join(" + ") ?? "Payout unavailable";
 }
 
 /**

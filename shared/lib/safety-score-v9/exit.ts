@@ -63,6 +63,7 @@ export interface V9ExitCapacityPoint {
 }
 
 export interface V9ExitEvaluationRoute {
+  retainsInputExposure?: true;
   routeSuspension?: RedemptionRouteSuspension;
   status?: V9FactStatusV2;
   factorStatuses?: V9ExitRouteFactV2["factorStatuses"];
@@ -113,6 +114,8 @@ export interface V9ExitRouteTrace {
   confidenceDimensions: V9ConfidenceDimensions | null;
   capacityEvidenceTier: ExitRouteCapacityEvidenceTier;
   rawSameNotionalCostBps: number | null;
+  inputCapacityUsd?: number;
+  costEvidence?: "measured" | "upper-bound";
   supportedComponentCeiling: number | null;
   factorContributions?: Readonly<Record<string, V9CauseContribution>>;
   routeKey: string;
@@ -413,7 +416,7 @@ function routeExclusionReason(route: V9ExitEvaluationRoute, envelope: V9Validate
   // Missing/stale capacity backed by A/B remains diagnostic. Relief is not
   // admission, even when adjacent output or settlement metadata is incomplete.
   if (route.observationState !== "known" && routeCause(route).excluded) return "missing-runtime-route-evidence";
-  if (route.applicability === "unresolved") return "missing-same-notional-route";
+  if (route.applicability === "unresolved" || route.retainsInputExposure) return "missing-same-notional-route";
   if (route.executionModelId && (!route.executionCertificate || !route.scoreEligible || route.observationState !== "known")) {
     return "unsupported-same-notional-route";
   }
@@ -870,6 +873,8 @@ function evaluateRoute(
     included: true,
     exclusionReason: null,
     confidenceDimensions,
+    inputCapacityUsd: capacityPoint.executableUsd,
+    costEvidence,
     rawSameNotionalCostBps: routeCause(route, "cost").cause === null && !hasUnquantifiedFee(route) ? capacityPoint.executionCostBps : null,
     supportedComponentCeiling: totalWeight > 0 ? weightedScore / totalWeight : null,
     factorContributions,
@@ -1005,6 +1010,7 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
     minRedeemUsd: route.minRedeemUsd ?? null,
     execution: mapExecution(route),
     outputQuality: mapOutputQuality(route),
+    ...(route.retainsInputExposure ? { retainsInputExposure: true } : {}),
     outputResolved: isV9ExitRouteOutputResolved(route.output),
     outputValueRetention: Math.min(1, route.output.valuation?.valueRetentionRatio ?? 0),
     ...(route.output.unboundedDeliveryCap !== undefined ? { unboundedDeliveryCap: route.output.unboundedDeliveryCap } : {}),

@@ -492,6 +492,8 @@ const ExitRouteObservationBaseSchema = z.object({
   completionRatio: z.number().finite().min(0).max(1),
   output: ExitRouteOutputSchema,
   evidenceKind: ExitRouteEvidenceKindSchema,
+  /** Reserve simulator capability used for historical comparisons. */
+  reserveModelId: z.string().min(1).optional(),
   /** Exact measured-adapter identity when a DEX observation came from a reviewed runtime adapter. */
   adapterProfileId: z.string().min(1).optional(),
   /** Reviewed fee disclosure without a same-notional execution cost bound. */

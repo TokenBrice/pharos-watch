@@ -530,6 +530,12 @@ describe("P4 DEX exit route observations", () => {
     });
     expect(isDexExitRouteCoverageComplete(strictComplete)).toBe(true);
     expect(isDexExitRouteCoverageWithinRouteBudget(strictComplete)).toBe(true);
+    const unknownFluidStatus = {
+      ...strictComplete, retainedPoolCount: 11, unsupportedPoolCount: 1,
+      unsupportedReasons: { "fluid-pool-identity-unverified": 1 },
+    };
+    expect(isDexExitRouteCoverageComplete(unknownFluidStatus)).toBe(false);
+    expect(isDexExitRouteCoverageWithinRouteBudget(unknownFluidStatus)).toBe(false);
 
     expect(isDexExitRouteCoverageWithinRouteBudget({
       ...overflowOnly, observationCount: 0, scoreEligibleObservationCount: 0,

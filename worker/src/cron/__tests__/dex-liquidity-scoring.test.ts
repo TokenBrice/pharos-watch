@@ -31,6 +31,8 @@ vi.mock("../../lib/db", async (importOriginal) => {
 });
 
 import { batchExecute } from "../../lib/db";
+import { buildDexPriceObservationsFromRetainedPools } from "../dex-liquidity/scoring-helpers";
+import type { FluidSwapStatus } from "@shared/types/dex-liquidity";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import { CURVE_R3_METAPOOL_POLICIES, CURVE_USD1_METAPOOL_POLICY } from "@shared/lib/curve-composite-policies";
@@ -244,6 +246,46 @@ describe("dex-liquidity scoring", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
+  });
+
+  it("preserves gross Fluid inventory and volumes while scoring only usable swaps", async () => {
+    const address = "0x97f32e5091d0e6aee24beb398e6592ae111dee9c";
+    const clock = { poolAddress: address, checkedAtSec: SCORING_CLOCK_SEC - 10, maxAgeSec: 3600 };
+    const paused: FluidSwapStatus = { ...clock, status: "paused", reason: "fluid-swaps-paused" };
+    const active: FluidSwapStatus = { ...clock, status: "active", reason: "fluid-swaps-active" };
+    const fluid = (fluidSwapStatus?: FluidSwapStatus) => makePool({ project: "fluid", poolType: "fluid-dex", source: "dl",
+      poolId: "ethereum:defillama:e3a3baab-c962-525b-a9a7-231325714c8b", price: 1, tvlUsd: 2_593_517,
+      volumeUsd1d: 0, volumeUsd7d: 2_770_982,
+      extra: { effectiveTvl: 2_204_489, qualityAdjustedTvl: 2_204_489, balanceRatio: 1, stressIndex: 0, fluidSwapStatus } });
+    const other = () => makePool({ poolId: "other", tvlUsd: 60_000, price: 0.998, volumeUsd1d: 61_000,
+      extra: { effectiveTvl: 5_000, balanceRatio: 0.23, stressIndex: 85 } });
+    const score = (pools: PoolEntry[]) => scoreOne("trusd-tori", "trUSD", withReadings(pools), { nowSec: SCORING_CLOCK_SEC });
+    const before = await score([other()]);
+    const result = await score([other(), fluid(paused)]);
+    const value = result.scores.get("trusd-tori")!;
+    expect(value).toMatchObject({ tvl: 2_653_517, effectiveTvl: 5_000, vol24h: 61_000,
+      effectiveDepth: { coverage: "complete", amountUsd: 5_000, pausedPoolCount: 1, unknownPoolCount: 0 },
+      components: before.scores.get("trusd-tori")!.components, weightedBalanceRatio: 0.23, avgStress: 85,
+      exitRouteObservationCoverage: { unsupportedReasons: { "fluid-swaps-paused": 1 } } });
+    const retained = result.retainedPoolsByStablecoin.get("trusd-tori")!;
+    expect(retained[1]).toMatchObject({ volumeUsd7d: 2_770_982, extra: { effectiveTvl: 0 } });
+    expect(buildDexPriceObservationsFromRetainedPools(result.retainedPoolsByStablecoin, new Map([["trusd-tori", [{
+      protocol: "fluid", chain: "ethereum", price: 1, tvl: 2_593_517, poolKey: retained[1]!.poolId,
+      identityConfidence: "exact", sourceFamily: "direct_api",
+    }, {
+      protocol: "cg-ticker-fluid-ethereum", chain: "orderbook", price: 1, tvl: 0,
+      observedVolumeUsd: 10_000_000, sourceFamily: "cg_tickers",
+    }]]]), true, SCORING_CLOCK_SEC).get("trusd-tori")?.map((row) => row.protocol)).toEqual(["balancer-v3"]);
+    const stale = fluid({ ...active, checkedAtSec: SCORING_CLOCK_SEC - 3600 });
+    const partial = (await score([other(), stale])).scores.get("trusd-tori")!;
+    expect(partial.effectiveDepth).toMatchObject({ amountUsd: 5_000, coverage: "partial", unknownPoolCount: 1 });
+    expect(stale.extra).not.toHaveProperty("effectiveTvl");
+    expect(stale.extra?.fluidSwapStatus?.reason).toBe("fluid-swap-state-expired");
+    expect((await score([fluid()])).scores.get("trusd-tori")).toMatchObject({ score: null,
+      effectiveDepth: { coverage: "unavailable", amountUsd: null } });
+    expect((await score([fluid(paused)])).scores.get("trusd-tori")).toMatchObject({ score: 0,
+      effectiveDepth: { coverage: "complete", amountUsd: 0 } });
+    expect((await score([fluid(active)])).scores.get("trusd-tori")!.effectiveTvl).toBe(2_204_489);
   });
 
   it("retains original price clocks while scoring a mixed-age pool graph", async () => {

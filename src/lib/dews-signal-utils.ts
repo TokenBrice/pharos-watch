@@ -4,7 +4,27 @@ import {
   DEWS_SIGNAL_WEIGHTS,
   type DewsSignalKey,
 } from "@shared/lib/dews-config";
-import type { StressSignalEntry } from "@shared/types/stress";
+import { formatSignedPercent } from "@shared/lib/format";
+import type { StressSignalEntry, TvlComparisonUnavailableReason } from "@shared/types/stress";
+
+const TVL_COMPARISON_REASON: Record<TvlComparisonUnavailableReason, string> = {
+  "current-tvl-clock-unavailable": "current TVL observation time unavailable",
+  "tvl-methodology-unavailable": "TVL methodology unavailable",
+  "methodology-basis-change": "TVL measurement basis changed",
+  "weekly-tvl-observation-unavailable": "no comparable weekly TVL observation",
+};
+
+export function describeLiquidityErosionInputs(signal: StressSignalEntry["signals"][string]): string {
+  const { componentCoverage, scoreDelta7d, tvlDelta7d, liquidityScore, liquidityScore7dAgo } = signal;
+  const delta = (value: unknown) => formatSignedPercent(typeof value === "number" ? value : null, 1, "unavailable");
+  const scores = typeof liquidityScore === "number" && typeof liquidityScore7dAgo === "number"
+    ? ` (${liquidityScore7dAgo} → ${liquidityScore})` : "";
+  const tvl = tvlDelta7d == null && signal.tvlDelta7dUnavailableReason
+    ? `unavailable (${TVL_COMPARISON_REASON[signal.tvlDelta7dUnavailableReason]})` : delta(tvlDelta7d);
+  const coverage = componentCoverage === 0 || componentCoverage === 0.5 || componentCoverage === 1
+    ? `${componentCoverage * 2} of 2 inputs` : "input coverage unknown";
+  return `7d score change ${delta(scoreDelta7d)}${scores} · 7d TVL change ${tvl} · ${coverage}`;
+}
 
 export interface DewsContributor {
   key: string;

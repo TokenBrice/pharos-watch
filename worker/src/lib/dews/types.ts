@@ -9,6 +9,7 @@
 import type { DewsSignalKey } from "@shared/lib/dews-config";
 import type { MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
+import type { TvlComparisonUnavailableReason } from "@shared/types/stress";
 import type { ReferenceAdmission } from "@shared/types/reference-admission";
 
 export interface DewsReferenceDivergence {
@@ -65,6 +66,9 @@ export interface SignalResult {
   smoothing?: PoolSmoothingOutcome;
   scoreDelta7d?: number | null;
   tvlDelta7d?: number | null;
+  tvlDelta7dUnavailableReason?: TvlComparisonUnavailableReason;
+  liquidityScore?: number;
+  liquidityScore7dAgo?: number;
   confidence?: string | null;
   spreadBps?: number;
   primaryDevBps?: number;
@@ -117,6 +121,7 @@ export interface DEWSInput {
   liquidityScore7dAgo: number | null;
   tvlCurrent: number | null;
   tvl7dAgo: number | null;
+  tvlDelta7dUnavailableReason?: TvlComparisonUnavailableReason;
   priceConfidence: string | null;
   prevPriceConfidence: string | null;
   /** Observed primary quote for confidence, even when its unit is ineligible for parity. */
@@ -201,7 +206,7 @@ export type HistoricalDEWSInput = Pick<DEWSInput,
   | "circulatingCurrent" | "circulatingPrevDay" | "circulatingPrevWeek"
   | "legacySupplyUsd"
   | "circulatingPrevDayAvailable" | "circulatingPrevWeekAvailable"
-  | "liquidityScore" | "liquidityScore7dAgo" | "tvlCurrent" | "tvl7dAgo"
+  | "liquidityScore" | "liquidityScore7dAgo" | "tvlCurrent" | "tvl7dAgo" | "tvlDelta7dUnavailableReason"
 >;
 
 export type DewsInsufficientEvidenceReason =

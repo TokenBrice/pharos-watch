@@ -22,6 +22,7 @@ import {
   formatSignedCurrency,
   formatSignedPercent,
 } from "@shared/lib/format";
+import { formatEffectiveLiquidity } from "@/lib/liquidity-coverage";
 import { formatPegOccupancy } from "@shared/lib/peg-format";
 import { GENIUS_STATUS_SHORT_LABELS } from "@shared/lib/genius";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
@@ -576,7 +577,11 @@ function buildSections(): ComparisonSection[] {
       shortLabel: "Exit & Liquidity",
       description: "Venue depth and the primary redemption route are shown separately, not blended.",
       metrics: [
-        { key: "effective-tvl", label: "Effective DEX TVL", numeric: true, render: (coin) => coin.liquidity ? formatCurrency(coin.liquidity.effectiveTvlUsd) : NULL_VALUE, compareValue: (coin) => coin.liquidity ? formatCurrency(coin.liquidity.effectiveTvlUsd) : NULL_KEY },
+        {
+          key: "effective-tvl", label: "Effective DEX TVL", numeric: true,
+          render: (coin) => coin.liquidity ? formatEffectiveLiquidity(coin.liquidity) ?? NULL_VALUE : NULL_VALUE,
+          compareValue: (coin) => coin.liquidity ? formatEffectiveLiquidity(coin.liquidity) ?? NULL_KEY : NULL_KEY,
+        },
         { key: "volume-24h", label: "DEX volume · 24h", numeric: true, render: (coin) => coin.liquidity?.totalVolume24hUsd != null ? formatCurrency(coin.liquidity.totalVolume24hUsd) : NULL_VALUE, compareValue: (coin) => coin.liquidity?.totalVolume24hUsd != null ? formatCurrency(coin.liquidity.totalVolume24hUsd) : NULL_KEY },
         { key: "venues", label: "Pools / chains", numeric: true, render: (coin) => coin.liquidity ? `${coin.liquidity.poolCount} / ${coin.liquidity.chainCount}` : NULL_VALUE, compareValue: (coin) => coin.liquidity ? `${coin.liquidity.poolCount}/${coin.liquidity.chainCount}` : NULL_KEY },
         { key: "dex-evidence", label: "Liquidity evidence", render: (coin) => humanize(coin.liquidity?.liquidityEvidenceClass), compareValue: (coin) => humanizeText(coin.liquidity?.liquidityEvidenceClass) ?? NULL_KEY },

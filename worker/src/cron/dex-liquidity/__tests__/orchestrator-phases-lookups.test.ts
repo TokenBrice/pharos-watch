@@ -116,6 +116,17 @@ describe("loadTrackedStablecoinMaps", () => {
       : undefined);
   });
 
+  it("retains physical dependencies of the trUSD primary price only for Curve pool execution", async () => {
+    const asset = makeAsset({ id: "trusd-tori", price: 0.997, priceSource: "coingecko+curve-onchain",
+      agreeSources: ["coingecko", "curve-onchain"], priceConfidence: "high" });
+    loadStablecoinsCache.mockResolvedValue({ kind: "ok", updatedAt: NOW_SEC, payload: { peggedAssets: [asset] } });
+    const { stablecoinPriceById } = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
+    expect(stablecoinPriceById.marketMarks?.has(asset.id)).toBe(false);
+    expect(stablecoinPriceById.curveExecutionMarks?.get(asset.id)?.upstreamKeys).toContain(
+      "ethereum:0xd1d954bc94c843815ec7b8119f2de00af27fa6ff",
+    );
+  });
+
   it("values a closed-session leg by a local-fetch consensus only when it is multi-source", async () => {
     const at = Date.parse("2026-11-14T01:00:00Z") / 1000;
     const quote = computePriceConsensus([

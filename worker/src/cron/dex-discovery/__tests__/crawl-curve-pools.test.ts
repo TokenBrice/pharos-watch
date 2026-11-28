@@ -22,7 +22,7 @@ describe("Curve discovery pool fetching", () => {
   });
 
   it("serializes larger census responses while preserving chain order", async () => {
-    const chains = [...CURVE_NATIVE_DISCOVERY_CHAINS].slice(0, 5);
+    const chains = [...CURVE_NATIVE_DISCOVERY_CHAINS].slice(0, 4).concat("monad");
     let activeRequests = 0;
     let maxActiveRequests = 0;
     const requestOrder: string[] = [];
@@ -50,6 +50,7 @@ describe("Curve discovery pool fetching", () => {
       }),
     });
 
+    expect(vi.mocked(fetchJsonWithRetry).mock.calls.map(([url]) => String(url))).toContain("https://api-core.curve.finance/v1/getPools/all/monad");
     expect(maxActiveRequests).toBe(1);
     expect(requestOrder.slice(0, 2)).toEqual(chains.slice(0, 2));
     expect(result.providerChecks.map((check) => check.chain)).toEqual(chains);

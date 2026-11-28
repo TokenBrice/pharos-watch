@@ -250,17 +250,8 @@ function publicExitHolderEligibility(
 
 export function publicDisplayMetadata(
   asset: CompiledV9FactSetV3["assets"][number],
-): {
-  labels: Record<string, string>;
-  exitHolderEligibility: Record<string, V9ExitHolderEligibility>;
-  exitRouteDetails: Record<string, {
-    chain: string | null;
-    protocol: string | null;
-    poolId: string | null;
-    evidenceKind: string;
-    observedAtSec: number | null;
-  }>;
-} {
+  metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
+) {
   const labels: Record<string, string> = {
     mint: "Native mint authority",
     "mint:binding": "Native mint authority",
@@ -339,9 +330,23 @@ export function publicDisplayMetadata(
       const evidence = routeEvidence ?? route.status.evidenceRefIds
         .map((evidenceId) => evidenceById.get(evidenceId))
         .find((item) => item !== undefined);
+      const conversionPoint = route.retainsInputExposure && route.coverageClass !== "diagnostic" && route.status.observationState === "known" &&
+        route.output.status.observationState === "known" && route.request
+        ? route.capacityCurve.find((point) => point.requestedNotionalUsd === route.request!.requestedNotionalUsd &&
+            point.maxCostBps === route.request!.maxCostBps)
+        : undefined;
       return [
         route.routeKey,
         {
+          payoutAssets: route.output.assetKeys.length === 0 ? null : route.output.assetKeys.map((key) => {
+            const symbol = metaById.get(key)?.symbol;
+            return symbol ? { key, symbol } : { key };
+          }),
+          ...(route.retainsInputExposure ? { conversion: {
+            evidenceKind: route.evidenceKind,
+            inputCapacityUsd: conversionPoint?.executableUsd ?? null,
+            maxCostBps: conversionPoint?.maxCostBps ?? null,
+          } } : {}),
           chain,
           protocol,
           poolId: scopedPool?.slice(scopedPool.indexOf(":") + 1) ?? null,
@@ -661,15 +666,15 @@ export function projectV9PublicationAssetFacts(
   asset: CompiledV9FactSetV3["assets"][number],
   factSet: Pick<CompiledV9FactSetV3, "sourceFingerprints">,
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
-  meta: V9ExtensionRegistryMeta | undefined,
+  metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
   reserveRejections: ReadonlyMap<string, V9ReserveCompositionAdmission> | undefined,
 ) {
   return {
-    display: publicDisplayMetadata(asset),
+    display: publicDisplayMetadata(asset, metaById),
     backingFromLiveReserves: asset.reserveExposures.some((exposure) => exposure.provenance === "live"),
     dexObservedAtSec: fixedInput.dexLiqMap[asset.assetId]?.updatedAt ?? null,
     dependencyMetadata: {
-      ...publicDependencyMetadata(asset, factSet, fixedInput, meta),
+      ...publicDependencyMetadata(asset, factSet, fixedInput, metaById.get(asset.assetId)),
       reserveCompositionAdmission: reserveRejections?.has(asset.assetId) && asset.gaps.some((gap) =>
         (gap.reasonCode === "missing-reserve-composition" || gap.reasonCode === "expired-reviewed-reserve-composition") &&
         asset.reserveStatus.gapIds.includes(gap.gapId))
@@ -690,7 +695,7 @@ function projectCandidatePublicationFacts(
   const dexObservedAtSec = new Map<string, number>();
   const metaById = input.registry?.metaById ?? ACTIVE_META_BY_ID;
   for (const asset of factSet.assets) {
-    const projected = projectV9PublicationAssetFacts(asset, factSet, input.fixedInput, metaById.get(asset.assetId), reserveRejections);
+    const projected = projectV9PublicationAssetFacts(asset, factSet, input.fixedInput, metaById, reserveRejections);
     displayByAssetId.set(asset.assetId, projected.display);
     if (projected.backingFromLiveReserves) scoreGradeLiveReserveIds.add(asset.assetId);
     dependencyMetadataByAssetId.set(asset.assetId, projected.dependencyMetadata);

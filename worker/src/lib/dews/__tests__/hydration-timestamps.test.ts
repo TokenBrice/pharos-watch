@@ -33,8 +33,12 @@ afterEach(() => vi.useRealTimers());
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
+function hydrationDefaults(nowSec = RUN_AT) {
+  return { nowSec, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() };
+}
+
 const hydrateFlow = (db: D1Database, nowSec = RUN_AT) =>
-  hydrateMintBurn({ db, nowSec, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() });
+  hydrateMintBurn({ db, ...hydrationDefaults(nowSec) });
 
 function nativeHistoryDb(rows: [string, number, number][]) {
   return mockD1([{ match: "pharos:dews:native-supply-history", rows: rows.map(([stablecoin_id, snapshot_date, circulating_native]) => ({
@@ -89,7 +93,7 @@ describe("DEWS hydration timestamp admission", () => {
         if (state === "debt") sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES ('usdt-tether', 'ethereum', ?)").run(end - 3600);
         if (state === "unpriced") sqlite.exec("UPDATE mint_burn_hourly SET burn_unpriced_event_count = 1");
         if (state === "unresolved") sqlite.exec("UPDATE mint_burn_hourly SET burn_unresolved_event_count = 1");
-        const result = await hydrateMintBurn({ db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() });
+        const result = await hydrateFlow(db);
         const snapshot = result.mintBurnMap.get("usdt-tether");
         if (["ethereum", "tron", "unpriced"].includes(state)) {
           expect(snapshot).toMatchObject({ scope: "partial-admitted-chains", chainIds: [chainId], burn24h: 700000,
@@ -148,7 +152,7 @@ describe("DEWS hydration timestamp admission", () => {
         if (state === "scope-missing-new") {
           MINT_BURN_CONFIGS[configIndex] = { ...originalConfig, contractAddress: "0x9999999999999999999999999999999999999999" };
         }
-        const hydrated = await hydrateMintBurn({ db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() });
+        const hydrated = await hydrateFlow(db);
         const snapshot = hydrated.mintBurnMap.get("usdt-tether");
         if (state === "quiet" || state === "eventful" || state === "compact" || state === "scope-missing") {
           const burn = state === "compact" ? 100_000_000 : state === "quiet" ? 0 : 700_000;
@@ -374,8 +378,7 @@ describe("DEWS hydration timestamp admission", () => {
           kind: "fx", generation, observation: { pegKey, source, cadence: "intraday", usdPerUnit: 1.1, observedAtSec: clock },
           repricing: { source, sessionOpenedAtSec: session, preCloseUsdPerUnit: 1.2 },
         } } }), clock);
-      const result = await assembleDewsScoringInput({ db, nowSec: RUN_AT, registerSourceFailure: vi.fn(),
-        registerMalformedPersistedInput: vi.fn() });
+      const result = await assembleDewsScoringInput({ db, ...hydrationDefaults() });
       expect(result.kind).toBe("ok");
       if (result.kind !== "ok") continue;
       const selection = result.sourceState.references?.get(pegKey);
@@ -390,14 +393,13 @@ describe("DEWS hydration timestamp admission", () => {
 
   it.each([["fresh", false], ["stale", true], ["unknown", false], [undefined, false]] as const)(
     "uses the selected row's %s cadence verdict independently of a seven-hour raw age", async (sourceFreshness, overdue) => {
-      vi.useFakeTimers();
-      vi.setSystemTime(RUN_AT * 1000);
+      vi.useFakeTimers({ now: RUN_AT * 1000 });
       const state = await hydrateYieldRankingsCache({
         db: mockD1([{ match: "pharos:dews:yield-rankings-cache", rows: [], first: {
           updated_at: RUN_AT, value: JSON.stringify({ rankings: [{ id: "a7a5-a7a5",
             provenance: { sourceFreshness }, sourceRisk: { sourceAgeSeconds: 7 * 3600 } }] }),
         } }]),
-        nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
+        ...hydrationDefaults(),
       });
       const signal = computeYieldSignal(makeDewsInput({ yieldSourceRisk: state.yieldSourceRisk.get("a7a5-a7a5"),
         yieldSourceOverdue: state.overdueSourceIds?.has("a7a5-a7a5") }));
@@ -417,8 +419,7 @@ describe("DEWS hydration timestamp admission", () => {
     ["invalid", Number.POSITIVE_INFINITY, 0, "invalid-timestamp"],
     ["missing", null, 0, "missing-timestamp"],
   ] as const)("holds inadmissible %s yield clocks without discarding readable diagnostics", async (_label, updatedAt, readOffset, reason) => {
-    vi.useFakeTimers();
-    vi.setSystemTime((RUN_AT + readOffset) * 1000);
+    vi.useFakeTimers({ now: (RUN_AT + readOffset) * 1000 });
     const registerSourceFailure = vi.fn();
     const hydrated = await hydrateYieldRankingsCache({
       db: mockD1([{ match: "pharos:dews:yield-rankings-cache", rows: [], first: {
@@ -428,7 +429,7 @@ describe("DEWS hydration timestamp admission", () => {
           rankChangeAttribution: { rankDelta: -5, primaryDriver: "source-risk" },
         }] }),
       } }]),
-      nowSec: RUN_AT, registerSourceFailure, registerMalformedPersistedInput: vi.fn(),
+      ...hydrationDefaults(), registerSourceFailure,
     });
     expect(hydrated.yieldSourceRisk.get("usdt-tether")?.rewardShare).toBe(0.9);
     expect(hydrated.yieldRankChangeAttribution.get("usdt-tether")).toMatchObject({
@@ -447,14 +448,13 @@ describe("DEWS hydration timestamp admission", () => {
     ["retained", RUN_AT - YIELD_BUDGET_SEC - 1, YIELD_BUDGET_SEC + 1, true, "retained-last-good"],
     ["stale", RUN_AT - DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC - 1, null, false, "stale-generation"],
   ] as const)("names the %s yield-rankings generation, age and retention budget", async (_label, updatedAt, ageSec, retained, reason) => {
-    vi.useFakeTimers();
-    vi.setSystemTime(RUN_AT * 1000);
+    vi.useFakeTimers({ now: RUN_AT * 1000 });
     const hydrated = await hydrateYieldRankingsCache({
       db: mockD1([{ match: "pharos:dews:yield-rankings-cache", rows: [], first: {
         updated_at: updatedAt,
         value: JSON.stringify({ rankings: [{ id: "usdt-tether", sourceRisk: { rewardShare: 0.9 } }] }),
       } }]),
-      nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
+      ...hydrationDefaults(),
     });
     expect(hydrated.yieldRankingsAgeSec).toBe(ageSec);
     expect(hydrated.yieldRankingsRetained).toBe(retained);
@@ -478,7 +478,7 @@ describe("DEWS hydration timestamp admission", () => {
     const registerSourceFailure = vi.fn();
     const hydrated = await hydrateLatestPsiScore({
       db: mockD1([{ match: "stability_index_samples", rows: [], first: storedAt == null ? null : { score: 0, stored_at: storedAt } }]),
-      nowSec: RUN_AT, registerSourceFailure, registerMalformedPersistedInput: vi.fn(),
+      ...hydrationDefaults(), registerSourceFailure,
     });
     expect(hydrated.latestPsiScore).toBe(reason == null ? 0 : null);
     expect(hydrated.dependencyDiagnostics).toMatchObject({
@@ -489,8 +489,7 @@ describe("DEWS hydration timestamp admission", () => {
     expect(scored?.amplifiers.psi).toBe(reason == null ? 1.3 : 1);
   });
   it("admits an overlapping publication but excludes clocks beyond read-time skew", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime((RUN_AT + 120) * 1000);
+    vi.useFakeTimers({ now: (RUN_AT + 120) * 1000 });
     const row = (stablecoin_id: string, updated_at: number) => ({
       stablecoin_id, updated_at, weighted_balance_ratio: 0.9, avg_pool_stress: 0,
       top_pools_json: "[]", liquidity_score: 80, total_tvl_usd: 1_000_000,
@@ -502,7 +501,7 @@ describe("DEWS hydration timestamp admission", () => {
       { match: "FROM dex_liquidity_publication_generations", rows: [], first: null },
     ]);
     const hydrated = await hydrateDexLiquidity({
-      db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
+      db, ...hydrationDefaults(),
     });
     expect([...hydrated.dexLiqMap.keys()]).toEqual(["overlap", "allowed"]);
     expect([...hydrated.dexLiqStaleIds]).toEqual(["future"]);
@@ -520,9 +519,12 @@ describe("DEWS hydration timestamp admission", () => {
       { stablecoin_id: "test", snapshot_date: target - distance, liquidity_score: 73, total_tvl_usd: tvl, coverage_confidence: confidence, methodology_version: null },
       { stablecoin_id: "test", snapshot_date: target, liquidity_score: 99, total_tvl_usd: 1000, coverage_confidence: 0.49, methodology_version: null },
     ] }]);
-    const hydrated = await hydrateDexLiquidityHistory({ db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() },
+    const hydrated = await hydrateDexLiquidityHistory({ db, ...hydrationDefaults() },
       new Map([["test", makeDexLiquidityRow({ stablecoin_id: "test" })]]));
-    expect(hydrated.liqHist7dMap.get("test")).toEqual(admitted ? { score: 73, tvl: null, date: target - distance } : undefined);
+    expect(hydrated.liqHist7dMap.get("test")).toEqual({
+      score: admitted ? 73 : null, tvl: null, date: admitted ? target - distance : null,
+      tvlDelta7dUnavailableReason: "current-tvl-clock-unavailable",
+    });
     expect(db.getHistory()[0].binds).toEqual([RUN_AT - 8.5 * 86400]);
     expect(db.getHistory()[0].sql).toContain("coverage_confidence");
   });
@@ -533,34 +535,38 @@ describe("DEWS hydration timestamp admission", () => {
       sqlite.exec(`INSERT INTO dex_liquidity_history
         (stablecoin_id,snapshot_date,liquidity_score,total_tvl_usd,coverage_confidence)
         VALUES ('daily',1727308800,80,100,0.5),('old',1727308799,80,100,0.5)`);
-      const hydrated = await hydrateDexLiquidityHistory({ db, nowSec: 1728043200, registerSourceFailure: vi.fn(),
-        registerMalformedPersistedInput: vi.fn() }, new Map(["daily", "old"].map(id =>
+      const hydrated = await hydrateDexLiquidityHistory({ db, ...hydrationDefaults(1728043200) }, new Map(["daily", "old"].map(id =>
         [id, makeDexLiquidityRow({ stablecoin_id: id })])));
       expect(hydrated.liqHistRowsRead).toBe(1);
-      expect([...hydrated.liqHist7dMap]).toEqual([["daily", { score: 80, tvl: null, date: 1727308800 }]]);
+      expect(hydrated.liqHist7dMap.get("daily")).toEqual({
+        score: 80, tvl: null, date: 1727308800, tvlDelta7dUnavailableReason: "current-tvl-clock-unavailable",
+      });
+      expect(hydrated.liqHist7dMap.get("old")).toMatchObject({ date: null, score: null, tvl: null });
     } finally { sqlite.close(); }
   });
 
   it.each([
+    ["7.56", "7.53", null],
     ["6.95", "6.92", null],
     ["6.95", "6.94", 100],
     ["6.92", "6.92", 100],
     ["3.2", "3.1", 100],
   ] as const)("hydrates history against the stored current version %s, not runtime (%s)", async (current, historical, tvl) => {
-    vi.useFakeTimers();
-    vi.setSystemTime(RUN_AT * 1000);
+    vi.useFakeTimers({ now: RUN_AT * 1000 });
     const { sqlite, db } = createLatestSchemaSqlite();
     const date = RUN_AT - 7 * 86400;
     try {
       sqlite.prepare("INSERT INTO dex_liquidity (stablecoin_id, symbol, total_tvl_usd, liquidity_score, updated_at, methodology_version, volume_availability_json) VALUES ('usdt-tether', 'USDT', 200, 80, ?, ?, ?)")
-        .run(RUN_AT, current, dexClock(RUN_AT - 1800));
+        .run(RUN_AT - 120, current, dexClock(RUN_AT - 9));
       sqlite.prepare("INSERT INTO dex_liquidity_history (stablecoin_id, total_tvl_usd, liquidity_score, snapshot_date, coverage_class, coverage_confidence, methodology_version, volume_availability_json) VALUES ('usdt-tether', 100, 73, ?, 'primary', 0.9, ?, ?)")
         .run(date, historical, dexClock(date - 1800));
       const hydrated = await loadDewsSourceState({
-        db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
+        db, ...hydrationDefaults(),
       });
       expect(hydrated.dexLiquidity.dexLiqMap.get("usdt-tether")?.methodology_version).toBe(current);
-      expect(hydrated.liquidityHistory.liqHist7dMap.get("usdt-tether")).toEqual({ score: 73, tvl, date });
+      expect(hydrated.liquidityHistory.liqHist7dMap.get("usdt-tether")).toEqual({
+        score: 73, tvl, date, ...(tvl === null ? { tvlDelta7dUnavailableReason: "methodology-basis-change" } : {}),
+      });
     } finally {
       sqlite.close();
     }
@@ -576,10 +582,11 @@ describe("DEWS hydration timestamp admission", () => {
       if (identity === "omitted-history") Reflect.deleteProperty(history, "methodology_version");
       const hydrated = await hydrateDexLiquidityHistory({
         db: mockD1([{ match: "FROM dex_liquidity_history", rows: [history] }]),
-        nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
+        ...hydrationDefaults(),
       }, identity === "absent-current" ? new Map() : new Map([["usdt-tether", current]]));
       expect(hydrated.liqHist7dMap.get("usdt-tether")).toEqual({
         score: 73, tvl: null, date: history.snapshot_date,
+        ...(identity === "absent-current" ? {} : { tvlDelta7dUnavailableReason: "current-tvl-clock-unavailable" }),
       });
     },
   );
@@ -589,15 +596,20 @@ describe("DEWS hydration timestamp admission", () => {
     const date = RUN_AT - 7 * 86400;
     const observation = { stablecoin_id: "usdt-tether", liquidity_score: 80, coverage_class: "primary",
       coverage_confidence: 0.9, methodology_version: "6.95" };
-    const hydrated = await hydrateDexLiquidityHistory({
-      db: mockD1([{ match: "FROM dex_liquidity_history", rows: [
-        { ...observation, snapshot_date: date, total_tvl_usd: 1000 },
-        { ...observation, snapshot_date: date - 86400, total_tvl_usd: 200, volume_availability_json: dexClock(date - 3600) },
-        { ...observation, snapshot_date: date - 2 * 86400, total_tvl_usd: 500, volume_availability_json: dexClock(capture + 1) },
-      ] }]), nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
-    }, new Map([["usdt-tether", makeDexLiquidityRow({ updated_at: RUN_AT, methodology_version: "6.95",
-      volume_availability_json: dexClock(capture) })]]));
-    expect(hydrated.liqHist7dMap.get("usdt-tether")).toEqual({ score: 80, tvl: 200, date });
+    const rows = [
+      { ...observation, snapshot_date: date, total_tvl_usd: 1000 },
+      { ...observation, snapshot_date: date - 86400, total_tvl_usd: 200, volume_availability_json: dexClock(date - 3600) },
+      { ...observation, snapshot_date: date - 2 * 86400, total_tvl_usd: 500, volume_availability_json: dexClock(capture + 1) },
+    ];
+    const hydrate = (currentCapture: number) => hydrateDexLiquidityHistory({
+      db: mockD1([{ match: "FROM dex_liquidity_history", rows }]),
+      ...hydrationDefaults(),
+    }, new Map([["usdt-tether", makeDexLiquidityRow({ updated_at: capture - 111, methodology_version: "6.95",
+      volume_availability_json: dexClock(currentCapture) })]]));
+    expect((await hydrate(capture)).liqHist7dMap.get("usdt-tether")).toEqual({ score: 80, tvl: 200, date });
+    expect((await hydrate(RUN_AT + 1)).liqHist7dMap.get("usdt-tether")).toEqual({
+      score: 80, tvl: null, date, tvlDelta7dUnavailableReason: "current-tvl-clock-unavailable",
+    });
   });
 
   it("hydrates only trusted fresh dex prices and never turns a failed read into a zero count", async () => {
@@ -618,7 +630,7 @@ describe("DEWS hydration timestamp admission", () => {
               protocol, price: 0.98, tvl, observedAt: RUN_AT - Number(sourceAge), aggregateObservedAt: age == null ? null : RUN_AT - age }))),
       })) }]);
     const hydrated = await hydrateDexPrices({
-      db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput,
+      db, ...hydrationDefaults(), registerMalformedPersistedInput,
     });
     expect(db.getHistory()[0].sql).toContain("price_sources_json");
     expect(registerMalformedPersistedInput.mock.calls.map(([row]) => [row.stablecoinId, row.reason, row.degradesRun]))
@@ -641,7 +653,7 @@ describe("DEWS hydration timestamp admission", () => {
     const registerSourceFailure = vi.fn();
     const failed = await hydrateDexPrices({
       db: mockD1([{ match: "FROM dex_prices", rows: [], throwError: new Error("dex_prices read failed") }]),
-      nowSec: RUN_AT, registerSourceFailure, registerMalformedPersistedInput: vi.fn(),
+      ...hydrationDefaults(), registerSourceFailure,
     });
     expect(registerSourceFailure).toHaveBeenCalledWith("dex-prices", expect.any(Error));
     expect(failed.staleCount).toBeNull();
@@ -655,7 +667,7 @@ describe("DEWS hydration timestamp admission", () => {
         { stablecoin_id: "usdt-tether", warning_signals: JSON.stringify(["depeg", "supply"]) },
         { stablecoin_id: "usdc-circle", warning_signals: "[1]" },
       ] }]),
-      nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput,
+      ...hydrationDefaults(), registerMalformedPersistedInput,
     });
     expect([...hydrated.yieldWarnings]).toEqual([["usdt-tether", ["depeg", "supply"]]]);
     expect(hydrated.rowsRead).toBe(2);
@@ -681,7 +693,7 @@ describe("DEWS hydration timestamp admission", () => {
       insert.run("usdc-circle", "aave-previous", "USDC", RUN_AT - 3600, "gen-old", '["yield-spike"]');
       insert.run("usdt-tether", "tracked-winner", "USDT", RUN_AT, "gen-live", '["yield-spike"]');
       const hydrated = await hydrateYieldWarnings({
-        db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
+        db, ...hydrationDefaults(),
       });
       expect([...hydrated.yieldWarnings]).toEqual([["usdt-tether", ["yield-spike"]]]);
     } finally {
@@ -690,8 +702,7 @@ describe("DEWS hydration timestamp admission", () => {
   });
 
   it("records a readable but malformed yield-rankings generation as non-degrading", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(RUN_AT * 1000);
+    vi.useFakeTimers({ now: RUN_AT * 1000 });
     const registerMalformedPersistedInput = vi.fn();
     const registerSourceFailure = vi.fn();
     const hydrated = await hydrateYieldRankingsCache({
@@ -720,7 +731,7 @@ describe("DEWS hydration timestamp admission", () => {
       insertBurnHour(sqlite, end - 25 * 3600);
       const registerSourceFailure = vi.fn();
       const hydrated = await hydrateMintBurn({
-        db, nowSec: RUN_AT, registerSourceFailure, registerMalformedPersistedInput: vi.fn(),
+        db, ...hydrationDefaults(), registerSourceFailure,
       });
       expect(hydrated.mintBurnMap.get("usdt-tether")).toMatchObject({
         burn24h: 0, burnBaseline: 700_000 / 30, baselineDays: 30,
@@ -740,7 +751,7 @@ describe("DEWS hydration timestamp admission", () => {
       insertBurnHour(sqlite, end - 3600);
       const registerSourceFailure = vi.fn();
       const hydrated = await hydrateMintBurn({
-        db, nowSec: RUN_AT, registerSourceFailure, registerMalformedPersistedInput: vi.fn(),
+        db, ...hydrationDefaults(), registerSourceFailure,
       });
       expect(hydrated.mintBurnMap.get("usdt-tether")).toMatchObject({ burn24h: 700_000 });
       expect([...hydrated.mintBurnStaleIds]).toEqual(["usdt-tether"]);

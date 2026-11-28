@@ -1,4 +1,4 @@
-import { encodeFunctionData, encodeFunctionResult, parseAbi } from "viem/utils";
+import { encodeAbiParameters, encodeFunctionData, encodeFunctionResult, parseAbi } from "viem/utils";
 import {
   getDexMeasuredExecutionProbeNotionals,
   type DexMeasuredExecutionProfile,
@@ -345,6 +345,7 @@ function encodeCurveNgFn(label: string, functionName: CurveNgFn, result: unknown
 }
 
 export interface CurveNgMulticallInput {
+  liteFactory?: { implementation: `0x${string}`; decimals: bigint[] };
   balances?: readonly bigint[];
   rates?: readonly bigint[];
   amplification?: bigint;
@@ -366,6 +367,12 @@ export function encodeCurveNgMulticallResults(
     offpeg_fee_multiplier: input.offpegFeeMultiplier ?? CURVE_PINNED_OFFPEG,
   };
   return calls.map(({ label }) => {
+    if (input.liteFactory && label.endsWith("-implementation")) {
+      return { label, success: true, returnData: encodeAbiParameters([{ type: "address" }], [input.liteFactory.implementation]) };
+    }
+    if (input.liteFactory && label.endsWith("-decimals")) {
+      return { label, success: true, returnData: encodeAbiParameters([{ type: "uint256[]" }], [input.liteFactory.decimals]) };
+    }
     const hit = CURVE_CALL_MAP.find(([suffix]) => label.endsWith(suffix));
     if (hit) return encodeCurveNgFn(label, hit[1], values[hit[1] as Exclude<CurveNgFn, "coins">]);
     const match = label.match(/-coin-(\d+)$/);

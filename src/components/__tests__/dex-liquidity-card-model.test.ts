@@ -58,6 +58,6 @@ describe("DEX liquidity verdict bands", () => {
     expect(unavailable).toMatch(/unavailable/i);
     expect(unavailable).not.toContain("0%");
     expect(getLiquidityEvidenceLabel({ ...partial, balanceMeasuredTvlUsd: 0 })).toContain("0%");
-    expect(getLiquidityEvidenceLabel({ ...partial, balanceMeasuredTvlUsd: 25 })).toContain("25%");
+    expect(getLiquidityEvidenceLabel({ ...partial, balanceMeasuredTvlUsd: 25 })).toContain("25.0%");
   });
 });

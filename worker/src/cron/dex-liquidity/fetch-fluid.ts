@@ -1,3 +1,4 @@
+import { indexFluidDefiLlamaAliases, indexFluidSwapStatuses, type FluidSwapStatusIndex } from "./fluid-swap-status";
 import { passesRawTokenVolumeSourcePreflight } from "./pool-volume-sanity";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { logWorkerEventArgs } from "../../lib/structured-log";
@@ -32,6 +33,19 @@ const FLUID_API_BASE = "https://api.fluid.instadapp.io/v2";
  * parsed inside the isolate.
  */
 const FLUID_MAX_RESPONSE_BYTES = 256 * 1024;
+
+async function readFluidIndex(url: string, signal?: AbortSignal) {
+  const checkedAtSec = Math.floor(Date.now() / 1000);
+  const result = await fetchJsonWithRetry<unknown>(url, {
+    cache: "no-store", headers: { Accept: "application/json", "User-Agent": USER_AGENT }, signal,
+  }, 0, { timeoutMs: 2_500, maxResponseBytes: 512 * 1024 });
+  if (!result?.response.ok) throw new Error("index unavailable");
+  const serverDate = Date.parse(result.response.headers.get("date") ?? "");
+  return {
+    payload: result.body,
+    checkedAtSec: Number.isFinite(serverDate) ? Math.min(checkedAtSec, Math.floor(serverDate / 1000)) : checkedAtSec,
+  };
+}
 
 const FLUID_RESOLVER_CALL_GAS = "0x0F4240";
 const FLUID_GET_COLLATERAL_RESERVES_SELECTOR = "0x957755e6";
@@ -188,12 +202,20 @@ export async function fetchFluidPools(
   fallbackCounters?: LiquidityFallbackCounters,
 ): Promise<DexApiFetchResult> {
   const results: DexApiPool[] = [];
+  const fluidSwapStatuses: FluidSwapStatusIndex = new Map();
   const errors: string[] = [];
   const warnings: string[] = [];
   let successfulChains = 0;
   const resolvedChainRpcs = chainRpcs ?? buildChainRpcs();
 
   for (const [chain, chainId] of Object.entries(FLUID_CHAINS) as Array<[keyof typeof FLUID_CHAINS, number]>) {
+    try {
+      const state = await readFluidIndex(`${FLUID_API_BASE}/${chainId}/dexes`, signal);
+      indexFluidSwapStatuses(fluidSwapStatuses, chain, state.payload, state.checkedAtSec);
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      errors.push(`${chain} swap state: ${toErrorMessage(error)}`);
+    }
     const url = `${FLUID_API_BASE}/${chainId}/dexes/stats/tickers`;
     try {
       const result = await fetchJsonWithRetry<unknown>(
@@ -301,10 +323,21 @@ export async function fetchFluidPools(
     }
   }
 
-  return makeDexApiFetchResult(results, {
+  if (fluidSwapStatuses.size > 0) {
+    try {
+      const aliases = await readFluidIndex("https://yields.llama.fi/poolsPro?project=fluid-dex", signal);
+      indexFluidDefiLlamaAliases(fluidSwapStatuses, aliases.payload);
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      errors.push(`Fluid DefiLlama aliases: ${toErrorMessage(error)}`);
+    }
+  }
+  const result = makeDexApiFetchResult(results, {
     ok: successfulChains > 0,
     degraded: errors.length > 0,
     errors,
     warnings,
   });
+  result.fluidSwapStatuses = fluidSwapStatuses;
+  return result;
 }

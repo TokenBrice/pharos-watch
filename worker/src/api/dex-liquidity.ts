@@ -29,6 +29,9 @@ import {
 } from "../lib/dex-liquidity-response";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
+import { comparableWeeklyExitBaselines } from "../lib/dex-history-routes";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
+import { DAY_SECONDS, WEEK_SECONDS } from "@shared/lib/time-constants";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
 import type { DexLiquidityData, DexLiquidityTableMap } from "@shared/types/dex-liquidity";
 import { getDexPriceSourceEntries } from "../lib/depeg-trust-policy";
@@ -59,13 +62,17 @@ export const handleDexLiquidity = async (
     tableProjection ? Promise.resolve({ results: [] as DexHistoryRow[] }) : db
       .prepare(
         `SELECT stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version, volume_availability_json
+         ${stablecoinId ? `, CASE WHEN snapshot_date = (
+           SELECT updated_at / ${DAY_SECONDS} * ${DAY_SECONDS} - ${WEEK_SECONDS} FROM dex_liquidity
+           WHERE stablecoin_id = ? AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
+         ) THEN exit_route_summary_json END AS exit_route_summary_json` : ""}
          FROM dex_liquidity_history
          WHERE snapshot_date >= (
            SELECT MIN(updated_at) - 864000 FROM dex_liquidity WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
          )${coinFilter}
          ORDER BY snapshot_date DESC, stablecoin_id`,
       )
-      .bind(...coinBindings)
+      .bind(...coinBindings, ...coinBindings)
       .all<DexHistoryRow>(),
     tableProjection ? Promise.resolve({ results: [] as DexPriceRow[] }) : db
       .prepare(
@@ -259,6 +266,10 @@ export const handleDexLiquidity = async (
     const volume24h = readStoredDexVolumeWindow(row.total_volume_24h_usd, volumeRecord, "24h");
     const volume7d = readStoredDexVolumeWindow(row.total_volume_7d_usd, volumeRecord, "7d", totalVolume7dMeasured);
 
+    const weeklyExitRouteBaselines = stablecoinId && evidence && scoreDetails.exitRouteObservations?.length
+      ? comparableWeeklyExitBaselines(scoreDetails, row.methodology_version, row.updated_at,
+          history.find((point) => point.snapshot_date === bucketUnixSecondsToUtcDay(row.updated_at) - WEEK_SECONDS))
+      : [];
     map[id] = {
       unavailableReason: evidence == null ? "invalid-coverage-evidence" : null,
       advisoryUnavailableReason,
@@ -306,6 +317,7 @@ export const handleDexLiquidity = async (
       priceSourceTvl: dexPrice?.source_total_tvl ?? null,
       priceSources: (dexPrice ? getDexPriceSourceEntries(pricePayload, "display") : null) as DexLiquidityData["priceSources"],
       effectiveTvlUsd: evidence?.effectiveTvlUsd ?? row.effective_tvl_usd ?? 0,
+      ...(evidence && scoreDetails.effectiveDepth ? { effectiveDepth: scoreDetails.effectiveDepth } : {}),
       avgPoolStress: row.avg_pool_stress ?? null,
       weightedBalanceRatio: row.weighted_balance_ratio ?? null,
       organicFraction: row.organic_fraction ?? null,
@@ -322,11 +334,13 @@ export const handleDexLiquidity = async (
       ),
       balanceMeasuredTvlUsd: evidence?.balanceMeasuredTvlUsd ?? row.balance_measured_tvl_usd ?? null,
       organicMeasuredTvlUsd: evidence?.organicMeasuredTvlUsd ?? row.organic_measured_tvl_usd ?? null,
-      scoreComponents: evidence == null ? null : scoreDetails.scoreComponents,
+      scoreComponents: evidence == null || scoreDetails.effectiveDepth?.coverage === "unavailable"
+        ? null : scoreDetails.scoreComponents,
       lockedLiquidityPct: row.locked_liquidity_pct ?? null,
       methodologyVersion: row.methodology_version,
       deploymentCoverage: deploymentCoverageById.get(id) ?? null,
       exitRouteObservations: evidence == null ? null : scoreDetails.exitRouteObservations,
+      ...(weeklyExitRouteBaselines?.length ? { weeklyExitRouteBaselines } : {}),
       ...(evidence == null ? {} : { exitRouteObservationCoverage: scoreDetails.exitRouteObservationCoverage }),
     };
   }

@@ -8,13 +8,12 @@
  * see ../../lib/dex-constants.ts
  */
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
+import { CURVE_LITE_DEPLOYMENTS, CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
 import type { LiquidityPoolSourceFamily } from "@shared/types/dex-liquidity";
 import { DEX_SUBGRAPH_FETCH_CONCURRENCY } from "@shared/lib/cron-jobs";
 
 export const DEFILLAMA_YIELDS_URL = "https://yields.llama.fi/pools";
 export const DEFILLAMA_PROTOCOLS_URL = "https://api.llama.fi/protocols";
-export const CURVE_API_BASE = "https://api.curve.finance/v1/getPools/all";
 // The shared census-provider set is the source of truth for Curve's fetch
 // list. Preserve its insertion order because payloads are index-aligned with
 // this array in fetch-primary and its persisted joins.
@@ -26,6 +25,10 @@ export const CURVE_CHAINS = [...CURVE_NATIVE_DISCOVERY_CHAINS] as const;
  * which is also the key the join writes into the Curve pool map.
  */
 export const CURVE_API_CHAIN_PATHS: Record<string, string> = { gnosis: "xdai" };
+export function curvePoolsApiUrl(chain: string): string {
+  const origin = CURVE_LITE_DEPLOYMENTS.has(chain) ? "https://api-core.curve.finance" : "https://api.curve.finance";
+  return `${origin}/v1/getPools/all/${CURVE_API_CHAIN_PATHS[chain] ?? chain}`;
+}
 export const DEX_LIQUIDITY_POOL_MIN_TVL_USD = 10_000;
 /**
  * Layer-2 TVL coherence bound for single-row UUID Curve joins on fingerprints

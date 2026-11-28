@@ -1,3 +1,4 @@
+import { CURVE_LITE_DEPLOYMENTS } from "@shared/lib/dex-deployment-coverage";
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
@@ -372,6 +373,10 @@ const CURVE_STABLESWAP_NG_ABI = parseAbi([
   "function offpeg_fee_multiplier() view returns (uint256)",
   "function coins(uint256) view returns (address)",
 ]);
+const CURVE_LITE_FACTORY_ABI = parseAbi([
+  "function get_implementation_address(address) view returns (address)",
+  "function get_decimals(address) view returns (uint256[])",
+]);
 const MAX_PROBES_PER_MULTICALL = 4;
 
 interface CurveStableswapRateDependencies {
@@ -444,7 +449,7 @@ function parsePoolState(input: {
   probe: CurveRateProbe;
   index: number;
   results: Map<string, EvmMulticall3Result>;
-}): CurveRatePoolState | null {
+}): CurveRatePoolState | DexExecutionCapabilityGate["reason"] {
   const prefix = `curve-rate-${input.index}`;
   const balances = decodeEvmCaptureUint256Array(input.results.get(`${prefix}-balances`));
   const rates = decodeEvmCaptureUint256Array(input.results.get(`${prefix}-rates`));
@@ -464,13 +469,25 @@ function parsePoolState(input: {
     balances.some((balance) => balance <= 0n) ||
     rates.some((rate) => rate <= 0n)
   ) {
-    return null;
+    return "incomplete-exact-capture";
+  }
+
+  const deployment = CURVE_LITE_DEPLOYMENTS.get(input.chain);
+  if (deployment) {
+    const implementation = decodeEvmCaptureAddress(input.chain, input.results.get(`${prefix}-implementation`));
+    const decimals = decodeEvmCaptureUint256Array(input.results.get(`${prefix}-decimals`));
+    if (!implementation || !decimals) return "incomplete-exact-capture";
+    if (implementation !== deployment.plainImplementation) return "deployment-code-mismatch";
+    if (decimals.length !== expectedCoins.length || decimals.some((value, i) => Number(value) !== expectedCoins[i]!.decimals)) {
+      return "ambiguous-token-identity";
+    }
   }
 
   const coinAddresses: `0x${string}`[] = [];
   for (let coinIndex = 0; coinIndex < expectedCoins.length; coinIndex++) {
     const address = decodeEvmCaptureAddress(input.chain, input.results.get(`${prefix}-coin-${coinIndex}`));
-    if (!address || address !== expectedCoins[coinIndex]!.address) return null;
+    if (!address) return "incomplete-exact-capture";
+    if (address !== expectedCoins[coinIndex]!.address) return deployment ? "ambiguous-token-identity" : "incomplete-exact-capture";
     coinAddresses.push(address);
   }
   return { balances, rates, amplification, fee, offpegFeeMultiplier, coinAddresses };
@@ -484,7 +501,7 @@ function rateFactor(rate: bigint, decimals: number): number | null {
 }
 
 function sourcePriceSpreadRatio(candidate: CurveStableswapRateInputExecutionCandidate): number | null {
-  const prices = candidate.coins.map((coin) => coin.referencePriceUsd);
+  const prices = candidate.coins.map((coin) => coin.referencePriceUsd ?? Number.NaN);
   if (prices.some((price) => !Number.isFinite(price) || price <= 0)) return null;
   return Math.max(...prices) / Math.min(...prices);
 }
@@ -494,6 +511,7 @@ function buildRateAwareExecutionModel(input: {
   stablecoinId: string;
   candidate: CurveStableswapRateInputExecutionCandidate;
   state: CurveRatePoolState;
+  marketMarks?: readonly DexMarketMark[];
   chainAddressToId: SymbolLookups["chainAddressToId"];
 }): { model: DexAmmExecutionModel; plain: boolean } | null {
   const { candidate, state } = input;
@@ -513,16 +531,17 @@ function buildRateAwareExecutionModel(input: {
     const factor = rateFactor(state.rates[index]!, coin.decimals);
     const baseRate = 10n ** BigInt(36 - coin.decimals);
     if (state.rates[index] !== baseRate) hasNonBaseRate = true;
+    const mark = input.marketMarks?.[index];
+    const referencePriceUsd = mark?.priceUsd ?? coin.referencePriceUsd;
     if (
       balance == null ||
       factor == null ||
-      !Number.isFinite(coin.referencePriceUsd) ||
-      coin.referencePriceUsd <= 0
+      referencePriceUsd == null || !Number.isFinite(referencePriceUsd) || referencePriceUsd <= 0
     ) {
       return null;
     }
     const scaledBalance = balance * factor;
-    const scaledReferencePrice = coin.referencePriceUsd / factor;
+    const scaledReferencePrice = referencePriceUsd / factor;
     if (
       !Number.isFinite(scaledBalance) ||
       scaledBalance <= 0 ||
@@ -539,7 +558,11 @@ function buildRateAwareExecutionModel(input: {
       decimals: coin.decimals,
       balance: scaledBalance,
       referencePriceUsd: scaledReferencePrice,
-      referencePriceSource: "source-token-usd" as const,
+      ...(mark ? {
+        referencePriceSource: "tracked-market" as const,
+        referencePriceSourceId: mark.source,
+        referencePriceObservedAt: mark.observedAtSec,
+      } : { referencePriceSource: "source-token-usd" as const }),
       ...(trackedAssetId ? { trackedAssetId } : {}),
     };
   });
@@ -567,7 +590,8 @@ function buildRateAwareExecutionModel(input: {
 }
 
 
-function buildPoolCalls(probes: readonly CurveRateProbe[], offset: number) {
+function buildPoolCalls(chain: string, probes: readonly CurveRateProbe[], offset: number) {
+  const deployment = CURVE_LITE_DEPLOYMENTS.get(chain);
   return probes.flatMap((probe, batchIndex) => {
     const index = offset + batchIndex;
     const prefix = `curve-rate-${index}`;
@@ -597,6 +621,14 @@ function buildPoolCalls(probes: readonly CurveRateProbe[], offset: number) {
         target: probe.candidate.poolAddress,
         callData: encodeFunctionData({ abi: CURVE_STABLESWAP_NG_ABI, functionName: "offpeg_fee_multiplier" }),
       },
+      ...(deployment ? [
+        { label: `${prefix}-implementation`, target: deployment.factory, callData: encodeFunctionData({
+          abi: CURVE_LITE_FACTORY_ABI, functionName: "get_implementation_address", args: [probe.candidate.poolAddress],
+        }) },
+        { label: `${prefix}-decimals`, target: deployment.factory, callData: encodeFunctionData({
+          abi: CURVE_LITE_FACTORY_ABI, functionName: "get_decimals", args: [probe.candidate.poolAddress],
+        }) },
+      ] : []),
       ...probe.candidate.coins.map((_, coinIndex) => ({
         label: `${prefix}-coin-${coinIndex}`,
         target: probe.candidate.poolAddress,
@@ -610,6 +642,29 @@ function buildPoolCalls(probes: readonly CurveRateProbe[], offset: number) {
   });
 }
 
+/** API Core may derive USD prices from the modeled pool itself. */
+function resolveLiteMarketMarks(
+  poolAddress: string, coinAddresses: readonly string[],
+  input: { chain: string; chainAddressToId: SymbolLookups["chainAddressToId"]; stablecoinPriceById?: DexValuationPrices },
+  nowSec: number,
+): DexMarketMark[] | null {
+  const poolKey = canonicalExitRouteAssetKey(input.chain, poolAddress);
+  const prices = input.stablecoinPriceById;
+  const marks: DexMarketMark[] = [];
+  for (const address of coinAddresses) {
+    const id = input.chainAddressToId.get(canonicalExitRouteAssetKey(input.chain, address));
+    if (!id || getClosedReferenceDexValuation(prices, id, nowSec)?.mark === null) return null;
+    const mark = getAdmittedDexMarketMark(prices, id, nowSec) ??
+      getAdmittedDexMarketMark(prices, id, nowSec, undefined, prices?.curveExecutionMarks);
+    if (!mark) return null;
+    const lineage = readDexPriceLineage(mark);
+    if (lineage.upstreamKeys?.includes(poolKey) || lineage.pricePoolKeys?.includes(poolKey) ||
+        lineage.upstreamKeys?.length === 0 || (lineage.pricePoolKeys?.length === 0 && !lineage.upstreamKeys)) return null;
+    marks.push(mark);
+  }
+  return marks;
+}
+
 async function enrichChain(input: {
   chain: string;
   probes: CurveRateProbe[];
@@ -619,6 +674,7 @@ async function enrichChain(input: {
   sourceGenerationId: string;
   chainAddressToId: SymbolLookups["chainAddressToId"];
   dependencies: CurveStableswapRateDependencies;
+  stablecoinPriceById?: DexValuationPrices;
   capturedPools: Map<PoolEntry, CurveStableswapNgCapturedPoolState>;
 }): Promise<void> {
   const rpcOptions = {
@@ -640,7 +696,7 @@ async function enrichChain(input: {
     return header;
   };
   await runPinnedBlockCapture<{
-    states: Map<CurveRateProbe, CurveRatePoolState | null>;
+    states: Map<CurveRateProbe, CurveRatePoolState | DexExecutionCapabilityGate["reason"]>;
     capture: NonNullable<DexAmmExecutionModel["capture"]>;
   }, DexExecutionCapabilityGate["reason"]>({
     chain: input.chain,
@@ -652,13 +708,13 @@ async function enrichChain(input: {
     freshnessFailureReason: "stale-observation",
     verifyDeployment: async () => ({ ok: true }),
     buildCalls: async ({ blockNumber, header, rpcOptions: captureRpcOptions }) => {
-      const states = new Map<CurveRateProbe, CurveRatePoolState | null>();
+      const states = new Map<CurveRateProbe, CurveRatePoolState | DexExecutionCapabilityGate["reason"]>();
       for (let start = 0; start < input.probes.length; start += MAX_PROBES_PER_MULTICALL) {
         throwIfAborted(input.signal);
         const probes = input.probes.slice(start, start + MAX_PROBES_PER_MULTICALL);
         const results = await input.dependencies.fetchMulticall(
           input.chain,
-          buildPoolCalls(probes, start),
+          buildPoolCalls(input.chain, probes, start),
           blockNumber,
           captureRpcOptions,
         );
@@ -669,7 +725,7 @@ async function enrichChain(input: {
           states.set(
             probe,
             probe.incompatibleLayout
-              ? null
+              ? "ambiguous-token-identity"
               : parsePoolState({ chain: input.chain, probe, index: start + batchIndex, results: byLabel }),
           );
         }
@@ -695,8 +751,20 @@ async function enrichChain(input: {
               : null;
       for (const probe of input.probes) {
         const state = states.get(probe);
-        if (!state) {
-          clearProbe(probe);
+        if (!state || typeof state === "string") {
+          clearProbe(probe, state);
+          continue;
+        }
+        const lite = CURVE_LITE_DEPLOYMENTS.has(input.chain);
+        if (lite && navCaptureRejectionReason) {
+          clearProbe(probe, navCaptureRejectionReason === "capture-stale" ? "stale-observation" : "invalid-observation");
+          continue;
+        }
+        const marketMarks = lite
+          ? resolveLiteMarketMarks(probe.candidate.poolAddress, state.coinAddresses, input, captureEvaluatedAtSec)
+          : undefined;
+        if (marketMarks === null) {
+          clearProbe(probe, "reference-price-unavailable");
           continue;
         }
         for (const reference of probe.references) {
@@ -704,6 +772,7 @@ async function enrichChain(input: {
             chain: input.chain,
             stablecoinId: reference.stablecoinId,
             candidate: reference.candidate,
+            marketMarks,
             state,
             chainAddressToId: input.chainAddressToId,
           });
@@ -716,7 +785,8 @@ async function enrichChain(input: {
           delete extra.curveStableswapRateInputExecutionCandidate;
           delete extra.executionCapabilityGate;
           extra.ammExecutionModel = built.model;
-          extra.measurement = { ...(extra.measurement ?? {}), balanceMeasured: true };
+          // A pinned model does not invent a directional balance statistic absent from the Lite source.
+          extra.measurement = { ...(extra.measurement ?? {}), balanceMeasured: marketMarks ? extra.balanceRatio != null : true };
           // A high source spread on a verified plain pool is diagnostic only.
           const spreadRatio = built.plain
             ? sourcePriceSpreadRatio(reference.candidate)
@@ -796,6 +866,7 @@ async function enrichChain(input: {
 export async function enrichCurveStableswapRateInputExecutionModels(input: {
   metrics: Map<string, SourcePoolGraph>;
   chainAddressToId: SymbolLookups["chainAddressToId"];
+  stablecoinPriceById?: DexValuationPrices;
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   nowSec?: number;
@@ -828,6 +899,10 @@ export async function enrichCurveStableswapRateInputExecutionModels(input: {
       clearCandidate(reference);
       continue;
     }
+    if (CURVE_LITE_DEPLOYMENTS.has(chain) && reference.pool.poolId !== canonicalExitRouteAssetKey(chain, poolAddress)) {
+      clearCandidate(reference, "exact-pool-join-unresolved");
+      continue;
+    }
     const probes = probesByChain.get(chain) ?? new Map<string, CurveRateProbe>();
     const existing = probes.get(poolAddress);
     if (existing) {
@@ -856,6 +931,7 @@ export async function enrichCurveStableswapRateInputExecutionModels(input: {
         sourceGenerationId: input.sourceGenerationId,
         chainAddressToId: input.chainAddressToId,
         dependencies,
+        stablecoinPriceById: input.stablecoinPriceById,
         capturedPools,
       });
     } catch (error) {

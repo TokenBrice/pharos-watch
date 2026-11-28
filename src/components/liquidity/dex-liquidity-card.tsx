@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDexLiquidityCoin } from "@/hooks/api-hooks";
 import type { DexLiquidityData } from "@shared/types/dex-liquidity";
 import { formatCurrency, formatPercentFromRatio, formatUsdPriceAdaptive } from "@shared/lib/format";
-import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
+import { formatEffectiveLiquidity, formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 import { describeDexVolume } from "@/lib/dex-volume-display";
 import { DEX_VOLUME_COVERAGE_MIN, DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { BalanceBar } from "@/components/liquidity/balance-bar";
@@ -32,6 +32,7 @@ import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import {
   ChainBar,
   DurabilityBadge,
+  ExitCapacityTrend,
   PermanentLiquidityProof,
   PoolSourceLabel,
   ProtocolBar,
@@ -115,7 +116,10 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   const tier = resolveScoreTier4(score);
   const coverageBadge = getLiquidityCoverageBadge(liq.coverageClass, liq.unavailableReason);
   const isRated = liq.liquidityScore != null;
+  const measuredBalance = liq.balanceMeasuredTvlUsd === 0 ? null : liq.weightedBalanceRatio;
   const evidenceLabel = getLiquidityEvidenceLabel(liq);
+  const pausedPools = liq.effectiveDepth?.pausedPoolCount;
+  const unknownPools = liq.effectiveDepth?.unknownPoolCount;
   const verdictLine = isRated ? buildLiquidityVerdictLine(liq.scoreComponents) : null;
   const permanentPools = getPermanentLiquidityPools(liq.topPools);
   const hasTvlChange24h = liq.tvlChange24h != null && Math.abs(liq.tvlChange24h) >= 0.05;
@@ -168,6 +172,8 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                 <p>DEX coverage evidence is unavailable ({liq.unavailableReason}).</p>
                 <p className="mt-1">Liquidity Score stays unrated until Pharos can validate the coverage evidence.</p>
               </>
+            ) : liq.effectiveDepth?.coverage === "unavailable" ? (
+              <p>Liquidity Score is unrated because swap availability could not be verified.</p>
             ) : isLiquidityActivityNotRated(liq) ? (
               <>
                 <p>
@@ -203,7 +209,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                 <MethodologyLabel topic="effectiveTvl">Effective liquidity</MethodologyLabel>
               </p>
               <p className="pharos-numeric text-xl font-semibold">
-                {formatCurrency(liq.effectiveTvlUsd)}
+                {formatEffectiveLiquidity(liq) ?? "—"}
               </p>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                 <span>
@@ -219,7 +225,17 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                   </span>
                 )}
               </div>
-              {evidenceLabel && <div className="text-xs text-muted-foreground mt-0.5">{evidenceLabel}</div>}
+              {pausedPools != null && pausedPools > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Effective depth excludes {pausedPools} paused {pausedPools === 1 ? "pool" : "pools"}.
+                </p>
+              )}
+              {unknownPools != null && unknownPools > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Swap availability unverified for {unknownPools} {unknownPools === 1 ? "pool" : "pools"}.
+                </p>
+              )}
+              {measuredBalance == null && evidenceLabel && <div className="text-xs text-muted-foreground mt-0.5">{evidenceLabel}</div>}
             </div>
             {[
               { label: "24h volume", display: describeDexVolume(liq.totalVolume24hUsd, liq.volume24hAvailability) },
@@ -312,7 +328,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                     </span>
                   )}
                 </div>
-              {(liq.durabilityScore != null || liq.weightedBalanceRatio != null || liq.organicFraction != null) && (
+              {(liq.durabilityScore != null || measuredBalance != null || liq.organicFraction != null) && (
                 <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
                   {liq.durabilityScore != null && (
                     <div>
@@ -320,10 +336,13 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                       <DurabilityBadge score={liq.durabilityScore} />
                     </div>
                   )}
-                  {liq.weightedBalanceRatio != null && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground">Pool Balance: </span>
-                      <BalanceBar ratio={liq.weightedBalanceRatio} />
+                  {measuredBalance != null && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground">Directional balance of measured pools</span>
+                        <BalanceBar ratio={measuredBalance} />
+                      </div>
+                      {evidenceLabel && <p className="text-xs text-muted-foreground">{evidenceLabel}</p>}
                     </div>
                   )}
                   {liq.organicFraction != null && (
@@ -376,6 +395,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
             <TopPoolsTable pools={liq.topPools} totalPoolCount={liq.poolCount} />
           )}
 
+          <ExitCapacityTrend stablecoinId={stablecoinId} liq={liq} />
           <PermanentLiquidityProof entries={permanentPools} />
         </div>
         </ModuleDisclosure>

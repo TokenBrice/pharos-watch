@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { attachFluidSwapStatuses, indexFluidDefiLlamaAliases } from "../fluid-swap-status";
+import { makePool } from "./scoring-test-builders";
 import { fetchFluidPools } from "../fetch-fluid";
 import { initLiquidityFallbackCounters } from "../pool-helpers";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
@@ -16,6 +18,39 @@ describe("fetchFluidPools", () => {
   });
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("joins the venue status to an opaque DefiLlama deployment independently of the ticker", async () => {
+    const address = "0x97f32e5091d0e6aee24beb398e6592ae111dee9c";
+    const uuid = "e3a3baab-c962-525b-a9a7-231325714c8b";
+    const tokens = ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "0xd0580192e98ea6ceb9c7b6191ed2e27560911697"];
+    const official = { address, token0Address: tokens[0], token1Address: tokens[1], state: { isSwapAndArbitragePaused: true } };
+    const alias = { project: "fluid-dex", chain: "Ethereum", pool: uuid, pool_old: `ethereum-${address}`,
+      poolTokenAddress: address, underlyingTokens: tokens };
+    const duplicate = { ...official, address: tokens[1] };
+    const live = { ...official, address: tokens[0], token1Address: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", state: { isSwapAndArbitragePaused: false } };
+    mockFetch([
+      { match: "/dexes/stats/tickers", body: [] },
+      { match: "/v2/1/dexes", body: [official, live, duplicate, { ...duplicate, state: live.state }] },
+      { match: "api.fluid.instadapp.io", body: [] },
+      { match: "poolsPro?project=fluid-dex", body: { data: [alias, { ...alias, pool: "native-alias",
+        pool_old: `ethereum-${tokens[0]}`, poolTokenAddress: tokens[0], underlyingTokens: [tokens[0], `0x${"0".repeat(40)}`] }] } },
+    ], { requireMatch: true });
+    const { fluidSwapStatuses, pools } = await fetchFluidPools(undefined, new Map());
+    expect(pools).toEqual([]);
+    const build = (id: string, fingerprint?: string) => makePool({ poolId: `ethereum:${id}`, project: "fluid", candidateFingerprint: fingerprint });
+    expect(fluidSwapStatuses?.get("ethereum:defillama:native-alias")?.observation.status).toBe("active");
+    const fingerprint = `fp:ethereum:fluid:${tokens.join(":")}`;
+    const inventory = [build(`defillama:${uuid}`, fingerprint), build(`defillama:${uuid}`, "wrong"), build(address),
+      build(tokens[0]!), build(tokens[1]!), build("absent")];
+    attachFluidSwapStatuses(new Map([["trusd-tori", { stablecoinId: "trusd-tori", symbol: "trUSD", pools: inventory }]]), fluidSwapStatuses);
+    expect(inventory.map((pool) => pool.extra?.fluidSwapStatus?.reason)).toEqual([
+      "fluid-swaps-paused", "fluid-pool-identity-unverified", "fluid-swaps-paused", "fluid-swaps-active",
+      "fluid-swap-state-conflicting", "fluid-swap-state-missing",
+    ]);
+    const ambiguous = new Map(fluidSwapStatuses);
+    indexFluidDefiLlamaAliases(ambiguous, { data: [alias, { ...alias, pool: "another-uuid", poolTokenAddress: tokens[1] }] });
+    expect(ambiguous.has(`ethereum:defillama:${uuid}`)).toBe(false);
   });
 
   it.each([

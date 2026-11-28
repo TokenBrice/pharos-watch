@@ -167,6 +167,7 @@ describe("buildSelectorRows", () => {
         "usdc-circle": {
           liquidityScore: 88,
           effectiveTvlUsd: 250_000_000,
+          effectiveDepth: { coverage: "partial", amountUsd: 250_000_000, pausedPoolCount: 0, unknownPoolCount: 1 },
           concentrationHhi: 0.2,
           chainTvl: { Ethereum: 250_000_000 },
           updatedAt: NOW / 1000,
@@ -193,6 +194,7 @@ describe("buildSelectorRows", () => {
       pegScore: 96,
       dewsScore: 42,
       liquidityScore: 88,
+      effectiveTvlUsd: null,
       canBeBlacklisted: true,
       custodyModel: "cex",
       currentDeviationBps: 4,

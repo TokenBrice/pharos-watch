@@ -5,8 +5,7 @@ import { USER_AGENT } from "../../lib/constants";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import {
-  CURVE_API_BASE,
-  CURVE_API_CHAIN_PATHS,
+  curvePoolsApiUrl,
   DEX_LIQUIDITY_POOL_MIN_TVL_USD,
 } from "../dex-liquidity/constants";
 import type { CurveApiPayload } from "../dex-liquidity/types";
@@ -44,11 +43,7 @@ export async function crawlCurvePoolsStage(input: {
     async ([chain, targets]): Promise<DexDeploymentProviderCheck[]> => {
       try {
         const result = await fetchJsonWithRetry<CurveApiPayload>(
-          // Curve addresses some chains under a different id than Pharos does;
-          // the liquidity stage has always honored this mapping and discovery
-          // has not, which is how every run spent its retry budget on a request
-          // the endpoint answers with an error.
-          `${CURVE_API_BASE}/${CURVE_API_CHAIN_PATHS[chain] ?? chain}`,
+          curvePoolsApiUrl(chain),
           {
             headers: { "User-Agent": USER_AGENT },
             signal: buildStageSignal(input.context.signal, input.context.deadlineMs, DISCOVERY_STAGE_TIMEOUT_MS.curve),

@@ -64,6 +64,14 @@ export interface DexDiscoveryProviderAdapter {
   crawlerLeaf?: DexDiscoveryCrawlerLeafId;
 }
 
+/** Curve Lite uses API Core; only the reviewed plain NG factory implementation can supply a reserve model. */
+export const CURVE_LITE_DEPLOYMENTS = new Map<string, { factory: `0x${string}`; plainImplementation: `0x${string}` }>([
+  ["monad", {
+    factory: "0x8271e06e5887fe5ba05234f5315c19f3ec90e8ad",
+    plainImplementation: "0xfc687efafed297b765edecf8179c32195597c2df",
+  }],
+]);
+
 /**
  * The chains on which Curve's getPools/all endpoint is queried and counts as a
  * registered token-pool discovery provider. This is the single definition:
@@ -91,6 +99,7 @@ export const CURVE_NATIVE_DISCOVERY_CHAINS: ReadonlySet<string> = new Set([
   "fantom",
   "kava",
   "gnosis",
+  ...CURVE_LITE_DEPLOYMENTS.keys(),
 ]);
 
 /** Native Horizon liquidity-pool discovery is currently scoped to classic Stellar assets. */

@@ -40,7 +40,7 @@ import { attachDefiLlamaCurvePoolIdentities } from "../defillama-curve-identity"
 import { logWorkerEvent } from "../../../lib/structured-log";
 import { buildPoolFingerprint } from "../pool-helpers";
 import { buildPoolIdentity, getIdentityDedupReason } from "../pool-identity";
-import { CURVE_API_BASE, CURVE_API_CHAIN_PATHS, CURVE_CHAINS } from "../constants";
+import { CURVE_CHAINS, curvePoolsApiUrl } from "../constants";
 import { CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS,
 CURVE_LUSD_3CRV_METAPOOL_ADDRESS,
 CURVE_NXUSD_COMPOSITE_POOL_ADDRESS,
@@ -119,10 +119,7 @@ describe("primary identity census", () => {
 });
 
 function curveChainFromUrl(url: string): string | null {
-  const prefix = `${CURVE_API_BASE}/`;
-  if (!url.startsWith(prefix)) return null;
-  const path = url.slice(prefix.length);
-  return CURVE_CHAINS.find((chain) => (CURVE_API_CHAIN_PATHS[chain] ?? chain) === path) ?? null;
+  return CURVE_CHAINS.find((chain) => curvePoolsApiUrl(chain) === url) ?? null;
 }
 
 function mockDlYieldsSuccess(curveResponse: (() => Promise<{ response: Response; body: unknown } | null>) | null = async () => ({ response: new Response("", { status: 200 }), body: { data: { poolData: [] } } })) {
@@ -140,7 +137,7 @@ function mockDlYieldsSuccess(curveResponse: (() => Promise<{ response: Response;
         body: [{ slug: "yearn-finance", category: "Yield Aggregator" }, { slug: "unknown", category: "" }],
       };
     }
-    if (urlStr.includes("api.curve.finance")) {
+    if (curveChainFromUrl(urlStr) != null) {
       return curveResponse ? curveResponse() : null;
     }
     return {
@@ -172,7 +169,7 @@ describe("fetchDataSources", () => {
     // Curve calls should not have been made
     const curveCalls = vi
       .mocked(fetchJsonWithRetry)
-      .mock.calls.filter((call) => String(call[0]).includes("api.curve.finance"));
+      .mock.calls.filter((call) => curveChainFromUrl(String(call[0])) != null);
     expect(curveCalls).toHaveLength(0);
     expect(result!.dlYieldsAvailable).toBe(true);
   });
@@ -308,7 +305,7 @@ describe("fetchDataSources", () => {
       if (urlStr.includes("api.llama.fi/protocols")) {
         return { response: new Response("", { status: 200 }), body: [] };
       }
-      if (urlStr.includes("api.curve.finance")) {
+      if (curveChainFromUrl(urlStr) != null) {
         expect(lookupGetSpy).toHaveBeenCalled();
         return { response: new Response("", { status: 200 }), body: { data: { poolData: [] } } };
       }
@@ -452,7 +449,7 @@ describe("fetchDataSources", () => {
       if (urlStr.includes("api.llama.fi/protocols")) {
         return { response: new Response("", { status: 200 }), body: [] };
       }
-      if (urlStr.includes("api.curve.finance")) {
+      if (curveChainFromUrl(urlStr) != null) {
         return { response: new Response("", { status: 200 }), body: { data: { poolData: [] } } };
       }
       return null;
@@ -509,6 +506,15 @@ describe("buildCurveLookups", () => {
     expect(curvePoolMap.get(`ethereum:${address}`)?.balanceDetails).toBeUndefined();
     expect(curvePoolMap.get(`ethereum:${address}`)?.executionCoins).toBeUndefined();
     expect(priceObservations.size).toBe(0);
+
+    const lite = await buildCurveLookups(
+      CURVE_CHAINS.map((chain) => chain === "monad" ? { data: { poolData: [{ ...pool, registryId: "factory-stable-ng" } as CurvePool] } } : null),
+      new Map(), new Map(), new Map(),
+    );
+    expect(lite.curvePoolMap.get(`monad:${address}`)?.liteNgCoins).toEqual(
+      field === "decimals" ? undefined : pool.coins.map(({ address, symbol, decimals }) => ({ address, symbol, decimals: Number(decimals) })),
+    );
+    expect(lite.curvePoolMap.get(`monad:${address}`)?.balanceRatio).toBeNull();
   });
 
   it.each(["0", " +0e0 "])("keeps explicit Curve zero %s measured", async (zero) => {

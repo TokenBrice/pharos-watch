@@ -14,7 +14,7 @@ import {
 import { SafetyScoreV9ResolvedCurrentCardSchema, type SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { buildReportCardsV9DependencyGraph, ReportCardsV9DependencyGraphSchema, type V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
-import { projectSafetyScoreV9PublicationForMaterialization } from "./report-cards-v9-projection";
+import { projectKeyedExitBreakdown, projectSafetyScoreV9PublicationForMaterialization } from "./report-cards-v9-projection";
 import { SafetyScoreV9StorageMetadataSchema, publicationIdentityFromStorageEnvelope, type SafetyScoreV9AdmittedPublication } from "./safety-score-v9/publication-codec";
 import { SAFETY_SCORE_V9_CACHE_KEYS, parseSafetyScoreV9PublicationHealthCache, resolveSafetyScoreV9EffectivePublicationHealth } from "./safety-score-v9/publication-health";
 import { D1_MAX_BOUND_PARAMETERS, executeAtomicBatch, prepareMultiRowInsertStatements } from "./db";
@@ -366,7 +366,7 @@ function* serializeMaterialization(
         const card = SafetyScoreV9ResolvedCurrentCardSchema.parse(resolveV9PublicWitnessTexts(snapshot.cards[index]!));
         graphCards.push({ id: card.id, dependencies: card.dependencies });
         if (index > 0) yield* append(",");
-        for (const chunk of stableJsonStringifyChunksV1(card)) yield* append(chunk);
+        for (const chunk of stableJsonStringifyChunksV1(projectKeyedExitBreakdown(card))) yield* append(chunk);
       }
       yield* append("]");
     } else if (key === "dependencyGraph" && !("projection" in snapshot)) {

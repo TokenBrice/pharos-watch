@@ -14,6 +14,8 @@ import type { DexApiPool, DexApiPoolToken } from "./dex-api-types";
 const NATIVE_PLACEHOLDER_TOKEN = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 
 export interface DexMarketMark {
+  upstreamKeys?: readonly string[];
+  pricePoolKeys?: readonly string[];
   priceUsd: number;
   observedAtSec: number;
   observedAtMode?: "upstream";
@@ -26,6 +28,7 @@ export interface DexMarketMark {
 
 export type DexValuationPrices = ReadonlyMap<string, number> & {
   readonly marketMarks?: ReadonlyMap<string, DexMarketMark>;
+  readonly curveExecutionMarks?: ReadonlyMap<string, DexMarketMark>;
   readonly closureValuationRejectedAssetIds?: Set<string>;
 };
 
@@ -34,8 +37,9 @@ export function getAdmittedDexMarketMark(
   stablecoinId: string,
   assessedAtSec: number,
   maxAgeSec = DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
+  marks = prices?.marketMarks,
 ): DexMarketMark | null {
-  const mark = prices?.marketMarks?.get(stablecoinId);
+  const mark = marks?.get(stablecoinId);
   if (
     !mark || mark.fxReference || mark.priceUsd !== prices?.get(stablecoinId) ||
     !Number.isFinite(mark.priceUsd) || mark.priceUsd <= 0 || !mark.source.trim() ||

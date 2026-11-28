@@ -227,7 +227,7 @@ export interface CurveStableswapRateInputExecutionCandidate {
     address: `0x${string}`;
     symbol: string;
     decimals: number;
-    referencePriceUsd: number;
+    referencePriceUsd?: number;
   }[];
 }
 
@@ -406,6 +406,8 @@ export interface ScoreComponents {
 }
 
 export interface CurvePoolEntry {
+  /** Lite NG can pin reserves and value them independently when REST omits a balance or USD price. */
+  liteNgCoins?: { address: string; symbol: string; decimals: number }[];
   curveBasePoolOverlap?: PoolEntry["curveBasePoolOverlap"];
   poolAddress?: string;
   apiIsBroken?: boolean;
@@ -682,6 +684,7 @@ export interface LiquidityFallbackCounters {
 }
 
 export type FullScoreResult = ScoreResult & {
+  effectiveDepth?: import("@shared/types/dex-liquidity").DexEffectiveDepth;
   hhi: number;
   durability: number;
   components: ScoreComponents;

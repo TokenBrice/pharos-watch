@@ -20,7 +20,7 @@ import {
 } from "@shared/lib/redemption-backstop-scoring";
 import { composeExitComponentScore } from "@shared/lib/exit-route-scoring";
 import { resolveV9EffectiveScoringWeight } from "@shared/types/safety-score-v9-causes";
-import { describeExitRouteVenue } from "@/lib/safety-score-reason-labels";
+import { describeExitPayout, describeExitRouteVenue } from "@/lib/safety-score-reason-labels";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
 import { formatRedemption } from "@/lib/show-your-work-formatters";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
@@ -385,7 +385,7 @@ export function buildExitRouteUsage(
 
   const primaryScore = Math.round(primaryRawScore);
   if (entry === null) {
-    best(primaryScore, describeExitRouteVenue(primary), null);
+    best(primaryScore, describeExitRouteVenue(primary), describeExitPayout(primary.capacity?.payoutAssets));
     return rows;
   }
   if (isEntryRoute(primary, entry)) {
@@ -395,7 +395,7 @@ export function buildExitRouteUsage(
         ? SAME_SCORE_NOTE
         : (exitDivergenceNote(primary, primaryRawScore, entry, entry.score, size) ?? `Re-scored ${size}`);
     counted(primaryScore, null, note);
-    best(null, "This route", null);
+    best(null, "This route", describeExitPayout(primary.capacity?.payoutAssets));
     return rows;
   }
   if (ownRoute !== null && ownRoute.included && ownRoute.score !== null) {
@@ -410,7 +410,7 @@ export function buildExitRouteUsage(
   } else {
     counted(null, NOT_COUNTED, "Not in the Exit evaluation");
   }
-  best(primaryScore, describeExitRouteVenue(primary), null);
+  best(primaryScore, describeExitRouteVenue(primary), describeExitPayout(primary.capacity?.payoutAssets));
   return rows;
 }
 

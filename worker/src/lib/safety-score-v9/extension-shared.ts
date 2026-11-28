@@ -46,7 +46,7 @@ export type V9ExtensionRegistryMeta = Pick<
   | "blacklistabilityReview"
   | "contracts"
 > &
-  Partial<Pick<StablecoinMeta, "flags" | "custodyModel">>;
+  Partial<Pick<StablecoinMeta, "symbol" | "flags" | "custodyModel">>;
 export type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 export type ControlOverlay = NonNullable<
   Extract<NonNullable<ExtensionAsset["controlReview"]>, { state: "partially-reviewed-controls" }>

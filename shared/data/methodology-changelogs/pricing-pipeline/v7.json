@@ -1,5 +1,18 @@
 [
   {
+    "version": "7.1",
+    "title": "Require affirmative swap availability for Fluid pool prices",
+    "date": "2026-11-28",
+    "effectiveAt": 1795893360,
+    "summary": "Fluid pools must have current evidence that swaps are active before their prices can contribute to the aggregate DEX price or the pool challenge.",
+    "impact": [
+      "Swap status follows the physical Fluid pool across provider aliases. Historical volume remains in its observation window when swaps pause.",
+      "Activation time is provisional until the first accepted DEX publication."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "7.0",
     "title": "ERC-4626 NAV vaults, mGLO six-chain preferred native supply, and Paxos Stable PYUSD reconciliation",
     "date": "2026-11-27",

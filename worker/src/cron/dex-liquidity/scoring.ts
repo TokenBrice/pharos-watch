@@ -1,3 +1,5 @@
+import { admitFluidSwapStatus } from "@shared/lib/fluid-swap-status";
+import { poolSwapsUsable } from "./fluid-swap-status";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { roundTo } from "@shared/lib/math";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
@@ -250,6 +252,17 @@ export async function computeStablecoinScores(
     const candidatePools = m.pools;
     candidatePoolsByStablecoin.set(id, candidatePools);
     for (const pool of candidatePools) {
+      if (pool.project === "fluid") {
+        pool.extra ??= {};
+        const status = admitFluidSwapStatus(pool.extra.fluidSwapStatus, routeObservedAt);
+        pool.extra.fluidSwapStatus = status;
+        if (status.status !== "active") {
+          if (status.status === "paused") pool.extra.effectiveTvl = 0;
+          else delete pool.extra.effectiveTvl;
+          delete pool.price;
+          if (pool.extra.measurement) pool.extra.measurement.priceMeasured = false;
+        }
+      }
       // Capture ALL Curve NAV rejection records BEFORE filterRetainedPools so
       // filtering out a Curve pool can never erase its rejection or let a
       // Curve REST / DefiLlama duplicate of that rejected pool slip through.
@@ -610,15 +623,27 @@ export async function computeStablecoinScores(
 
     const tvlStab = tvlStabilityMap.get(id) ?? null;
     const volStab = volumeStabilityMap.get(id) ?? null;
-    const durability = computeDurabilityScore(m, tvlStab, volStab, fallbackCounters);
+    const hasWithheldPools = rebuilt.usablePoolCount < rebuilt.poolCount;
+    const scoreInputs = hasWithheldPools ? {
+      ...m, poolCount: rebuilt.usablePoolCount, totalTvlUsd: rebuilt.usableTvlUsd,
+      ...summarizeRetainedPoolVolume(retainedPools.filter(poolSwapsUsable).map((pool) => ({
+        reading: pool.volumeReading, tvlUsd: pool.tvlUsd,
+      })), volumeClock),
+    } : m;
+    const noUsableSwaps = hasWithheldPools && rebuilt.usablePoolCount === 0;
+    const durability = noUsableSwaps ? 0 : computeDurabilityScore(scoreInputs, tvlStab, volStab, fallbackCounters);
 
     const circulatingUsd = mcapById?.get(id);
-    const { score, unavailableReason, components } = computeLiquidityScore(m, durability, circulatingUsd, fallbackCounters);
+    const scored = computeLiquidityScore(scoreInputs, durability, circulatingUsd, fallbackCounters);
+    if (noUsableSwaps) {
+      scored.score = rebuilt.unknownPoolCount > 0 ? null : 0;
+      scored.unavailableReason = null;
+    }
 
     const weightedBalanceRatio = weightedRatio(m.balanceRatioWeightedSum, m.totalTvlForBalance);
     const organicFrac = weightedRatio(m.organicTvlWeightedSum, m.totalTvlForOrganic);
     // Stored diagnostic only: stress-unmeasured TVL contributes zero stress under the current methodology.
-    const avgStress = weightedRatio(m.stressWeightedSum, m.totalTvlUsd, 2);
+    const avgStress = weightedRatio(m.stressWeightedSum, rebuilt.usableTvlUsd, 2);
     const lockedLiqPct = weightedRatio(m.lockedLiqWeightedSum, m.totalTvlForLocked);
     const { coverageClass, coverageConfidence } = classifyCoverage({
       sourceMix: rebuilt.sourceMix,
@@ -635,13 +660,20 @@ export async function computeStablecoinScores(
     const fullScoreResult: P4aFullScoreResult = {
       tvl: m.totalTvlUsd,
       effectiveTvl: m.effectiveTvl,
+      ...(rebuilt.poolCount > 0 ? {
+        effectiveDepth: rebuilt.unknownPoolCount === 0
+          ? { coverage: "complete", amountUsd: Math.round(m.effectiveTvl), pausedPoolCount: rebuilt.pausedPoolCount, unknownPoolCount: 0 }
+          : noUsableSwaps
+            ? { coverage: "unavailable", amountUsd: null, pausedPoolCount: rebuilt.pausedPoolCount, unknownPoolCount: rebuilt.unknownPoolCount }
+            : { coverage: "partial", amountUsd: Math.round(m.effectiveTvl), pausedPoolCount: rebuilt.pausedPoolCount, unknownPoolCount: rebuilt.unknownPoolCount },
+      } : {}),
       vol24h: m.totalVolume24hUsd,
       volumeAvailability: volume.volumeAvailability,
-      score,
-      liquidityScoreUnavailableReason: unavailableReason,
+      score: scored.score,
+      liquidityScoreUnavailableReason: scored.unavailableReason,
       hhi: Math.round(rebuilt.hhi * 10000) / 10000,
       durability,
-      components,
+      components: scored.components,
       weightedBalanceRatio,
       organicFrac,
       avgStress,

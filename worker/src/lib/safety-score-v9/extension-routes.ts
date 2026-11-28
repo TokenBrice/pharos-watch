@@ -7,7 +7,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { admitDirectMetalBenchmark, getPegReferenceEvidence, hasCurrentPegAdmission, isSameReferenceSession, EUR_VAULT_PAYOUT_REFERENCE_PREFIX } from "./reference-evidence";
 import { PHYSICAL_TO_USD_EXIT_POLICY } from "@shared/lib/exit-route-scoring";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
-import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
+import { isDexExitPayoutConversion, resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
 import {
   getRedemptionBackstopConfig,
@@ -1122,6 +1122,7 @@ function buildPhysicalRouteReview(fixedInput: Readonly<SafetyScoreV9CompilerInpu
 export function buildSafetyScoreV9RouteReviews(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
+  metaById: Parameters<typeof isDexExitPayoutConversion>[2] = ACTIVE_META_BY_ID,
 ): RouteReview[] {
   const reviews: RouteReview[] = [];
   // Alternatives retain their own admission; Exit selection and capacity
@@ -1136,6 +1137,11 @@ export function buildSafetyScoreV9RouteReviews(
   if (composedExit) {
     for (const retained of buildSafetyScoreV9ComposedDexRoutes(fixedInput, assetId)) {
       reviews.push(buildDexRouteReview(fixedInput, assetId, retained.observation, composedExit));
+    }
+  }
+  for (const review of reviews) {
+    if (review.output && isDexExitPayoutConversion(assetId, review.output.assetKeys, metaById)) {
+      review.retainsInputExposure = true;
     }
   }
   const redemption = fixedInput.redemptionBackstopMap[assetId];

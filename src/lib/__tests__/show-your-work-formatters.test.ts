@@ -128,6 +128,7 @@ describe("show-your-work formatters", () => {
       signals: {
         supply: { value: 80, available: true },
         pool: { value: 0, available: false },
+        liq: { value: 0, available: true, componentCoverage: 0.5, scoreDelta7d: 0, tvlDelta7d: null },
       },
       computedAt: 0,
       methodologyVersion: "v6.0",
@@ -135,6 +136,7 @@ describe("show-your-work formatters", () => {
     expect(table.topic).toBe("dews");
     expect(table.rows.find((r) => r.label === "supply")?.value).toBe("80");
     expect(table.rows.find((r) => r.label === "pool")?.value).toBe("n/a");
+    expect(table.rows.find((r) => r.label === "liq")?.value).toBe("0 (7d score change 0.0% · 7d TVL change unavailable · 1 of 2 inputs)");
     expect(table.rows.find((r) => r.label === "Composite score")?.value).toBe("42");
     expect(table.formula).toContain("weighted average of available stress signals");
     expect(table.formula).toContain("weights redistributed");

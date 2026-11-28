@@ -11,6 +11,7 @@ import {
   mapClockedCurveNavReasonToApiUnavailableReason,
   validateClockedCurveNavCaptureRecord,
 } from "./depeg-trust-policy";
+import type { TvlComparisonUnavailableReason } from "@shared/types/stress";
 import { CURRENT_DEPLOYMENT_KEYS, deploymentKey, normalizeDexLiquidityEvidence } from "./dex-liquidity";
 import { DexLiquidityCronMetadataSchema } from "./schemas";
 import {
@@ -21,6 +22,9 @@ import {
 } from "@shared/types/exit-route";
 import {
   DexPermanentLiquiditySchema,
+  FluidSwapStatusSchema,
+  DexEffectiveDepthSchema,
+  type DexEffectiveDepth,
   DexPoolVolumeObservationSchema,
   LiquidityScoreUnavailableReasonSchema,
   type LiquidityPoolSourceFamily,
@@ -53,6 +57,7 @@ export interface DexHistoryRow {
   coverage_confidence: number | null;
   methodology_version: string | null;
   volume_availability_json?: string | null;
+  exit_route_summary_json?: string | null;
 }
 
 export interface DexPriceRow {
@@ -170,6 +175,7 @@ export interface DexDeploymentOutcomeRow {
 }
 
 export interface NormalizedDexScoreDetails {
+  effectiveDepth?: DexEffectiveDepth;
   scoreComponents: unknown;
   exitRouteObservations: ExitRouteObservation[] | null;
   exitRouteObservationCoverage: ExitRouteObservationCoverage;
@@ -223,8 +229,10 @@ export function normalizeDexScoreDetails(
   const details = parsed as Record<string, unknown>;
   const observations = DexExitRouteObservationsSchema.safeParse(details.exitRouteObservations);
   const coverage = ExitRouteObservationCoverageSchema.safeParse(details.exitRouteObservationCoverage);
+  const depth = DexEffectiveDepthSchema.safeParse(details.effectiveDepth);
   const unavailableReason = LiquidityScoreUnavailableReasonSchema.safeParse(details.liquidityScoreUnavailableReason);
   return {
+    ...(depth.success ? { effectiveDepth: depth.data } : {}),
     scoreComponents: projectLegacyScoreComponents(details),
     exitRouteObservations: observations.success ? observations.data : null,
     exitRouteObservationCoverage: coverage.success ? coverage.data : UNKNOWN_EXIT_ROUTE_COVERAGE,
@@ -381,6 +389,7 @@ const ALLOWED_EXTRA_KEYS = new Set<string>([
   "ammExecutionModel",
   "measuredExecution",
   "permanentLiquidity",
+  "fluidSwapStatus",
 ]);
 
 export interface TopPoolsPriceAdmissionContext {
@@ -530,6 +539,9 @@ export function normalizeTopPools(
       if (!DexPermanentLiquiditySchema.safeParse(cleanedExtra.permanentLiquidity).success) {
         delete cleanedExtra.permanentLiquidity;
       }
+      if (cleanedExtra.fluidSwapStatus !== undefined && !FluidSwapStatusSchema.safeParse(cleanedExtra.fluidSwapStatus).success) {
+        delete cleanedExtra.fluidSwapStatus;
+      }
       cleaned.extra = cleanedExtra;
     }
     // Absent = legacy row whose volume eligibility was never recorded; a
@@ -558,7 +570,7 @@ export function selectLiquidityObservation<T extends DexHistoryRow>(
   targetSec: number,
   toleranceSec: number,
 ): T | null {
-  return selectHistoryObservation(history, targetSec, toleranceSec, null);
+  return selectHistoryObservation(history, targetSec, toleranceSec, null).baseline;
 }
 
 // TVL comparisons require the stored current identity, never the runtime
@@ -570,7 +582,7 @@ export function selectTrendBaseline<T extends DexHistoryRow>(
   currentMethodologyVersion: string | null,
 ): T | null {
   if (currentMethodologyVersion === undefined) return null;
-  return selectHistoryObservation(history, targetSec, toleranceSec, liquidityTvlBasisEpoch(currentMethodologyVersion));
+  return selectHistoryObservation(history, targetSec, toleranceSec, liquidityTvlBasisEpoch(currentMethodologyVersion)).baseline;
 }
 
 export function getDexTvlObservedAt(
@@ -588,12 +600,28 @@ export function selectObservedTrendBaseline<T extends DexHistoryRow>(
   toleranceSec: number,
   currentMethodologyVersion: string | null,
 ): T | null {
-  if (observedAt == null || currentMethodologyVersion === undefined) return null;
-  return selectHistoryObservation(history, observedAt - lookbackSec, toleranceSec,
+  return assessObservedTrendBaseline(history, observedAt, lookbackSec, toleranceSec, currentMethodologyVersion, false).baseline;
+}
+
+export function assessObservedTrendBaseline<T extends DexHistoryRow>(
+  history: T[],
+  observedAt: number | null,
+  lookbackSec: number,
+  toleranceSec: number,
+  currentMethodologyVersion: string | null,
+  explainBasisChange = true,
+): { baseline: T | null; reason?: TvlComparisonUnavailableReason } {
+  if (observedAt == null) return { baseline: null, reason: "current-tvl-clock-unavailable" };
+  if (currentMethodologyVersion === undefined) return { baseline: null, reason: "tvl-methodology-unavailable" };
+  const { baseline, differentBasis } = selectHistoryObservation(history, observedAt - lookbackSec, toleranceSec,
     liquidityTvlBasisEpoch(currentMethodologyVersion), (row) => {
       const sampleAt = getDexTvlObservedAt(parseDexVolumeAvailabilityRecord(row.volume_availability_json), observedAt);
       return sampleAt != null && sampleAt < observedAt ? sampleAt : null;
-    });
+    }, explainBasisChange);
+
+  return baseline ? { baseline } : {
+    baseline: null, reason: differentBasis ? "methodology-basis-change" : "weekly-tvl-observation-unavailable",
+  };
 }
 
 function selectHistoryObservation<T extends DexHistoryRow>(
@@ -602,13 +630,16 @@ function selectHistoryObservation<T extends DexHistoryRow>(
   toleranceSec: number,
   currentEpoch: number | null,
   getObservationTime: (row: T) => number | null = (row) => row.snapshot_date,
-): T | null {
+  explainBasisChange = false,
+): { baseline: T | null; differentBasis: boolean } {
   let best: T | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
+  let differentBasis = false;
 
   for (const row of history) {
-    if (currentEpoch != null && (row.methodology_version === undefined ||
-      liquidityTvlBasisEpoch(row.methodology_version) !== currentEpoch)) continue;
+    if (currentEpoch != null && row.methodology_version === undefined) continue;
+    const comparable = currentEpoch == null || liquidityTvlBasisEpoch(row.methodology_version) === currentEpoch;
+    if (!comparable && !explainBasisChange) continue;
     try {
       if (normalizeDexLiquidityEvidence(row).coverageConfidence < TREND_BASELINE_CONFIDENCE_MIN) continue;
     } catch {
@@ -620,13 +651,18 @@ function selectHistoryObservation<T extends DexHistoryRow>(
     if (observationTime == null) continue;
     const distance = Math.abs(observationTime - targetSec);
     if (distance > toleranceSec) continue;
+    if (!comparable) {
+      // A basis break explains the gap only for an otherwise admissible observation.
+      differentBasis = true;
+      continue;
+    }
     if (distance < bestDistance) {
       best = row;
       bestDistance = distance;
     }
   }
 
-  return best;
+  return { baseline: best, differentBasis };
 }
 
 export function getDexLiquidityTrendTolerances() {

@@ -132,6 +132,7 @@ export const DexExecutionCapabilityGateSchema = z.object({
     "paused-or-swap-disabled",
     "metapool-unsupported",
     "incomplete-exact-capture",
+    "reference-price-unavailable",
     // The verification transport failed before anything was observed (request
     // failure, pinned block unavailable, or exhausted wall-time budget). The
     // pool was NOT semantically refused: distinct from

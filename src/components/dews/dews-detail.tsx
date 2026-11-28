@@ -19,7 +19,7 @@ import { formatChartDate } from "@shared/lib/format";
 import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { cn } from "@/lib/utils";
-import { getDewsAmplifiers, getDewsSignalLabel } from "@/lib/dews-signal-utils";
+import { describeLiquidityErosionInputs, getDewsAmplifiers, getDewsSignalLabel } from "@/lib/dews-signal-utils";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { ShowYourWorkToggle } from "@/components/show-your-work-toggle";
 
@@ -220,7 +220,11 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
 
   const unscoredSignals = Object.entries(SIGNAL_META)
     .filter(([key]) => !signals[key]?.available)
-    .map(([key, meta]) => `${sentenceCase(meta.name).toLowerCase()} (${describeUnscoredSignal(key, signals[key]?.unavailableReason)})`);
+    .map(([key, meta]) => {
+      const detail = key === "liq" && signals[key]?.componentCoverage === 0
+        ? describeLiquidityErosionInputs(signals[key]) : describeUnscoredSignal(key, signals[key]?.unavailableReason);
+      return `${sentenceCase(meta.name).toLowerCase()} (${detail})`;
+    });
 
   return (
     <Card className="pharos-card-shell animate-in gap-0 overflow-hidden py-0 fade-in duration-300">
@@ -334,8 +338,9 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                   <span className="min-w-0">
                     <span className="text-foreground">{sentenceCase(meta.name)}</span>
                     <span className="text-muted-foreground">
-                      {" · "}{meta.metricLabel}{" "}
-                      <span className="pharos-numeric">{formatMetric(meta.metricKey, metricVal)}</span>
+                      {" · "}{key === "liq" ? describeLiquidityErosionInputs(signal) : (
+                        <>{meta.metricLabel} <span className="pharos-numeric">{formatMetric(meta.metricKey, metricVal)}</span></>
+                      )}
                     </span>
                   </span>
                   <span className="pharos-numeric shrink-0 tabular-nums text-foreground" aria-label={`${rounded} out of 100`}>

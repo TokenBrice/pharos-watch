@@ -1,3 +1,4 @@
+import { CURVE_LITE_DEPLOYMENTS } from "@shared/lib/dex-deployment-coverage";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import { setCache } from "../../lib/db-cache";
@@ -20,8 +21,7 @@ import type {
 import {
   DEFILLAMA_YIELDS_URL,
   DEFILLAMA_PROTOCOLS_URL,
-  CURVE_API_BASE,
-  CURVE_API_CHAIN_PATHS,
+  curvePoolsApiUrl,
   CURVE_CHAINS,
   DEX_LIQUIDITY_POOL_MIN_TVL_USD,
 } from "./constants";
@@ -495,12 +495,13 @@ export async function fetchDataSources(
     const curveResults = await mapWithConcurrency(CURVE_CHAINS, DEX_CURVE_FETCH_CONCURRENCY, async (chain) => {
       const readStartedAtSec = Math.floor(Date.now() / 1000);
       const result = await fetchJsonWithRetry<CurveApiPayload>(
-        `${CURVE_API_BASE}/${CURVE_API_CHAIN_PATHS[chain] ?? chain}`,
+        curvePoolsApiUrl(chain),
         { headers: { "User-Agent": USER_AGENT }, signal },
         2,
         { timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS, maxResponseBytes: CURVE_MAX_RESPONSE_BYTES },
       );
-      if (result?.body) result.body.readStartedAtSec = readStartedAtSec;
+      if (!Array.isArray(result?.body?.data?.poolData)) return null;
+      result.body.readStartedAtSec = readStartedAtSec;
       return result;
     });
     curvePayloads = curveResults.map((result) => result?.body ?? null);
@@ -712,6 +713,11 @@ export async function buildCurveLookups(
           pool.coins.length <= 8 &&
           executionCoins.every((coin) => coin !== null);
 
+        const liteNgCoins = !executionComplete && CURVE_LITE_DEPLOYMENTS.has(chain) && !pool.isMetaPool &&
+          pool.registryId === "factory-stable-ng" && coinBalances.every(({ coin, decimals }) =>
+            !coin.isBasePoolLpToken && decimals != null && Number.isInteger(decimals) && decimals >= 0 && decimals <= 36)
+          ? coinBalances.map(({ coin, decimals }) => ({ address: coin.address, symbol: coin.symbol, decimals: decimals! }))
+          : undefined;
         const permanentLiquidity = resolvePermanentLiquidity(chain, pool.address, pool.totalSupply);
         const curveBasePoolOverlap = resolveCurveBasePoolOverlap(chain, pool, coinBalances);
         const entry: CurvePoolEntry = {
@@ -743,6 +749,7 @@ export async function buildCurveLookups(
                   underlyingCoins as NonNullable<CurvePoolEntry["underlyingCoins"]>,
               }
             : {}),
+          ...(liteNgCoins ? { liteNgCoins } : {}),
           ...(executionComplete
             ? { executionCoins: executionCoins as NonNullable<CurvePoolEntry["executionCoins"]> }
             : {}),

@@ -194,6 +194,18 @@ const EXIT_COMPONENT_KEYS = [
   "cost",
 ] as const;
 
+const ExitPayoutAssetsSchema = z.array(z.strictObject({
+  key: z.string().min(1), symbol: z.string().min(1).optional(),
+})).min(1);
+export type SafetyScoreExitPayoutAssets = z.infer<typeof ExitPayoutAssetsSchema>;
+
+const ExitConversionSchema = z.strictObject({
+  evidenceKind: z.string().min(1),
+  inputCapacityUsd: z.number().finite().nonnegative().nullable(),
+  maxCostBps: z.number().finite().nonnegative().nullable(),
+});
+export type SafetyScoreExitConversion = z.infer<typeof ExitConversionSchema>;
+
 const SafetyScoreV9ExitBreakdownBaseSchema = z
   .object({
     ...SafetyScoreV9BreakdownPillarBaseShape,
@@ -248,6 +260,9 @@ const SafetyScoreV9ExitBreakdownBaseSchema = z
             chain: z.string().min(1).nullable(),
             protocol: z.string().min(1).nullable(),
             poolId: z.string().min(1).nullable(),
+            payoutAssets: ExitPayoutAssetsSchema.nullable().optional(),
+            inputCapacityUsd: z.number().finite().nonnegative().optional(),
+            costEvidence: z.enum(["measured", "upper-bound"]).optional(),
             evidenceKind: z.string().min(1),
             observedAtSec: z.number().int().nonnegative().nullable(),
           })
@@ -278,6 +293,8 @@ const SafetyScoreV9ExitBreakdownBaseSchema = z
           exclusionReason: V9ReasonCodeSchema.nullable(),
           physicalToUsd: PhysicalToUsdTraceSchema.optional(),
           routeSuspension: RedemptionRouteSuspensionSchema.optional(),
+          payoutAssets: ExitPayoutAssetsSchema.nullable().optional(),
+          conversion: ExitConversionSchema.optional(),
           executionCertificate: ExitExecutionPublicCertificateSchema.optional(),
           confidenceFactor: z.number().finite().min(0).max(1).nullable().optional(),
           confidenceDimensions: V9ConfidenceDimensionsSchema.nullable(),
@@ -307,6 +324,11 @@ type ExitBreakdownRefinementInput = Omit<z.infer<typeof SafetyScoreV9ExitBreakdo
 
 function refineExitBreakdown(breakdown: ExitBreakdownRefinementInput, ctx: z.RefinementCtx, recordedEligibilityMultiplier = 1): void {
     refineBreakdownAdjustments(breakdown, ctx);
+    breakdown.alternatives.forEach((route, index) => {
+      if (route.conversion && (route.included || route.score !== null || route.capacity != null)) {
+        issue(ctx, ["alternatives", index], "A conversion cannot carry an independent exit score or capacity");
+      }
+    });
     if (breakdown.primaryRoute === null) return;
     const keys = breakdown.primaryRoute.components.map((component) => component.key);
     if (JSON.stringify(keys) !== JSON.stringify(EXIT_COMPONENT_KEYS)) {
@@ -374,9 +396,13 @@ const SafetyScoreV9ExitBreakdownSchema = SafetyScoreV9ExitBreakdownBaseSchema.su
 const SafetyScoreV9HistoricalExitBreakdownSchema = SafetyScoreV9ExitBreakdownBaseSchema.extend({
   primaryRoute: SafetyScoreV9ExitBreakdownBaseSchema.shape.primaryRoute.unwrap()
     .omit({ routeId: true, lane: true })
-    .extend({ eligibilityMultiplier: z.number().finite().min(0).max(1) }).nullable(),
+    .extend({
+      eligibilityMultiplier: z.number().finite().min(0).max(1),
+      capacity: SafetyScoreV9ExitBreakdownBaseSchema.shape.primaryRoute.unwrap().shape.capacity.unwrap().unwrap()
+        .omit({ payoutAssets: true, inputCapacityUsd: true, costEvidence: true }).nullable().optional(),
+    }).nullable(),
   alternatives: z.array(SafetyScoreV9ExitBreakdownBaseSchema.shape.alternatives.element
-    .omit({ routeId: true, lane: true })),
+    .omit({ routeId: true, lane: true, payoutAssets: true, conversion: true })),
 }).superRefine((breakdown, ctx) => refineExitBreakdown(breakdown, ctx, breakdown.primaryRoute?.eligibilityMultiplier ?? 1));
 export type SafetyScoreV9ExitBreakdown = z.infer<
   typeof SafetyScoreV9ExitBreakdownSchema

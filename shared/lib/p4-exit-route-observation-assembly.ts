@@ -1,3 +1,4 @@
+import { admitFluidSwapStatus } from "./fluid-swap-status";
 import { EXIT_ROUTE_SCORING_TABLES } from "./exit-route-scoring";
 import { validateExitRouteCapacityCurve } from "./exit-route-capacity-point";
 import type { ExitRouteObservation, ExitRouteOutput } from "../types/exit-route";
@@ -81,6 +82,16 @@ export function buildP4DexExitRouteObservations(params: {
   let scoreEligibleCapabilityPoolCount = 0;
 
   for (const pool of params.retainedPools) {
+    const swapStatus = pool.project === "fluid" ? admitFluidSwapStatus(pool.extra?.fluidSwapStatus, params.observedAt) : null;
+    if (swapStatus && swapStatus.status !== "active") {
+      const { reason } = swapStatus;
+      unsupportedReasons[reason] = (unsupportedReasons[reason] ?? 0) + 1;
+      unsupportedPoolCount++;
+      if (swapStatus.status === "unknown" && requiresP4DexScoreEligibleCapabilityCoverage(pool)) {
+        scoreEligibleCapabilityPoolCount++;
+      }
+      continue;
+    }
     if (requiresP4DexScoreEligibleCapabilityCoverage(pool)) scoreEligibleCapabilityPoolCount++;
     if (!Number.isFinite(pool.tvlUsd) || pool.tvlUsd <= 0 || !pool.poolId || !pool.project || !pool.chain) {
       // An invalid retained row cannot prove that it belongs to a diagnostic-only
@@ -357,6 +368,7 @@ export function buildP4DexExitRouteObservations(params: {
           evidenceKind: capability.outputEvidenceKind,
           confidence: capability.confidence,
           scoreEligible: capability.scoreEligible,
+          reserveModelId: capability.id,
           observedAt: state ? state.blockTimestamp! : ammModel.capture?.blockTimestamp ?? params.observedAt,
           freshnessSeconds: state ? Math.max(0, params.observedAt - Math.min(
             state.blockTimestamp!, inputToken.referencePriceObservedAt!, outputToken.referencePriceObservedAt!,

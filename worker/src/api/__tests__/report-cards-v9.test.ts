@@ -186,10 +186,25 @@ describe("materialized V9 response", () => {
     expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value).toBe(stored);
   });
 
-  it("requires a separate wire opt-in for reserve admission on full and detail cards", async () => {
+  it("preserves keyed Exit compatibility and the separate reserve diagnostics opt-in", async () => {
     const { db } = database();
     const publication = makeWorkerSafetyScoreV9Publication();
     const card = publication.cards[0]!;
+    const exit = card.breakdowns!.exit;
+    const primary = exit.primaryRoute!;
+    primary.capacity = {
+      payoutAssets: [{ key: "frxusd-frax", symbol: "frxUSD" }], inputCapacityUsd: 3_200, costEvidence: "upper-bound",
+      executableUsd: 3_100, requestedNotionalUsd: 1_000_000, completionRatio: 0.0031, maxCostBps: 200, executionCostBps: 200,
+      settlementDelaySec: 0, capacityScoringHorizon: "immediate", chain: "ethereum", protocol: "curve", poolId: "pool",
+      evidenceKind: "reserve-based-amm-simulation", observedAtSec: publication.asOfSec,
+    };
+    exit.alternatives = [{
+      key: "dex:receipt", routeId: "receipt", lane: "dex", label: "Conversion to strUSD · Curve",
+      routeFamily: "dex-amm", included: false, score: null, exclusionReason: "missing-same-notional-route",
+      confidenceDimensions: null, capacityEvidenceTier: primary.capacityEvidenceTier, rawSameNotionalCostBps: null, capacity: null,
+      payoutAssets: [{ key: "strusd-tori", symbol: "strUSD" }],
+      conversion: { evidenceKind: "reserve-based-amm-simulation", inputCapacityUsd: 1_000_000, maxCostBps: 200 },
+    }];
     card.reserveCompositionAdmission = { reasons: ["no-review"] };
     await persistAndMaterialize(db, currentInput(publication));
     vi.useFakeTimers({ toFake: ["Date"] });
@@ -205,9 +220,20 @@ describe("materialized V9 response", () => {
       const plain = await handle(db, url);
       url.searchParams.set("reserveAdmission", "diagnostics");
       const optedIn = await handle(db, url);
-      const readCard = async (response: Response) => (await response.json() as { cards: object[] }).cards[0];
-      expect(await readCard(plain)).not.toHaveProperty("reserveCompositionAdmission");
-      expect(await readCard(optedIn)).toHaveProperty("reserveCompositionAdmission", card.reserveCompositionAdmission);
+      const readCard = async (response: Response) => (await response.json() as { cards: SafetyScoreV9CurrentCard[] }).cards[0]!;
+      const plainCard = await readCard(plain);
+      expect(plainCard).not.toHaveProperty("reserveCompositionAdmission");
+      const diagnostics = await readCard(optedIn);
+      expect(diagnostics.reserveCompositionAdmission).toEqual(card.reserveCompositionAdmission);
+      const servedExit = plainCard.breakdowns!.exit;
+      expect(diagnostics.breakdowns!.exit).toEqual(servedExit);
+      if (handle === handleReportCardsV9Detail) expect(servedExit).toEqual(exit);
+      else {
+        for (const key of ["payoutAssets", "inputCapacityUsd", "costEvidence"]) expect(servedExit.primaryRoute!.capacity).not.toHaveProperty(key);
+        for (const key of ["conversion", "payoutAssets"]) expect(servedExit.alternatives[0]).not.toHaveProperty(key);
+        expect(servedExit.alternatives[0]!.label).toContain("Conversion to strUSD");
+        expect(active.snapshot!.cards[0]!.breakdowns!.exit).toEqual(servedExit);
+      }
       expect(optedIn.headers.get("ETag")).not.toBe(plain.headers.get("ETag"));
     }
   });

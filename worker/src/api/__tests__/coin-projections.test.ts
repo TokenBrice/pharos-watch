@@ -1,3 +1,4 @@
+import type { DexExitRouteObservation } from "@shared/types/exit-route";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
@@ -57,6 +58,49 @@ describe("site-only coin projections", () => {
       const missing = DexLiquidityCoinResponseSchema.parse(await (await handleDexLiquidityCoin(db, coinUrl("dex-liquidity-coin", "dai-makerdao"))).json());
       expect(missing.coins).toEqual({});
       expect(missing.projection).toMatchObject({ unavailableReason: "row-not-published", generationId: null, updatedAt: null, totalCount: 2 });
+    } finally { sqlite.close(); }
+  });
+
+  it("projects only a comparable same-pool weekly sell observation on the detail endpoint", async () => {
+    const id = "trusd-tori";
+    const pool = "ethereum:0xd1d954bc94c843815ec7b8119f2de00af27fa6ff";
+    const output = "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29";
+    const route: DexExitRouteObservation = {
+      routeId: `dex:${id}:dl:${encodeURIComponent(pool)}:${encodeURIComponent(output)}`,
+      routeFamily: "dex-amm", scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: pool, protocol: "curve" },
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["frxusd-frax"], assetKeys: [output] },
+      requestedNotionalUsd: 1_000_000, maxCostBps: 200, settlementHorizonSec: 300, executableUsd: 3_231.89,
+      completionRatio: 0.003232, observedAt: 1_795_857_263, freshnessSeconds: 110,
+      evidenceKind: "reserve-based-amm-simulation", scoreEligible: true, confidence: "high", commonModeKeys: [],
+    };
+    const coverage = { status: "populated", capabilityMatrixVersion: "p4a.10", retainedPoolCount: 6,
+      observationCount: 1, scoreEligibleObservationCount: 1, unsupportedPoolCount: 5,
+      evidenceCounts: { "reserve-based-amm-simulation": 1 }, unsupportedReasons: {} };
+    const prior = { ...route, executableUsd: 186_813.88, completionRatio: 0.186814, observedAt: 1_795_266_731 };
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      insert(sqlite, "dex_liquidity", { symbol: "trUSD", ...makeDexLiquidityRow({ stablecoin_id: id,
+        updated_at: 1_795_857_035, methodology_version: "7.56", score_components_json: JSON.stringify({
+          exitRouteObservations: [route], exitRouteObservationCoverage: coverage,
+        }) }) });
+      insert(sqlite, "dex_liquidity_history", { stablecoin_id: id, total_tvl_usd: 5_922_372,
+        snapshot_date: 1_795_219_200, coverage_class: "mixed", coverage_confidence: 0.74, methodology_version: "7.53" });
+      const read = async (observation: DexExitRouteObservation, version = "7.53") => {
+        sqlite.prepare("UPDATE dex_liquidity_history SET exit_route_summary_json = ?, methodology_version = ?")
+          .run(JSON.stringify({ observations: [observation], coverage }), version);
+        const body = DexLiquidityCoinResponseSchema.parse(await (await handleDexLiquidityCoin(db, coinUrl("dex-liquidity-coin", id))).json());
+        return body.coins[id].weeklyExitRouteBaselines;
+      };
+      expect(await read(prior)).toEqual([{ routeId: route.routeId, observedAt: prior.observedAt, executableUsd: 186_813.88 }]);
+      expect(await read({ ...prior, executableUsd: 0, completionRatio: 0 })).toEqual([
+        { routeId: route.routeId, observedAt: prior.observedAt, executableUsd: 0 },
+      ]);
+      for (const patch of [
+        { requestedNotionalUsd: 100_000 }, { maxCostBps: 100 }, { settlementHorizonSec: 3600 },
+        { observedAt: prior.observedAt - 86_400 }, { reserveModelId: "different" },
+        { output: { ...prior.output, assetKeys: ["different"] } },
+      ]) expect(await read({ ...prior, ...patch })).toBeUndefined();
+      expect(await read(prior, "7.52")).toBeUndefined();
     } finally { sqlite.close(); }
   });
 

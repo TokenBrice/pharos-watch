@@ -23,7 +23,7 @@ import { BLACKLIST_PUBLIC_EVENT_SQL, type BlacklistPersistedRow } from "../../bl
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../../structured-log";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../dex-liquidity";
-import { getDexLiquidityTrendTolerances, getDexTvlObservedAt, selectLiquidityObservation, selectObservedTrendBaseline } from "../../dex-liquidity-response";
+import { getDexLiquidityTrendTolerances, getDexTvlObservedAt, selectLiquidityObservation, assessObservedTrendBaseline } from "../../dex-liquidity-response";
 import type { DexHistoryRow } from "../../dex-liquidity-response";
 import {
   CONTRACT_CONFIGS,
@@ -389,8 +389,9 @@ export async function hydrateDexLiquidityHistory(
 ): Promise<DexLiquidityHistoryHydration> {
   const target7d = ctx.nowSec - 7 * DAY_SECONDS;
   const tolerance = getDexLiquidityTrendTolerances().week;
+  // updated_at is the sync start. Registry evaluation can complete later in that generation.
   const captureById = new Map([...currentLiquidityById].map(([id, row]) => [
-    id, getDexTvlObservedAt(parseDexVolumeAvailabilityRecord(row.volume_availability_json), row.updated_at ?? 0),
+    id, getDexTvlObservedAt(parseDexVolumeAvailabilityRecord(row.volume_availability_json), ctx.nowSec),
   ]));
   // History is indexed by UTC day and the serving capture may predate this run.
   const earliestCapture = [...captureById.values()].reduce<number>(
@@ -429,17 +430,20 @@ export async function hydrateDexLiquidityHistory(
       history.push({ ...row, total_tvl_usd: row.total_tvl_usd ?? 0 });
       byId.set(row.stablecoin_id, history);
     }
-    for (const [id, history] of byId) {
+    for (const id of new Set([...byId.keys(), ...currentLiquidityById.keys()])) {
+      const history = byId.get(id) ?? [];
       const scoreBaseline = selectLiquidityObservation(history, target7d, tolerance);
       const current = currentLiquidityById.get(id);
-      const tvlBaseline = current
-        ? selectObservedTrendBaseline(history, captureById.get(id) ?? null, 7 * DAY_SECONDS, tolerance, current.methodology_version)
+      const comparison = current
+        ? assessObservedTrendBaseline(history, captureById.get(id) ?? null, 7 * DAY_SECONDS, tolerance, current.methodology_version)
         : null;
-      if (scoreBaseline || tvlBaseline) {
+      const tvlBaseline = comparison?.baseline;
+      if (scoreBaseline || comparison) {
         liqHist7dMap.set(id, {
           score: scoreBaseline?.liquidity_score ?? null,
           tvl: tvlBaseline?.total_tvl_usd ?? null,
-          date: scoreBaseline?.snapshot_date ?? tvlBaseline!.snapshot_date,
+          ...(comparison?.reason ? { tvlDelta7dUnavailableReason: comparison.reason } : {}),
+          date: scoreBaseline?.snapshot_date ?? tvlBaseline?.snapshot_date ?? null,
         });
       }
     }

@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { getCronQualityReasons as qualReasons } from "@shared/lib/cron-quality-reasons";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { DatabaseSync } from "node:sqlite";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { createLatestSchemaSqlite as mkSqlite } from "@shared/test-utils/latest-schema-sqlite";
@@ -517,12 +518,12 @@ describe("dex liquidity stage same-hour recovery", () => {
     expect((await consume(undefined, hSlot)).status).toBe("skipped_neutral"); expect(persistScores).toHaveBeenCalledOnce();
   });
 
-  it("skips an incompatible v9 stage before publication", async () => {
+  it("skips the preceding v11 stage before publication", async () => {
     await stageHr();
-    h.sqlite.exec("UPDATE dex_liquidity_scoring_stage_chunks SET payload_json = replace(payload_json, '\"schemaVersion\":11', '\"schemaVersion\":9'), payload_bytes = payload_bytes - 1 WHERE chunk_index = 0; UPDATE dex_liquidity_scoring_stages SET payload_bytes = payload_bytes - 1;");
+    h.sqlite.exec("UPDATE dex_liquidity_scoring_stage_chunks SET payload_json = replace(payload_json, '\"schemaVersion\":12', '\"schemaVersion\":11') WHERE chunk_index = 0;");
     const res = await consume();
     expect(res.status).toBe("skipped_neutral");
-    expect(readMeta(res)).toMatchObject({ reason: "scoring-stage-payload-version-mismatch", payloadVersion: 9, persistence: { generationId: null, skipped: true, publicationStarted: false } });
+    expect(readMeta(res)).toMatchObject({ reason: "scoring-stage-payload-version-mismatch", payloadVersion: 11, persistence: { generationId: null, skipped: true, publicationStarted: false } });
     expect(persistScores).not.toHaveBeenCalled(); expect(markConsumed).not.toHaveBeenCalled();
   });
 
@@ -672,7 +673,7 @@ describe("dex liquidity stage same-hour recovery", () => {
     const now = Math.floor(schedMs / 1e3), src = "defillama-curve-identities";
     for (const [status, n, id, age, prev, hold] of [["partial", 3, "", 0, "", false], ["unavailable", 0, "g1", 3600, "ok", true], ["unavailable", 0, "g2", 7200, "ok", false], ["unavailable", 0, "g3", 1800, "unavailable", false]] as const) {
       h.sqlite.exec("DELETE FROM dex_liquidity_publication_generations;DELETE FROM dex_liquidity_scoring_stage_chunks;DELETE FROM dex_liquidity_scoring_stages;");
-      if (id) { const t = now - age; h.sqlite.prepare("INSERT INTO dex_liquidity_publication_generations(generation_id,started_at,published_at,state,expected_row_count,created_at,metadata_json)VALUES(?,?,?,'published',2,?,?)").run(id, t, t, t, js({ methodologyVersion: "7.56", curveIdentityStatus: prev })); }
+      if (id) { const t = now - age; h.sqlite.prepare("INSERT INTO dex_liquidity_publication_generations(generation_id,started_at,published_at,state,expected_row_count,created_at,metadata_json)VALUES(?,?,?,'published',2,?,?)").run(id, t, t, t, js({ methodologyVersion: LIQUIDITY_METHODOLOGY_VERSION, curveIdentityStatus: prev })); }
       vm(persistScores).mockClear();
       fx.reset({ primary: fx.primary({ curveIdentityAttachment: { status, curvePoolCount: 4, attachedPoolCount: n, unmatchedPoolCount: 4 - n } }) });
       await stageHr();

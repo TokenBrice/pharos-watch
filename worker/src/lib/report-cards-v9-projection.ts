@@ -78,13 +78,31 @@ function buildPublicProjection(
   };
 }
 
+/** Keep newly frozen payout detail in the site detail and accepted publication.
+ * The keyed v9 wire is consumed by strict clients, including older readers. */
+export function projectKeyedExitBreakdown(card: SafetyScoreV9CurrentCard): SafetyScoreV9CurrentCard {
+  if (!card.breakdowns) return card;
+  const exit = card.breakdowns.exit;
+  let primaryRoute = exit.primaryRoute;
+  if (primaryRoute?.capacity) {
+    const { payoutAssets, inputCapacityUsd, costEvidence, ...capacity } = primaryRoute.capacity;
+    if (payoutAssets !== undefined || inputCapacityUsd !== undefined || costEvidence !== undefined) {
+      primaryRoute = { ...primaryRoute, capacity };
+    }
+  }
+  const alternatives = exit.alternatives.some((route) => route.payoutAssets !== undefined || route.conversion !== undefined)
+    ? exit.alternatives.map(({ payoutAssets: _payout, conversion: _conversion, ...route }) => route)
+    : exit.alternatives;
+  if (primaryRoute === exit.primaryRoute && alternatives === exit.alternatives) return card;
+  return { ...card, breakdowns: { ...card.breakdowns, exit: { ...exit, primaryRoute, alternatives } } };
+}
+
 export function projectSafetyScoreV9PublicationToPublicSnapshot(
   publication: SafetyScoreV9AdmittedPublication,
   publicationHealth: V9PublicationHealth,
 ): ReportCardsV9CurrentResponse {
   const cards = publication.cards.map((card: SafetyScoreV9CurrentCard) => {
-    if (card.reserveCompositionAdmission === undefined) return resolveV9PublicWitnessTexts(card);
-    const { reserveCompositionAdmission: _diagnostic, ...compatibleCard } = card;
+    const { reserveCompositionAdmission: _diagnostic, ...compatibleCard } = projectKeyedExitBreakdown(card);
     return resolveV9PublicWitnessTexts(compatibleCard);
   });
   return ReportCardsV9CurrentResponseSchema.parse(buildPublicProjection(publication, publicationHealth, cards));

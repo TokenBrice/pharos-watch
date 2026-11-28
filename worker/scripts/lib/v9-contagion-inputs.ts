@@ -15,6 +15,9 @@
 export const V9_CONTAGION_INPUT_PREFIXES: readonly string[] = [
   "shared/lib/safety-score-",
   "shared/lib/api-",
+  "shared/lib/fluid-swap-status.ts",
+  "shared/types/dex-liquidity.ts",
+  "shared/types/dex-execution",
   "shared/lib/base64.ts",
   "shared/lib/business-calendars.ts",
   "shared/lib/chain-rpc-registry.ts",

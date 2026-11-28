@@ -3,6 +3,7 @@ import { fixedFee, type RedemptionBackstopConfig } from "@shared/lib/redemption-
 import * as redemptionBackstops from "@shared/lib/redemption-backstops";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
+import { isDexExitPayoutConversion } from "@shared/lib/exit-route-output";
 import { buildV9DependencyEvaluationPlan } from "@shared/lib/safety-score-v9/dependencies";
 import { classifyV9DocumentationGap } from "@shared/lib/safety-score-v9/documentation";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
@@ -653,6 +654,45 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     expect(compileFS(rebuilt, reviewedFor(rebuilt, { routeReviews: true })).assets[0]!.exitRoutes.some((route) => route.lane === "redemption")).toBe(false);
   });
 
+  it("retains a parent-to-receipt conversion without scoring its capacity or inferring an empty exit census", () => {
+    const registry = new Map([["strusd-tori", { variantKind: "savings-passthrough", variantOf: "alpha" }]]);
+    const draft = structuredClone(exactFixedInput());
+    const observation = draft.dexLiqMap.alpha!.exitRouteObservations![0]!;
+    observation.output = { kind: "tracked-stablecoin", trackedAssetIds: ["strusd-tori"] };
+    draft.navPriceById = { "strusd-tori": { priceUsd: 1.04, sourceId: "defillama-contract", observedAtSec: observation.observedAt, confidence: "high" } };
+    const project = (relationships: typeof registry) => {
+      const fixed = rebuildFixed(draft), extension = reviewedFor(fixed);
+      extension.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha", relationships);
+      return buildSafetyScoreV9Candidate({ fixedInput: fixed, extension, publishedAtSec: fixed.clockSec }).candidate.cards[0]!;
+    };
+    const card = project(registry);
+    const exit = card.breakdowns!.exit;
+    expect(exit.primaryRoute).toBeNull();
+    expect(card.reasonCodes).not.toContain("no-viable-exit-path");
+    expect(exit.alternatives).toContainEqual(expect.objectContaining({
+      routeId: observation.routeId, label: expect.stringContaining("Conversion to strUSD"), score: null, included: false, capacity: null,
+      payoutAssets: [{ key: "strusd-tori", symbol: "strUSD" }],
+      conversion: { evidenceKind: observation.evidenceKind, inputCapacityUsd: 80_000, maxCostBps: 200 },
+    }));
+    const reverse = new Map([["alpha", { variantKind: "savings-passthrough", variantOf: "strusd-tori" }]]);
+    const selected = project(reverse).breakdowns!.exit.primaryRoute;
+    expect(selected).toMatchObject({ routeId: observation.routeId, capacity: {
+      payoutAssets: [{ key: "strusd-tori", symbol: "strUSD" }], inputCapacityUsd: 400_000, maxCostBps: 200,
+    } });
+    observation.output = { kind: "unknown" };
+    const unresolved = project(registry);
+    expect(unresolved.breakdowns!.exit.primaryRoute).toBeNull();
+    expect(unresolved.reasonCodes).not.toContain("no-viable-exit-path");
+    expect(unresolved.breakdowns!.exit.alternatives).toContainEqual(expect.objectContaining({
+      routeId: observation.routeId, payoutAssets: null, score: null, capacity: null,
+    }));
+    expect(isDexExitPayoutConversion("alpha", ["independent"], registry)).toBe(false);
+    registry.set("nested", { variantKind: "pure-wrapper", variantOf: "strusd-tori" });
+    expect(isDexExitPayoutConversion("alpha", ["nested"], registry)).toBe(true);
+    registry.set("strusd-tori", { variantKind: "pure-wrapper", variantOf: "nested" });
+    expect(isDexExitPayoutConversion("alpha", ["nested"], registry)).toBe(false);
+  });
+
   it("canonicalizes fractional capacity points in ascending numeric order", () => {
     const fixed = structuredClone(exactFixedInput()), observation = fixed.dexLiqMap.alpha!.exitRouteObservations![0]!;
     observation.capacityCurve = [
@@ -839,7 +879,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
           unsupportedReasons: {
             "nonExecutableEvidence:defillama-pool-shaped": 1_449, "nonExecutableEvidence:curve-stableswap-shaped": 11,
             "nonExecutableEvidence:direct-api-amm-shaped": 653, "nonExecutableEvidence:discovery-pool-shaped": 267,
-            ...(exactCapabilityPoolCount > 1 ? (extraGate ?? { "executionCapabilityGate:measured-execution:quote-failed": 1 }) : {}),
+            ...(extraGate ?? (exactCapabilityPoolCount > 1 ? { "executionCapabilityGate:measured-execution:quote-failed": 1 } : {})),
           },
         }) } },
       });
@@ -850,6 +890,8 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     const gated = compileFS(fixedWithCoverage(2), extension()).assets[0]!;
     expect(gated.exitStatus.observationState).toBe("bounded-unknown");
     expect(gated.gaps.map((g) => g.reasonCode)).toContain("incomplete-dex-route-coverage");
+    const unresolved = compileFS(fixedWithCoverage(1, { "fluid-swap-state-missing": 1 }), extension()).assets[0]!;
+    expect(unresolved.exitStatus.observationState).toBe("bounded-unknown");
     const modelLimitOnly = compileFS(fixedWithCoverage(2, { "executionCapabilityGate:curve-stableswap:rate-bearing-inputs": 1 }), extension()).assets[0]!;
     expect(modelLimitOnly.exitStatus.observationState).toBe("known");
     expect(modelLimitOnly.gaps.map((g) => g.reasonCode)).not.toContain("incomplete-dex-route-coverage");
@@ -932,7 +974,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
   it.each([
     "deploymentCensusUnsupportedMethod", "deploymentCensusProviderOutage", "deploymentCensusNonExhaustiveProvider",
     "nonExecutableEvidence:defillama-pool-shaped", "executionCapabilityGate:curve-stableswap:rate-bearing-inputs",
-    "executionCapabilityGate:measured-execution:target-unresolved",
+    "executionCapabilityGate:measured-execution:target-unresolved", "fluid-pool-identity-unverified",
   ])("does not upgrade the legacy %s coverage counter into pipeline proof", (unsupportedReason) => {
     for (const withRedemptionRoute of [false, true]) {
       const original = withRedemptionRoute ? queuedRedemptionFixedInput() : exactFixedInput();
@@ -947,7 +989,9 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       });
       const reviewed = extension(); reviewed.assets[0]!.routeReviews = [];
       const factSet = compileFS(fixed, reviewed), asset = factSet.assets[0]!;
-      expect(asset.gaps.find((e) => e.gapId === (withRedemptionRoute ? "alpha:gap:exit-portfolio-coverage" : "alpha:gap:exit-routes"))).toMatchObject({ causeProof: { cause: "U" } });
+      const gap = asset.gaps.find((e) => e.gapId === (withRedemptionRoute ? "alpha:gap:exit-portfolio-coverage" : "alpha:gap:exit-routes"));
+      expect(gap).toMatchObject({ causeProof: { cause: "U" } });
+      if (unsupportedReason === "fluid-pool-identity-unverified") expect(gap!.message).toContain("Fluid swap state is unresolved");
       expect(buildV9EvidenceGapQueue({ factSet, policy: P }).summary.policyBindingMismatchGapCount).toBe(0);
       expect(evalExitFor(asset).aggregationDisposition).toBe("included");
     }

@@ -64,7 +64,8 @@ export interface DexLiquidityDependencyDiagnostics {
 export interface LiquidityHistorySnapshot {
   score: number | null;
   tvl: number | null;
-  date: number;
+  tvlDelta7dUnavailableReason?: DEWSInput["tvlDelta7dUnavailableReason"];
+  date: number | null;
 }
 
 export interface DexPriceSnapshot {

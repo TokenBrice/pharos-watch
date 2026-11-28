@@ -146,6 +146,12 @@ describe("P4 route observation persistence envelope", () => {
       previousBestCapacityUsd: 24_600_000,
       candidateBestCapacityUsd: 1_000,
     });
+    expect(selectStillFreshDexRouteSetHold(candidate, encodeCurrentRouteSet({
+      exitRouteObservations: [{ ...previousObservation, scope: { kind: "chain-contract", chain: "ethereum",
+        protocol: "fluid", contractOrPoolId: "ethereum:fluid" } }], exitRouteObservationCoverage: coverage,
+    }), nowSec)).toBeNull();
+    expect(selectStillFreshDexRouteSetHold({ ...candidate, effectiveDepth: { coverage: "partial",
+      amountUsd: 1_000, pausedPoolCount: 0, unknownPoolCount: 1 } }, previousRaw, nowSec)).toBeNull();
     expect(
       selectStillFreshDexRouteSetHold(
         candidate,
