@@ -501,11 +501,13 @@ export async function loadStablecoinsIntake(
   }
 
   const supplementalAssets = [...goldTokens, ...silverTokens, ...fiatCgTokens];
-  // Reviewed non-commodity preferred-native stock (BUIDL and Wave-1 non-USD checkpoints) is primary
-  // even when DefiLlama lists the asset; skipped/failed reads follow preferred-native restore/withhold.
+  // Reviewed non-commodity preferred-native stock (BUIDL and the #2169 non-USD checkpoints) is primary
+  // even when DefiLlama lists the asset, including CoinGecko-detail coins with a live llamaId
+  // (zarm-mento; usyc-hashnote if DefiLlama relists 237): a retained list row would otherwise
+  // discard the clocked native packet as a duplicate. Skipped/failed reads follow restore/withhold.
   assets = assets.filter((asset) => {
     const meta = ACTIVE_META_BY_ID.get(asset.id);
-    if (meta && meta.detailProvider !== "coingecko" && prefersReviewedNativeFiatSupply(meta)) return false;
+    if (meta && prefersReviewedNativeFiatSupply(meta)) return false;
     return !isKinesisWrapperSupplyCutoverActive(asset.id, input.syncStartSec);
   });
   for (const asset of assets) {

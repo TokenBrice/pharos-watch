@@ -15,6 +15,7 @@ import {
   prefersOnChainSupplyMcap,
   prefersReviewedNativeFiatSupply,
   REVIEWED_ONCHAIN_SUPPLY_PLANS,
+  requiresOnchainSupplyStateClock,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSingleOnchainSupplyProbeContract,
   supportsOnchainSupplyProbe,
@@ -152,7 +153,9 @@ describe("curated on-chain supply paths", () => {
     { id: "eurcv-societe-generale-forge", chains: ["ethereum", "xrpl", "stellar", "solana"], zero: [] },
     { id: "zchf-frankencoin", chains: ["ethereum", "optimism", "gnosis", "base", "arbitrum", "polygon", "avalanche", "sonic"], zero: ["avalanche", "sonic"] },
     { id: "euri-banking-circle", chains: ["ethereum", "bsc"], zero: [] },
-    { id: "cadd-cad-digital", chains: ["ethereum", "base", "solana", "tempo"], zero: ["tempo"] },
+    { id: "cadd-cad-digital", chains: ["ethereum", "base", "solana", "tempo", "arc"], zero: ["arc"] },
+    { id: "tgbp-tokenised", chains: ["ethereum", "base", "bsc", "polygon", "avalanche", "solana", "arbitrum", "gnosis", "arc"], zero: ["avalanche", "arc"] },
+    { id: "cadc-cad-coin", chains: ["ethereum", "polygon", "arbitrum", "base", "linea", "solana", "ethereum", "base", "polygon", "solana"], zero: ["ethereum", "polygon", "arbitrum", "base", "linea", "solana"] },
     { id: "dgld-gold-token-sa", chains: ["ethereum", "base", "solana"], zero: [] },
     { id: "jpym-mento", chains: ["celo", "monad"], zero: [], canonical: "celo" },
     { id: "mxnb-juno", chains: ["ethereum", "polygon", "arbitrum", "avalanche", "base", "arc"], zero: [] },
@@ -207,9 +210,14 @@ describe("curated on-chain supply paths", () => {
     expect(prefersOnChainSupplyMcap(TRACKED_META_BY_ID.get("jtrsy-anemoy")!)).toBe(true);
     expect(prefersOnChainSupplyMcap(TRACKED_META_BY_ID.get("usdcx-movement")!)).toBe(true);
     expect(selectSingleOnchainSupplyProbeContract(meta)?.chain).toBe("ethereum");
-    for (const id of ["eurc-circle", "eurcv-societe-generale-forge", "brla-brla-digital", "zchf-frankencoin", "euri-banking-circle"]) {
-      expect(prefersReviewedNativeFiatSupply(TRACKED_META_BY_ID.get(id)!)).toBe(true);
+    for (const id of ["eurc-circle", "eurcv-societe-generale-forge", "brla-brla-digital", "zchf-frankencoin", "euri-banking-circle",
+      "cadd-cad-digital", "krwq-iq", "xofm-mento", "zarm-mento", "tgbp-tokenised", "cadc-cad-coin"]) {
+      expect([prefersReviewedNativeFiatSupply(TRACKED_META_BY_ID.get(id)!), requiresOnchainSupplyStateClock(id)]).toEqual([true, true]);
     }
+    expect(["buidl-blackrock", "kau-kinesis", "kag-kinesis", "susds-sky", "paxg-paxos", "wm-m0", "wtgxx-wisdomtree", "tbill-openeden",
+      "cetes-etherfuse", "jpym-mento", "usyc-hashnote"].map(requiresOnchainSupplyStateClock)).toEqual([...Array(9).fill(true), false, false]);
+    const krwq = CURATED_AGGREGATE_ESCROW_RESIDUALS["krwq-iq"]!;
+    expect([krwq.escrowAddress, resolveChainId(krwq.unattributedChainLabel)]).toEqual(["0xbdc82654f3574a113cdbd62f39cbe02e5b522d57", null]);
     expect(prefersReviewedNativeFiatSupply(TRACKED_META_BY_ID.get("kau-kinesis")!)).toBe(false);
     const eurcvStellar = TRACKED_META_BY_ID.get("eurcv-societe-generale-forge")!.contracts!.find((c) => c.chain === "stellar")!;
     expect(onchainSupplyProbeFamily(eurcvStellar)).toBeNull();

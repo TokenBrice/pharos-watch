@@ -33,6 +33,7 @@ import {
   getOnchainSupplyHoldReason,
   isKinesisWrapperSupplyId,
   isOnchainSupplyPartitionExcluded,
+  requiresOnchainSupplyStateClock,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSupplementalOnchainSupplyProbeContract,
   type OnchainSupplyProbeFamily,
@@ -542,12 +543,7 @@ async function fetchOnChainSupplyForContract(input: {
     if (!isFixedDecimalDeployment(supplyContract)) return reject("amount-encoding-unavailable");
     const decimals = supplyContract.decimals;
     const rpcOptions = joinedSupplyRpcOptions({ ...input, signal: supplySignal });
-    const stateClockRequired = input.meta.id === "buidl-blackrock" || isKinesisWrapperSupplyId(input.meta.id)
-      || input.meta.id === "susds-sky" || input.meta.id === "paxg-paxos"
-      || input.meta.id === "eurc-circle" || input.meta.id === "eurcv-societe-generale-forge"
-      || input.meta.id === "brla-brla-digital" || input.meta.id === "wm-m0"
-      || input.meta.id === "wtgxx-wisdomtree" || input.meta.id === "tbill-openeden"
-      || input.meta.id === "cetes-etherfuse";
+    const stateClockRequired = requiresOnchainSupplyStateClock(input.meta.id);
     const needsJoinedBlock = family === "evm" && (
       stateClockRequired || !!CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[input.meta.id] ||
       (!!CURATED_AGGREGATE_ESCROW_RESIDUALS[input.meta.id] &&

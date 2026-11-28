@@ -30,7 +30,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "tGBP has issuer-native StableTokenV1OFT deployments on Ethereum, Base, BSC, Polygon, Avalanche, Arbitrum, and Gnosis plus an issuer-native Solana SPL mint. LayerZero V2 supplies a separate direct OFT burn/mint mesh: EVM owners configure peers and bridge options, while the Solana OFT Store 9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb is one signer of the 1-of-2 mint multisig for inbound bridge credits. The shared EVM owner can mint, pause, configure OFT peers, and authorize upgrades without a verified immutable numeric ceiling, so its bridge cap semantics are conservatively raiseable. Recent LayerZero Scan observations show V302, ten confirmations, three required DVNs, and route-specific executors; the OFT route is therefore externally validated, while direct native minting remains independently scored under Mint Authority.",
+    "summary": "tGBP has issuer-native StableTokenV1OFT deployments on Ethereum, Base, BSC, Polygon, Avalanche, Arbitrum, Gnosis, and Arc plus an issuer-native Solana SPL mint. LayerZero V2 supplies a separate direct OFT burn/mint mesh: EVM owners configure peers and bridge options, while the Solana OFT Store 9hbekmg6j6YFpuYcDoJJovndnNkBaVayzKZuAWaX6dLb is one signer of the 1-of-2 mint multisig for inbound bridge credits. The shared EVM owner can mint, pause, configure OFT peers, and authorize upgrades without a verified immutable numeric ceiling, so its bridge cap semantics are conservatively raiseable. Recent LayerZero Scan observations show V302, ten confirmations, three required DVNs, and route-specific executors; the OFT route is therefore externally validated, while direct native minting remains independently scored under Mint Authority.",
     "reviewedAt": "2026-08-28",
     "reviewer": "Codex mint-bridge-boundary migration; BRDG cap-semantics review 2026-08-28",
     "confidence": "verified",
@@ -313,6 +313,35 @@
             "url": "https://raw.githubusercontent.com/bcp-markets/tGBPv2/main/contracts/StableTokenV1OFT.sol"
           }
         ]
+      },
+      {
+        "id": "arc:0x27f6c8289550fce67f6b50bed1f519966afe5287",
+        "destinationChain": "arc",
+        "contractAddress": "0x27f6c8289550fce67f6b50bed1f519966afe5287",
+        "protocol": "Tokenised StableTokenV1OFT (issuer-deployed LayerZero OFT)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native issuer-owned StableTokenV1OFT deployment on arc (listed by the issuer API alongside the other eight deployments): endpoint() = LayerZero EndpointV2 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, owner() = 0xAF4fCE2984Fb307a368f3Ff01f900909956595C0, EIP-1967 implementation 0xc608f7750b91f2e655ce7702bce3d30b8504abf2 and ProxyAdmin 0x666b8f67969a22a4015d6d523d8671ee714b114f verified at block 33493732 on 2026-11-27; peers() resolve to the Ethereum, Base, BSC, Polygon and Arbitrum deployments and the Solana OFT Store at block 33495162. totalSupply was 0.000361 tGBP. The direct owner-only mint/burn path is native issuance; the LayerZero OFT burn/mint overlay and peer controls are scored separately in bridgeRouteRisk.controls.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 33493732,
+        "sources": [
+          {
+            "label": "Arc mainnet RPC (pinned block 33493732)",
+            "url": "https://rpc.mainnet.arc.io"
+          },
+          {
+            "label": "tGBP StableTokenV1OFT source",
+            "url": "https://raw.githubusercontent.com/bcp-markets/tGBPv2/main/contracts/StableTokenV1OFT.sol"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:tgbp-tokenised"
+        ]
       }
     ],
     "controls": [
@@ -326,7 +355,8 @@
           "polygon:0x27f6c8289550fce67f6b50bed1f519966afe5287",
           "avalanche:0x27f6c8289550fce67f6b50bed1f519966afe5287",
           "arbitrum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
-          "gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f"
+          "gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f",
+          "arc:0x27f6c8289550fce67f6b50bed1f519966afe5287"
         ],
         "capabilities": [
           "bridge-mint",
@@ -347,7 +377,8 @@
           "contract:polygon:0x27f6c8289550fce67f6b50bed1f519966afe5287",
           "contract:avalanche:0x27f6c8289550fce67f6b50bed1f519966afe5287",
           "contract:arbitrum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
-          "contract:gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f"
+          "contract:gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f",
+          "contract:arc:0x27f6c8289550fce67f6b50bed1f519966afe5287"
         ],
         "authorityType": "eoa",
         "routeChecks": {

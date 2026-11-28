@@ -14,7 +14,8 @@
         "polygon:0x27f6c8289550fce67f6b50bed1f519966afe5287",
         "avalanche:0x27f6c8289550fce67f6b50bed1f519966afe5287",
         "arbitrum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
-        "gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f"
+        "gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f",
+        "arc:0x27f6c8289550fce67f6b50bed1f519966afe5287"
       ],
       "proxyAddresses": [
         "0x27f6c8289550fce67f6b50bed1f519966afe5287",
@@ -83,13 +84,14 @@
           "polygon:0x27f6c8289550fce67f6b50bed1f519966afe5287",
           "avalanche:0x27f6c8289550fce67f6b50bed1f519966afe5287",
           "arbitrum:0x27f6c8289550fce67f6b50bed1f519966afe5287",
-          "gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f"
+          "gnosis:0x1f34490f8e8e776ffc547b39b864364035eaf44f",
+          "arc:0x27f6c8289550fce67f6b50bed1f519966afe5287"
         ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-01",
         "observedBlock": 26095808,
-        "evidence": "Current RPC reads on 2026-08-16 returned this EOA from owner() on Ethereum block 25771292, Base block 50069042, BSC block 116370461, Polygon block 92148275, Avalanche block 92987083, Arbitrum block 495314108, and Gnosis block 47763307. All seven deployments are transparent proxies. ProxyAdmin 0x666b8f67969a22a4015d6d523d8671ee714b114f is owned by this EOA on Ethereum, Base, BSC, Polygon, and Arbitrum; Gnosis uses ProxyAdmin 0xe7dc79cd19c604ed5846cbae6ed4401ed92a23d4, also owned by this EOA. Avalanche's ProxyAdmin instead returns itself as owner, leaving that chain's implementation replacement path inaccessible through an external owner. The direct owner-only mint/burn path remains present on all seven EVM deployments.",
+        "evidence": "Current RPC reads on 2026-08-16 returned this EOA from owner() on Ethereum block 25771292, Base block 50069042, BSC block 116370461, Polygon block 92148275, Avalanche block 92987083, Arbitrum block 495314108, and Gnosis block 47763307. All seven deployments are transparent proxies. ProxyAdmin 0x666b8f67969a22a4015d6d523d8671ee714b114f is owned by this EOA on Ethereum, Base, BSC, Polygon, and Arbitrum; Gnosis uses ProxyAdmin 0xe7dc79cd19c604ed5846cbae6ed4401ed92a23d4, also owned by this EOA. Avalanche's ProxyAdmin instead returns itself as owner, leaving that chain's implementation replacement path inaccessible through an external owner. The direct owner-only mint/burn path remains present on all seven EVM deployments. Arc (re-verified 2026-11-27 at block 33493732, hash 0x5128fa3347d977620c6bb19e77ecb1387533ff0aef3238710b0e609059ffb334): owner() returns this EOA, the EIP-1967 implementation is 0xc608f7750b91f2e655ce7702bce3d30b8504abf2 and ProxyAdmin 0x666b8f67969a22a4015d6d523d8671ee714b114f is owned by this EOA, so the direct owner-only mint/burn path also covers Arc.",
         "sources": [
           {
             "label": "OpenZeppelin tGBP audit",

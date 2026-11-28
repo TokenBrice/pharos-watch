@@ -181,6 +181,114 @@
             "url": "https://solscan.io/token/9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7"
           }
         ]
+      },
+      {
+        "id": "ethereum:0x49a6f6aeab68ea001beaa4815186eb22fbdccf2a",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x49a6f6aeab68ea001beaa4815186eb22fbdccf2a",
+        "protocol": "Loon native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Successor CADC (reissued by CADC Reserve Trust; loon.finance/cadc pairs it with legacy 0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef): at Ethereum block 26509850 (2026-11-27) it reads name 'CAD Coin', symbol CADC and 6 decimals; owner(), pauser() and blacklister() return EOA 0x0a142ecf77eca988fc057e98223738832f29e835 and masterMinter() returns 0x99b582c209b976ae05f8f1cb899285f5ab15cae2 on every successor EVM deployment. Migration burned legacy tokens and minted successor tokens to the holder, so this is native issuance, not a bridge representation. Upgrade administration was not reviewed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 26509850,
+        "sources": [
+          {
+            "label": "Loon CADC (successor and legacy contracts)",
+            "url": "https://loon.finance/cadc"
+          },
+          {
+            "label": "Successor CAD Coin",
+            "url": "https://etherscan.io/token/0x49a6f6aeab68ea001beaa4815186eb22fbdccf2a"
+          }
+        ]
+      },
+      {
+        "id": "base:0x5e63e9c06c3f2c779ef29a8071f94f5a724eb5e4",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x5e63e9c06c3f2c779ef29a8071f94f5a724eb5e4",
+        "protocol": "Loon native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Successor CADC (reissued by CADC Reserve Trust; loon.finance/cadc pairs it with legacy 0x043eb4b75d0805c43d7c834902e335621983cf03): at Base block 63159543 (2026-11-27) it reads name 'CAD Coin', symbol CADC and 6 decimals; owner(), pauser() and blacklister() return EOA 0x0a142ecf77eca988fc057e98223738832f29e835 and masterMinter() returns 0x99b582c209b976ae05f8f1cb899285f5ab15cae2 on every successor EVM deployment. Migration burned legacy tokens and minted successor tokens to the holder, so this is native issuance, not a bridge representation. Upgrade administration was not reviewed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 63159543,
+        "sources": [
+          {
+            "label": "Loon CADC (successor and legacy contracts)",
+            "url": "https://loon.finance/cadc"
+          },
+          {
+            "label": "Successor CAD Coin",
+            "url": "https://basescan.org/token/0x5e63e9c06c3f2c779ef29a8071f94f5a724eb5e4"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x74d9423a2886618522f7c992edf647ea707a38eb",
+        "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x74d9423a2886618522f7c992edf647ea707a38eb",
+        "protocol": "Loon native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Successor CADC (reissued by CADC Reserve Trust; loon.finance/cadc pairs it with legacy 0x9de41aff9f55219d5bf4359f167d1d0c772a396d): at Polygon block 98077870 (2026-11-27) it reads name 'CAD Coin', symbol CADC and 6 decimals; owner(), pauser() and blacklister() return EOA 0x0a142ecf77eca988fc057e98223738832f29e835 and masterMinter() returns 0x99b582c209b976ae05f8f1cb899285f5ab15cae2 on every successor EVM deployment. Migration burned legacy tokens and minted successor tokens to the holder, so this is native issuance, not a bridge representation. Upgrade administration was not reviewed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 98077870,
+        "sources": [
+          {
+            "label": "Loon CADC (successor and legacy contracts)",
+            "url": "https://loon.finance/cadc"
+          },
+          {
+            "label": "Successor CAD Coin",
+            "url": "https://polygonscan.com/token/0x74d9423a2886618522f7c992edf647ea707a38eb"
+          }
+        ]
+      },
+      {
+        "id": "solana:52spLAAFjKMwhNJ3TL2PUAUGYGgXsbvipP4whRtBp82S",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "52spLAAFjKMwhNJ3TL2PUAUGYGgXsbvipP4whRtBp82S",
+        "protocol": "Loon native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Successor CADC on Solana (loon.finance/cadc pairs it with legacy 9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7): at finalized slot 474739724 (2026-11-27) the SPL Token mint had decimals 6, mintAuthority FYUwdj3PPNEzcwee5KoFHxz49M7kjcjNrF1EfHHEQTvm and freezeAuthority 5qxWg4NfA6iUMNC4TqzFyWue3BE6bHZGEVu2sz2wbWvg (the legacy mint's authority). Native issuance, not a bridge representation; the mint authority account type was not reviewed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 474739724,
+        "sources": [
+          {
+            "label": "Loon CADC (successor and legacy contracts)",
+            "url": "https://loon.finance/cadc"
+          },
+          {
+            "label": "Successor CAD Coin",
+            "url": "https://solscan.io/token/52spLAAFjKMwhNJ3TL2PUAUGYGgXsbvipP4whRtBp82S"
+          }
+        ]
       }
     ]
   }

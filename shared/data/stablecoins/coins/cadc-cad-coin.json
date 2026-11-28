@@ -86,6 +86,26 @@
       "chain": "solana",
       "address": "9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7",
       "decimals": 6
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x49a6f6aeab68ea001beaa4815186eb22fbdccf2a",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0x5e63e9c06c3f2c779ef29a8071f94f5a724eb5e4",
+      "decimals": 6
+    },
+    {
+      "chain": "polygon",
+      "address": "0x74d9423a2886618522f7c992edf647ea707a38eb",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "52spLAAFjKMwhNJ3TL2PUAUGYGgXsbvipP4whRtBp82S",
+      "decimals": 6
     }
   ],
   "custodyModel": "institutional-regulated",

@@ -22,7 +22,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "CADD is natively issued on Ethereum, Base, Solana, and Tempo; none of the reviewed deployments is a representation of another. On Ethereum and Base, the eight AccessControl roles decoded from RoleGranted logs are held by identical addresses, and the same MINTER_ROLE holder 0x4b37dd8b672ba9f738d888e43ecfaf946cdcadd9 was confirmed on both at 2026-08-18. No CCIP router, LayerZero endpoint, Wormhole manager or any other adapter holds MINTER_ROLE on Base, and Base mints are overwhelmingly unpaired with Ethereum burns, so no contract conserves supply across those two chains. The June 2026 Baker Tilly WM CSAE 3000 report attests CADD in Circulation as the total supply across Base, Tempo and Ethereum against a single pooled trust reserve, so Base liabilities are covered at the aggregate level rather than left unreconciled; the Solana SPL mint and Tempo TIP-20 deployment are separate issuer mint surfaces, and no cross-chain conservation is asserted for them. No bridge control carries the claim; cross-chain moves are manual issuer operations, not transported supply.",
+    "summary": "CADD is natively issued on Ethereum, Base, Solana, Tempo, and Arc; none of the reviewed deployments is a representation of another. On Ethereum and Base, the eight AccessControl roles decoded from RoleGranted logs are held by identical addresses, and the same MINTER_ROLE holder 0x4b37dd8b672ba9f738d888e43ecfaf946cdcadd9 was confirmed on both at 2026-08-18. No CCIP router, LayerZero endpoint, Wormhole manager or any other adapter holds MINTER_ROLE on Base, and Base mints are overwhelmingly unpaired with Ethereum burns, so no contract conserves supply across those two chains. The June 2026 Baker Tilly WM CSAE 3000 report attests CADD in Circulation as the total supply across Base, Tempo and Ethereum against a single pooled trust reserve, so Base liabilities are covered at the aggregate level rather than left unreconciled; the Solana SPL mint and Tempo TIP-20 deployment are separate issuer mint surfaces, and no cross-chain conservation is asserted for them. No bridge control carries the claim; cross-chain moves are manual issuer operations, not transported supply.",
     "reviewedAt": "2026-08-18",
     "reviewer": "Codex mint/bridge boundary reopened verification",
     "confidence": "manual-review",
@@ -201,6 +201,32 @@
           {
             "label": "Tetra CADD FAQ (supported networks)",
             "url": "https://tetradg.com/cadd-stablecoin/"
+          }
+        ]
+      },
+      {
+        "id": "arc:0x24bf8ae7b8e073d766a3509c25b45a6ad30e9046",
+        "destinationChain": "arc",
+        "contractAddress": "0x24bf8ae7b8e073d766a3509c25b45a6ad30e9046",
+        "protocol": "CADD (CAD Digital native issuance on Arc)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Tetra's Supported Blockchains page (updated 2026-11-03) lists this exact Arc CADD contract at 18 decimals. At Arc block 33493732 (2026-11-27) it reads name 'CAD Digital' and symbol CADD, resolves through EIP-1967 to the same ERC20F implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62 as Ethereum and Base, and hasRole confirms MINTER_ROLE for 0x4b37dd8b672ba9f738d888e43ecfaf946cdcadd9 and DEFAULT_ADMIN_ROLE for 0xb3a77dd7c30cdf4f30ae515f73d96f3f41593fce, the Ethereum and Base holders; totalSupply was 1.0 CADD. 0x9367b51c7833f4ea32898079e7f4318e4f412b78 does not hold UPGRADER_ROLE on Arc and the Arc holder was not resolved (keyless Arc RPCs refuse full-range RoleGranted scans), so this is an issuer-native issuance surface, not a bridge representation, with its upgrade role holder unreviewed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-27",
+        "observedBlock": 33493732,
+        "sources": [
+          {
+            "label": "Tetra CADD Supported Blockchains",
+            "url": "https://tetradg.com/supported-blockchains/"
+          },
+          {
+            "label": "Arc mainnet RPC (pinned block 33493732)",
+            "url": "https://rpc.mainnet.arc.io"
           }
         ]
       }

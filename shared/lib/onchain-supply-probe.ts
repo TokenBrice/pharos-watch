@@ -146,6 +146,11 @@ export function prefersOnChainSupplyMcap(meta: Pick<StablecoinMeta, "id">): bool
   return REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.preferMcap === true;
 }
 
+/** Reviewed plans whose legs must publish their own pinned state clock (R6), never the run clock. */
+export function requiresOnchainSupplyStateClock(id: string): boolean {
+  return REVIEWED_ONCHAIN_SUPPLY_PLANS[id]?.requireStateClock === true;
+}
+
 export function isPinnedNativeSharesWorkflow(meta: Pick<StablecoinMeta, "id">): boolean {
   return REVIEWED_ONCHAIN_SUPPLY_PLANS[meta.id]?.nativeWorkflow === "pinned-native-shares";
 }
@@ -358,6 +363,12 @@ interface ReviewedOnchainSupplyPlan {
   escrowResidual?: CuratedAggregateEscrowResidualConfig;
   excludedBalances?: OnChainSupplyExclusionConfig;
   nativeWorkflow?: "hive-debt" | "zephyr-scanner" | "pinned-native-shares";
+  /**
+   * Every leg must date its supply at its own pinned state (EIP-1898 block hash with a
+   * closing header recheck, finalized Solana slot or Stellar ledger close), never the run clock.
+   * Enable only after each leg's routed endpoints have been proven pin-capable.
+   */
+  requireStateClock?: boolean;
 }
 
 /** Reviewed deployment stock, accounting and supply preference, owned together per asset. */
@@ -380,6 +391,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // A genuinely redeemed-to-zero class requires a reviewed plan change.
   "buidl-blackrock": {
     preferMcap: true,
+    requireStateClock: true,
     aggregateContracts: [
       { chain: "ethereum", address: "0x7712c34205737192402172409a8f7ccef8aa2aec" },
       { chain: "ethereum", address: "0x6a9da2d710bb9b700acde7cb81f10f1ff8c89041" },
@@ -390,8 +402,8 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   },
   "hbd-hive": { nativeWorkflow: "hive-debt" },
   // The registry identities cover the Ethereum wrappers, not the native programs.
-  "kau-kinesis": { preferMcap: true, aggregateContracts: [{ chain: "ethereum", allowZeroSupply: true }] },
-  "kag-kinesis": { preferMcap: true, aggregateContracts: [{ chain: "ethereum", allowZeroSupply: true }] },
+  "kau-kinesis": { preferMcap: true, requireStateClock: true, aggregateContracts: [{ chain: "ethereum", allowZeroSupply: true }] },
+  "kag-kinesis": { preferMcap: true, requireStateClock: true, aggregateContracts: [{ chain: "ethereum", allowZeroSupply: true }] },
   [ZEPHYR_ZSD_ASSET_ID]: { nativeWorkflow: "zephyr-scanner" },
   [ZEPHYR_ZYS_ASSET_ID]: { nativeWorkflow: "zephyr-scanner" },
   // Reviewed 2026-11-27: WisdomTree WTGXX independent issuer-native deployments
@@ -402,6 +414,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // Stellar 1.82M, AVAX 0.91M, SOL 0.57M, BASE 0.15M, PLUME 1.08, OP 1.00).
   "wtgxx-wisdomtree": {
     preferMcap: true,
+    requireStateClock: true,
     aggregateContracts: [
       { chain: "arbitrum" },
       { chain: "avalanche" },
@@ -421,6 +434,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // Pinned 2026-11-27 total: 244,691,376.54 TBILL ($285.07M at $1.16500612 NAV).
   "tbill-openeden": {
     preferMcap: true,
+    requireStateClock: true,
     aggregateContracts: [
       { chain: "ethereum" },
       { chain: "arbitrum", allowZeroSupply: true },
@@ -438,6 +452,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // CoinGecko circulating_supply (~13.0M) omits Stellar.
   "cetes-etherfuse": {
     preferMcap: true,
+    requireStateClock: true,
     aggregateContracts: [
       { chain: "solana" },
       { chain: "base" },
@@ -588,18 +603,22 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // DefiLlama currently lists these active assets but intermittently reports a
   // zero supply row. Use only verified live deployments and fail closed if any
   // configured chain cannot be read, so this cannot silently undercount.
-  // Reviewed 2026-11-25: Tetra's supported-blockchains roster binds four
-  // independent issuer-native CADD deployments (no bridge lockbox): Ethereum
-  // 1,825,864.12 (block 26491782) + Base 6,356,928.80 (block 62071808) +
-  // Solana Token-2022 82,998.023043 (slot 473723301) + Tempo TIP-20 99.00
-  // (block 50740563) = 8,265,889.943043 CADD. ETH+Base matches DefiLlama 387
-  // exactly; ETH+Base+Solana matches CoinGecko; Tempo dust allows zero.
+  // Reviewed 2026-11-27 (#2169 Wave 2, owner ruling D8: enroll fenced): Tetra's
+  // Supported Blockchains page (updated 2026-11-03) binds five independent
+  // issuer-native CADD deployments (no bridge lockbox): Ethereum 1,825,864.12
+  // (block 26509823) + Base 12,476,975.84 (block 63157847) + Solana Token-2022
+  // 82,998.023043 (slot 474733752) + Tempo TIP-20 350,099.00 (block 51143741) +
+  // Arc 1.00 (block 33493653) = 14,735,937.983043 CADD. DefiLlama 387 counts
+  // Ethereum + Base only; Arc dust allows zero.
   "cadd-cad-digital": {
+    preferMcap: true,
+    requireStateClock: true,
     aggregateContracts: [
       { chain: "ethereum" },
       { chain: "base" },
       { chain: "solana" },
-      supplyProbeChain("tempo", { allowZeroSupply: true }),
+      supplyProbeChain("tempo"),
+      supplyProbeChain("arc", { allowZeroSupply: true }),
     ],
   },
   // Bridge's OUSD reserve page binds these four issuer deployments. Reviewed
@@ -840,10 +859,17 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
     ],
     canonicalSupplyChain: "celo",
   },
+  // Reviewed 2026-11-27 (#2169 Wave 2): single issuer-native Celo registers.
+  // ZARm 11,300.654418 and XOFm 5,366,598.001186 at Celo block 83921191 match
+  // DefiLlama 368 and 371 to the unit.
   "zarm-mento": {
+    preferMcap: true,
+    requireStateClock: true,
     aggregateContracts: [{ chain: "celo" }],
   },
   "xofm-mento": {
+    preferMcap: true,
+    requireStateClock: true,
     aggregateContracts: [{ chain: "celo" }],
   },
   // sUSDS and sDAI are Sky savings NAV wrappers with no DefiLlama market row
@@ -854,6 +880,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // includes their L1 escrow; the canonical policy below reallocates remote
   // supply instead of adding it. This roster is not an economic supply plan.
   "susds-sky": {
+    requireStateClock: true,
     aggregateContracts: [
       { chain: "ethereum" },
       { chain: "base" },
@@ -1154,7 +1181,17 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // double count. Note: this drops the published supply from CoinGecko's
   // Ethereum+Base double count to the conserved 1,069,438,010.15 KRWQ. The
   // Codex leg is a 5 KRWQ seed mint, so allow it to read zero.
+  // Re-verified 2026-11-27 (#2169 Wave 2): Ethereum totalSupply 780,683,266.039697
+  // (block 26509823) is conserved; the adapter escrows 510,370,539.217545 against a
+  // 510,359,539.217545 five-spoke total. The 11,000 KRWQ remainder (including the
+  // uncataloged 1,000 KRWQ Solana OFT) publishes under a non-canonical escrow label.
   "krwq-iq": {
+    preferMcap: true,
+    requireStateClock: true,
+    escrowResidual: {
+      escrowAddress: "0xbdc82654f3574a113cdbd62f39cbe02e5b522d57",
+      unattributedChainLabel: "KRWQ unattributed OFT escrow",
+    },
     aggregateContracts: [
       { chain: "ethereum" },
       { chain: "base" },
@@ -1242,6 +1279,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // 442,885.899659 + Solana 3,215.284434, with Base the ~235 oz remainder.
   // Do not add CANONICAL_SUPPLY_CHAINS.
   "paxg-paxos": {
+    requireStateClock: true,
     aggregateContracts: [{ chain: "ethereum" }, { chain: "solana" }, { chain: "base" }],
   },
   // DGLD is independently gold-backed on Ethereum, Base and Solana after the
@@ -1527,6 +1565,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // G-account, so bind classic code EURCV explicitly.
   "eurcv-societe-generale-forge": {
     preferMcap: true,
+    requireStateClock: true,
     aggregateContracts: [
       { chain: "ethereum" },
       supplyProbeChain("xrpl"),
@@ -1541,6 +1580,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // unreadableDeployments so Polygon, Gnosis and Celo enforce fresh EIP-1898 block clocks.
   "brla-brla-digital": {
     preferMcap: true,
+    requireStateClock: true,
     unreadableDeployments: [{ chain: "moonbeam", address: "0xfeb25f3fddad13f82c4d6dbc1481516f62236429" }],
     aggregateContracts: [
       { chain: "polygon" },
@@ -1555,6 +1595,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // Sonic 4.00 = 32,538,013.40 ZCHF (-0.0050% vs DefiLlama implied 32,539,636.63).
   "zchf-frankencoin": {
     preferMcap: true,
+    requireStateClock: true,
     aggregateContracts: [
       { chain: "ethereum" },
       { chain: "optimism" },
@@ -1571,6 +1612,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // (bit-exact match to DefiLlama implied 28,503,081.16).
   "euri-banking-circle": {
     preferMcap: true,
+    requireStateClock: true,
     aggregateContracts: [
       { chain: "ethereum" },
       { chain: "bsc" },
@@ -1588,6 +1630,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // 459,761,376.36).
   "eurc-circle": {
     preferMcap: true,
+    requireStateClock: true,
     aggregateContracts: [
       { chain: "ethereum" },
       { chain: "base" },
@@ -1623,9 +1666,11 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
   // 26491774) proves Nexus (chainId 3946) is an isolated spoke (bridgedPrincipal == 1.380000,
   // bounding Nexus wM to <= 1.520478 wM while RPC stays down); Nexus is recorded in
   // unreadableDeployments. Mantra EVM (72,948.06 wM) and Moca (2.31 wM) stay outside this
-  // perimeter under an explicit dated owner exception until CHAIN_META identity is settled.
+  // perimeter as a permanent reviewed exclusion (owner ruling D6, #2370; re-open trigger in
+  // docs/supply-snapshot.md#coverage-decisions).
   "wm-m0": {
     preferMcap: true,
+    requireStateClock: true,
     unreadableDeployments: [
       { chain: "nexus", address: "0x437cc33344a0b27a429f795ff6b469c72698b291" },
     ],
@@ -1647,6 +1692,55 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
       supplyProbeChain("0g", { allowZeroSupply: true }),
       supplyProbeChain("sei", { allowZeroSupply: true }),
       supplyProbeChain("fluent", { allowZeroSupply: true }),
+    ],
+  },
+  // === #2169 Wave 2 non-USD reviewed native supply checkpoints (Pricing v7.1) ===
+  // tGBP: issuer-native StableTokenV1OFT deployments on Ethereum, Base, BSC, Polygon,
+  // Avalanche, Arbitrum, Gnosis and Arc plus a Solana SPL mint; LayerZero OFT moves burn
+  // and mint, with no lockbox escrow. Pinned 2026-11-27 sum: 19,670,210.774473 tGBP
+  // (Ethereum 14,042,025.54, Base 5,272,725.21, Solana 211,743.17, Polygon 62,933.45,
+  // Arbitrum 58,003.01, BSC 21,279.15, Gnosis 1,485.16, Avalanche 16.08, Arc 0.000361),
+  // matching DefiLlama 317 to the unit. Avalanche and Arc dust allow zero.
+  "tgbp-tokenised": {
+    preferMcap: true,
+    requireStateClock: true,
+    aggregateContracts: [
+      { chain: "ethereum" },
+      { chain: "base" },
+      { chain: "bsc" },
+      { chain: "polygon" },
+      { chain: "avalanche", allowZeroSupply: true },
+      { chain: "solana" },
+      { chain: "arbitrum" },
+      { chain: "gnosis" },
+      supplyProbeChain("arc", { allowZeroSupply: true }),
+    ],
+  },
+  // === #2393: CADC legacy + successor registers (owner ruling D10, Pricing v7.1) ===
+  // CADC Reserve Trust reissued CADC on six-decimal Ethereum, Base, Polygon and Solana
+  // contracts (loon.finance/cadc). The 1:1 migration closed 2026-11-26; legacy CADC stays
+  // redeemable for CAD via Paytrie, so both registers are outstanding claims. Migration
+  // burns the legacy tokens (Ethereum 53,826.49 and Base 26,422.02 burned through
+  // intermediaries with no parked balance) and mints the successor to the holder, so the
+  // registers add. Pinned 2026-11-27: legacy Ethereum 798,488.25 + Polygon 52,574.23 +
+  // Arbitrum 15,100.00 + Base 1,213,884.19 + Linea 10,000.00 + Solana 10,001.00 =
+  // 2,100,047.67; successor Ethereum 63,926.49 + Base 692,221.47 + Polygon 26,106.67 +
+  // Solana 37,622.16 = 819,876.79; total 2,919,924.46 CADC. DefiLlama 145 counts only the
+  // four legacy EVM registers. Closed legacy registers may redeem to zero.
+  "cadc-cad-coin": {
+    preferMcap: true,
+    requireStateClock: true,
+    aggregateContracts: [
+      { chain: "ethereum", address: "0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef", allowZeroSupply: true },
+      { chain: "polygon", address: "0x9de41aff9f55219d5bf4359f167d1d0c772a396d", allowZeroSupply: true },
+      { chain: "arbitrum", allowZeroSupply: true },
+      { chain: "base", address: "0x043eb4b75d0805c43d7c834902e335621983cf03", allowZeroSupply: true },
+      { chain: "linea", allowZeroSupply: true, fallbackRpcUrl: SUPPLY_RPC_DEFAULTS.linea.rpcUrl },
+      { chain: "solana", address: "9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7", allowZeroSupply: true },
+      { chain: "ethereum", address: "0x49a6f6aeab68ea001beaa4815186eb22fbdccf2a" },
+      { chain: "base", address: "0x5e63e9c06c3f2c779ef29a8071f94f5a724eb5e4" },
+      { chain: "polygon", address: "0x74d9423a2886618522f7c992edf647ea707a38eb" },
+      { chain: "solana", address: "52spLAAFjKMwhNJ3TL2PUAUGYGgXsbvipP4whRtBp82S" },
     ],
   },
 };

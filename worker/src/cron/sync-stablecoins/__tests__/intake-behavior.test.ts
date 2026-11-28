@@ -499,6 +499,8 @@ describe("stablecoin intake admission", () => {
     { label: "BUIDL skipped native beats relisted supply", id: "buidl-blackrock", primary: 100, supplemental: null, expected: undefined, source: "onchain-supply-withheld", observedAt: undefined },
     { label: "EURCV preferred native beats DefiLlama list supply", id: "eurcv-societe-generale-forge", primary: 100, supplemental: 200, expected: 200, source: "onchain-total-supply", observedAt: 1_777_000_000 },
     { label: "EURC preferred circulating native beats DefiLlama list supply", id: "eurc-circle", primary: 100, supplemental: 200, expected: 200, source: "onchain-circulating-supply", observedAt: 1_777_000_000 },
+    { label: "CoinGecko-detail ZARm native beats its DefiLlama list row", id: "zarm-mento", primary: 100, supplemental: 200, expected: 200, source: "onchain-total-supply", observedAt: 1_777_000_000 },
+    { label: "USYC native beats a relisted DefiLlama 237 row", id: "usyc-hashnote", primary: 100, supplemental: 200, expected: 200, source: "onchain-total-supply", observedAt: 1_777_000_000 },
     { label: "positive primary beats positive supplemental", primary: 100, supplemental: 200, expected: 100, source: "defillama", observedAt: 1_776_999_940 },
     { label: "observed zero beats positive supplemental", primary: 0, supplemental: 200, expected: 0, source: "defillama", observedAt: 1_776_999_940 },
     { label: "observed zero beats zero supplemental", primary: 0, supplemental: 0, expected: 0, source: "defillama", observedAt: 1_776_999_940 },
@@ -520,8 +522,7 @@ describe("stablecoin intake admission", () => {
     vi.mocked(supplemental.fetchSupplementalTrackedTokens).mockResolvedValue({
       goldTokens: [], silverTokens: [], fiatCgTokens: supplementalSupply === null ? [] : [makePeggedAsset({
         id, circulating: supplementalSupply === undefined ? {} : { peggedUSD: supplementalSupply },
-        supplySource: id === "eurc-circle" ? "onchain-circulating-supply"
-          : id === "buidl-blackrock" || id === "eurcv-societe-generale-forge" ? "onchain-total-supply" : "coingecko-fallback", supplyObservedAt: 1_777_000_000,
+        supplySource: (id === "intake-supply-fixture" ? null : source) ?? "coingecko-fallback", supplyObservedAt: 1_777_000_000,
       })],
     });
     upstream({ peggedAssets: rows });

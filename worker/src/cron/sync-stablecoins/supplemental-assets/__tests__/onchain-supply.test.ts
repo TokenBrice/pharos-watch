@@ -1235,8 +1235,7 @@ describe("discovery native supply aggregates", () => {
       await expect(fetchCuratedAggregateOnChainMcap(meta, 1.1, buildChainRpcs())).resolves.toBeNull();
     }
 
-    // Slot freshness is enforced unconditionally for Solana excluded-account reads,
-    // even for coins outside the hardcoded stateClockRequired list.
+    // Slot freshness is enforced for Solana excluded-account reads even without requireStateClock.
     const validAccounts = new Map<string, SolanaAccount | null>([
       [mintAddr, makeMint(115_000_000_000_000n)],
       [premints[0], makeTokenAccount(mintAddr, 25_000_000_000_000n)],
@@ -1302,6 +1301,16 @@ describe("discovery native supply aggregates", () => {
     expect(vi.mocked(evmRpc.fetchEvmUint256AtBlock)).toHaveBeenCalledWith(
       "polygon", meta.contracts![0].address, TOTAL_SUPPLY_SELECTOR, 122, expect.objectContaining({ stateBlockHash: parentHash }),
     );
+  });
+
+  it.each(["euri-banking-circle", "zchf-frankencoin"])("stamps %s at its EIP-1898 block clock and withholds a stale header", async (id) => {
+    const meta = TRACKED_META_BY_ID.get(id)!;
+    const now = Math.floor(Date.now() / 1000);
+    vi.mocked(evmRpc.fetchEvmUint256AtBlock).mockResolvedValue(10n ** 24n);
+    for (const [age, observedAt] of [[25, now - 25], [301, undefined]] as const) {
+      vi.mocked(evmRpc.fetchEvmBlockHeader).mockResolvedValue({ number: 123, hash: BLOCK_HASH, timestamp: now - age });
+      expect((await fetchCuratedAggregateOnChainMcap(meta, 1.1, buildChainRpcs()))?.observedAt).toBe(observedAt);
+    }
   });
 
   it("reads wm-m0 with EIP-1898 + Solana clocks, zero spokes, and fail-closed withholding", async () => {
