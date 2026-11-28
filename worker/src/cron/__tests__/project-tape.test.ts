@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
+import { YIELD_METHODOLOGY_CHANGELOG } from "@shared/lib/methodology-versions/registry";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { PlacedProjectTapeResultSchema as TapeResult } from "@shared/types/placed-executor";
 import { projectTape } from "../project-tape";
@@ -40,7 +41,7 @@ function baseTables(): MockTableConfig[] {
     { match: "FROM cache WHERE key", rows: [] },
     { match: "INDEXED BY idx_tape_source_key", rows: [] },
     { match: "INDEXED BY idx_tape_type_ts", rows: [] },
-    { match: "UPDATE tape_events SET ts = ?, payload_json = ?", rows: [] },
+    { match: "UPDATE tape_events SET ts = ?", rows: [] },
     { match: MATCH_DEPEG_OPEN_PEAK, rows: [] },
     { match: MATCH_DEPEG_OPENED, rows: [] },
     { match: MATCH_DEPEG_RESOLVED, rows: [] },
@@ -319,21 +320,21 @@ describe("projectTape", () => {
     const y855 = getRow("methodology:yield", "8.55");
     const p697 = getRow("methodology:pricing-pipeline", "6.97");
     const drift = sqlite.prepare(
-      "UPDATE tape_events SET event_id = ?, ts = ?, payload_json = ?, suppressed_at = ?, suppression_reason = ? WHERE id = ?",
+      "UPDATE tape_events SET event_id = ?, ts = ?, title = ?, summary = ?, severity = ?, payload_json = ?, suppressed_at = ?, suppression_reason = ? WHERE id = ?",
     );
     const oldTs = 1_795_046_400_000;
     const oldId = String(y855.event_id).replace(/^\d+/, String(oldTs));
     const oldPayload = JSON.stringify({ effectiveAt: oldTs / 1000, impact: ["Pending"] });
     const pOldId = String(p697.event_id).replace(/^\d+/, "1795723200000");
     sqlite.exec("DELETE FROM tape_events WHERE source_table = 'methodology:yield' AND source_row_id = '8.56'");
-    drift.run(oldId, oldTs, oldPayload, null, null, y855.id!);
-    drift.run(pOldId, 1_795_723_200_000, oldPayload, null, null, p697.id!);
+    drift.run(oldId, oldTs, "Old title", "Old summary", "warning", oldPayload, null, null, y855.id!);
+    drift.run(pOldId, 1_795_723_200_000, p697.title, p697.summary, p697.severity, oldPayload, null, null, p697.id!);
 
     const prepare = vi.spyOn(db, "prepare");
     const updates = () => prepare.mock.calls.filter(([sql]) => sql.startsWith("UPDATE tape_events")).length;
     expect(await projectMethodologyBumps(db, { dryRun: true })).toEqual({ projected: 1, advanced: null });
     expect(updates()).toBe(0);
-    expect(getRow("methodology:yield", "8.55")).toMatchObject({ ts: oldTs, payload_json: oldPayload });
+    expect(getRow("methodology:yield", "8.55")).toMatchObject({ ts: oldTs, title: "Old title", payload_json: oldPayload });
 
     expect(await projectMethodologyBumps(db)).toEqual({ projected: 1, advanced: null });
     expect(updates()).toBe(2);
@@ -345,7 +346,7 @@ describe("projectTape", () => {
     expect(await projectMethodologyBumps(db)).toEqual({ projected: 0, advanced: null });
     expect(updates()).toBe(0);
 
-    drift.run(oldId, oldTs, oldPayload, SEC, "editorial-suppression", y855.id!);
+    drift.run(oldId, oldTs, y855.title, y855.summary, y855.severity, oldPayload, SEC, "editorial-suppression", y855.id!);
     expect(await projectMethodologyBumps(db)).toEqual({ projected: 0, advanced: null });
     expect(getRow("methodology:yield", "8.55")).toEqual({
       ...y855, event_id: oldId, suppressed_at: SEC, suppression_reason: "editorial-suppression",
@@ -355,6 +356,18 @@ describe("projectTape", () => {
       limit: 3, cursor: null, includeTotal: false,
     });
     expect(visible.rows.map((row) => row.methodology_version)).toEqual(["8.56"]);
+
+    const entries = YIELD_METHODOLOGY_CHANGELOG as Array<(typeof YIELD_METHODOLOGY_CHANGELOG)[number]>;
+    entries.push({ ...entries[0]!, version: "0.0-invalid", effectiveAt: 0 });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      expect(await projectMethodologyBumps(db)).toEqual({ projected: 0, advanced: null });
+      expect(getRow("methodology:yield", "0.0-invalid")).toBeUndefined();
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("Skipping methodology entry yield v0.0-invalid"));
+    } finally {
+      entries.pop();
+      warn.mockRestore();
+    }
   });
 
   it("emits cemetery.entry.added on first observation", async () => {

@@ -20,12 +20,12 @@ One row per triaged open issue (`ops:calendar` and `ops:upstream-wait` issues wi
 | --- | --- | --- |
 | Resolvable today | `close-now` | Every `Done when` clause is already met by evidence read this session; no repo change. |
 | Resolvable today | `close-redundant` | Duplicate of another open issue, split-date sibling consolidated into one surviving issue, fully owned by an automated tracker/calendar (`#945`, `#1302`, `npm run digest:curation`, `reviewBy`/`expiresAtSec`), or a self-monitored/low-value check retired by owner ruling. No repo change. |
-| Resolvable today | `fix` | Every open clause can be met by work merged and observed today (including previously approved `design-first` issues carrying a `Build-ready:` comment). Do not bundle buildable fixes with passive external waits or post-deploy verification in one issue. |
+| Resolvable today | `fix` | Every open clause can be met by work merged and observed today (including previously approved `design-first` issues carrying a `Build-ready:` comment). Keep buildable fixes separate from passive external waits or post-deploy verification ([Follow-up issues](../../../../docs/process/agent-artifacts.md#follow-up-issues)). |
 | Resolvable today | `partial-advance` | Some clauses move today and the issue stays open; name the remaining clauses and move `Due:` to the earliest remaining gate (never close-and-spin-off). A fix whose unmonitored acceptance observation falls after the session belongs here. |
-| Resolvable today | `design-first` | The change touches architecture, methodology, schema or listing scope and needs a written design reviewed before build. Cap at 1–2 bounded designs per pass that can be built in-pass; route multi-PR architecture work to dedicated single-topic sessions. Once approved, post `Build-ready: <memo path or summary>` on the issue so the next pass treats it immediately as `fix` instead of re-triaging. |
+| Resolvable today | `design-first` | The change touches architecture, methodology, schema or listing scope and needs a written design reviewed before build; follows the `design-first` cap and `Build-ready:` handoff in [closure and batching](closure-and-batching.md#batching-and-order). |
 | Excluded | `excluded-dated` | The next step is an observation or readout that cannot happen before a date **and** the row is not `close-redundant`; record the date and flag a `Due:` line that disagrees. `ops:calendar` issues with `Due: > today + 7d` auto-skip in `clearance-plan` without triage rows. |
 | Excluded | `excluded-blocked` | An upstream, external, credential or owner-only prerequisite blocks it; name the blocker and the re-check date. `ops:upstream-wait` issues with `Due: > today + 7d` auto-skip in `clearance-plan`; when due, apply the **Upstream-Wait Backoff & 3-Strike Rule** below. |
-| Excluded | `standing-tracker` | An automated tracker that never closes; act on items inside their lead time directly in the pass, and never spawn manual `ops:followup` issues for queued/future items the tracker already owns. |
+| Excluded | `standing-tracker` | An automated tracker or self-closing incident monitor (e.g. `#945`, `#1302`, `ci:weekly-report`, `ci:nightly-red`, `Scheduled delivery incident`, `Worker capacity headroom`, `Post-deploy first-execution failure`); act on items inside their lead time directly in the pass, and never spawn manual `ops:followup` issues for queued/future items or incidents the monitor already owns. |
 | Needs owner | `needs-decision` | Policy, scope, methodology, listing or two defensible readings. Transient: re-verdict after the ruling; a row still here at session end is an unanswered decision. |
 
 ## Per-Issue Verification
@@ -54,11 +54,11 @@ User intake (`data-correction`, `feature-request`): verify the claim against pri
 
 ## Upstream-Wait Backoff & 3-Strike Rule
 
-Applies to `ops:upstream-wait` issues (and `excluded-blocked` external waits) whose upstream state is unchanged on re-check:
+Applies to `ops:upstream-wait` issues (and `excluded-blocked` external waits) whose upstream state is unchanged on re-check; count prior `Upstream unchanged (strike N/3)` comments on the issue to pick the next step:
 
-- **1st unchanged re-check:** move `Due:` to `+14d`.
-- **2nd unchanged re-check:** move `Due:` to `+30d`.
-- **3rd unchanged re-check (or >30 days idle):** escalate to `needs-decision` — codify the blocker as a documented limitation/disposition and close, or park on a quarterly (`+90d`) `ops:upstream-wait` re-check.
+- **1st unchanged re-check:** comment `Upstream unchanged (strike 1/3): <evidence>` and move `Due:` to `+14d`.
+- **2nd unchanged re-check:** comment `Upstream unchanged (strike 2/3): <evidence>` and move `Due:` to `+30d`.
+- **3rd unchanged re-check (or >30 days idle):** comment `Upstream unchanged (strike 3/3): <evidence>` and escalate to `needs-decision` — codify the blocker as a documented limitation/disposition and close, or park on a quarterly (`+90d`) `ops:upstream-wait` re-check.
 
 ## Owner Decision Table
 

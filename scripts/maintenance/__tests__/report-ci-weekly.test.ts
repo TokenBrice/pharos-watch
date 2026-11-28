@@ -100,11 +100,13 @@ const sampleIssues: IssueHygieneInput = {
     { number: 4, title: "Agent maintenance candidates", labels: [] },
     { number: 5, title: "Worker capacity headroom", labels: [] },
     { number: 6, title: "Scheduled delivery incident", labels: [] },
-    { number: 7, title: "Q1 calendar renewal", labels: ["ops:calendar", "ops:upstream-wait"] },
-    { number: 7, title: "Q1 calendar renewal", labels: ["ops:calendar", "ops:upstream-wait"] },
+    { number: 7, title: "Q1 calendar renewal", labels: ["ops:calendar", "ops:upstream-wait"], due: "2026-12-15" },
+    { number: 7, title: "Q1 calendar renewal", labels: ["ops:calendar", "ops:upstream-wait"], due: "2026-12-15" },
     { number: 8, title: "Wait on upstream API", labels: ["ops:upstream-wait"] },
     { number: 9, title: "Fix parser bug", labels: ["bug", "ops:followup", "bug"] },
     { number: 10, title: "Owner policy call", labels: ["ops:decision"] },
+    { number: 11, title: "Imminent calendar check", labels: ["ops:calendar"], due: "2026-11-05" },
+    { number: 12, title: "Post-deploy first-execution failure", labels: ["ops:followup"], due: null },
   ],
 };
 
@@ -226,14 +228,15 @@ describe("weekly CI report", () => {
       [{ ...empty, closedInWindow: [{ number: 1, closedAt: "nope", labels: [] }] }, /ISO timestamp/],
       [{ ...empty, openNow: [{ number: 1, title: 42, labels: [] }] }, /title/],
       [{ ...empty, openNow: [{ number: 1, title: "ok", labels: [1] }] }, /labels/],
+      [{ ...empty, openNow: [{ number: 1, title: "ok", labels: [], due: "2026-02-31" }] }, /due/],
     ] as const) expect(() => parseIssueHygiene(bad)).toThrow(pattern);
     expect(parseIssueHygiene(sampleIssues)).toEqual(sampleIssues);
   });
 
   it("deduplicates and classifies 7-day issue hygiene without double-counting queues", () => {
     expect(summarizeIssueHygiene(sampleIssues, "2026-10-26T00:00:00Z", "2026-11-02T00:00:00Z")).toEqual({
-      opened: 2, closed: 3, net: -1, openTotal: 10, standingTrackers: 6, calendarOpen: 1, upstreamWaitOpen: 1, actionableOpen: 2,
-      byLabel: { "ops:followup": 1, "ops:calendar": 2, "ops:upstream-wait": 2, "ops:decision": 1, bug: 1 },
+      opened: 2, closed: 3, net: -1, openTotal: 12, standingTrackers: 7, calendarOpen: 1, upstreamWaitOpen: 1, actionableOpen: 3,
+      byLabel: { "ops:followup": 2, "ops:calendar": 3, "ops:upstream-wait": 2, "ops:decision": 1, bug: 1 },
     });
   });
 
@@ -286,9 +289,9 @@ describe("weekly CI report", () => {
     expect(markdown).toContain("| worker-api | 76000 | 1 | 2 |");
     expect(markdown).toMatch(/src\/components\/a.tsx[^\n]+200 B over ceiling\.[\s\S]+worker\/src\/api\/a.ts[^\n]+1 B over ceiling\./);
     expect(markdown).toContain("## Issue hygiene (7d)");
-    expect(markdown).toContain("Opened 2, closed 3 (net -1) in the window; 10 open total (2 actionable, 6 standing tracker(s), 1 calendar, 1 upstream-wait).");
-    expect(markdown).toContain("| `ops:followup` | 1 |");
-    expect(markdown).toContain("| `ops:calendar` | 2 |");
+    expect(markdown).toContain("Opened 2, closed 3 (currently closed, latest closure in window; net -1); 12 open total (3 actionable, 7 standing tracker(s), 1 calendar >7d, 1 upstream-wait).");
+    expect(markdown).toContain("| `ops:followup` | 2 |");
+    expect(markdown).toContain("| `ops:calendar` | 3 |");
     expect(markdown).toContain("| `ops:upstream-wait` | 2 |");
     expect(markdown).toContain("| `ops:decision` | 1 |");
     expect(markdown).toContain("| `bug` | 1 |");
@@ -325,7 +328,7 @@ describe("weekly CI report", () => {
       const issuesPath = join(root, "issues.json");
       writeFileSync(issuesPath, JSON.stringify(sampleIssues));
       expect(main([...baseArgs, "--issues", issuesPath])).toBe(0);
-      expect(readFileSync(outPath, "utf8")).toContain("Opened 2, closed 3 (net -1) in the window");
+      expect(readFileSync(outPath, "utf8")).toContain("Opened 2, closed 3 (currently closed, latest closure in window; net -1)");
 
       writeFileSync(issuesPath, JSON.stringify({ version: 9 }));
       expect(main([...baseArgs, "--issues", issuesPath])).toBe(0);

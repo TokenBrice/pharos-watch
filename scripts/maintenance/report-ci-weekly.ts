@@ -61,7 +61,9 @@ const STANDING_TRACKER_TITLES = new Set([
   "Agent maintenance candidates",
   "Worker capacity headroom",
   "Scheduled delivery incident",
+  "Post-deploy first-execution failure",
 ]);
+const CALENDAR_DEFER_WINDOW_MS = 7 * 86_400_000;
 const TRACKED_ISSUE_LABELS = [
   "ops:followup",
   "ops:calendar",
@@ -148,6 +150,7 @@ export interface OpenIssueSnapshot {
   number: number;
   title: string;
   labels: string[];
+  due?: string | null;
 }
 
 export interface IssueHygieneInput {
@@ -445,6 +448,19 @@ function parseIssueLabels(raw: unknown, label: string): string[] {
   return raw as string[];
 }
 
+function parseIssueDueDate(raw: unknown, label: string): string | null | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === null) return null;
+  if (typeof raw !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    throw new Error(`${label}.due must be YYYY-MM-DD or null`);
+  }
+  const ms = Date.parse(`${raw}T00:00:00Z`);
+  if (!Number.isFinite(ms) || new Date(ms).toISOString().slice(0, 10) !== raw) {
+    throw new Error(`${label}.due must be a valid calendar date`);
+  }
+  return raw;
+}
+
 export function parseIssueHygiene(payload: unknown): IssueHygieneInput {
   const record = payload as {
     version?: unknown;
@@ -485,10 +501,12 @@ export function parseIssueHygiene(payload: unknown): IssueHygieneInput {
     const loc = `openNow[${index}]`;
     if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error(`${loc} must be an object`);
     if (typeof item.title !== "string") throw new Error(`${loc}.title must be a string`);
+    const due = parseIssueDueDate(item.due, loc);
     return {
       number: parseIssueNumber(item.number, loc),
       title: item.title,
       labels: parseIssueLabels(item.labels, loc),
+      ...(due !== undefined ? { due } : {}),
     };
   });
   return { version: 1, openedInWindow, closedInWindow, openNow };
@@ -544,9 +562,11 @@ export function summarizeIssueHygiene(
     for (const label of TRACKED_ISSUE_LABELS) {
       if (labels.has(label)) byLabel[label] += 1;
     }
+    const dueMs = issue.due ? Date.parse(`${issue.due}T00:00:00Z`) : Number.NaN;
+    const isDeferredCalendar = labels.has("ops:calendar") && Number.isFinite(dueMs) && dueMs > untilMs + CALENDAR_DEFER_WINDOW_MS;
     if (isStandingTracker(issue)) {
       standingTrackers += 1;
-    } else if (labels.has("ops:calendar")) {
+    } else if (isDeferredCalendar) {
       calendarOpen += 1;
     } else if (labels.has("ops:upstream-wait")) {
       upstreamWaitOpen += 1;
@@ -718,7 +738,7 @@ export function renderWeeklyReport(report: WeeklyReport): string {
     const hygiene = report.issueHygiene;
     const netSign = hygiene.net > 0 ? `+${hygiene.net}` : `${hygiene.net}`;
     lines.push(
-      `Opened ${hygiene.opened}, closed ${hygiene.closed} (net ${netSign}) in the window; ${hygiene.openTotal} open total (${hygiene.actionableOpen} actionable, ${hygiene.standingTrackers} standing tracker(s), ${hygiene.calendarOpen} calendar, ${hygiene.upstreamWaitOpen} upstream-wait).`,
+      `Opened ${hygiene.opened}, closed ${hygiene.closed} (currently closed, latest closure in window; net ${netSign}); ${hygiene.openTotal} open total (${hygiene.actionableOpen} actionable, ${hygiene.standingTrackers} standing tracker(s), ${hygiene.calendarOpen} calendar >7d, ${hygiene.upstreamWaitOpen} upstream-wait).`,
       "",
       "| Label | Open issues |",
       "|---|---:|",

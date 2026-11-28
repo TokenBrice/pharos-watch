@@ -267,18 +267,18 @@ describe("computeDexLiquidityDriftSummary cohort drops", () => {
     [1, "2026-11-21T21:04:19Z", 1, 1, false],
     [2, "2026-11-08", 1, 0.9, false], [2, "2026-11-08", 1, 1, false], [2, "2026-11-09", 1, 1, true],
     [3, "2026-11-09", 1, 1, true], [3, "2026-11-09", 1, 1.019, true],
-    [4, "2026-11-08", 1, 0.9, true], [5, "2026-11-08", 1, 0.9, false],
+    [4, "2026-11-08", 1, 0.9, true], [4, "2026-11-08", 1, null, false], [5, "2026-11-08", 1, 0.9, false],
   ] as const)("bounds chain review %s at %s (%s, %s)", (index, date, baselineScale, observedScale, accepted) => {
     const review = dispositions[index];
     const { flag, baselineValue, observedValue, reviewedAt, expiresAt, evidenceUrls, reason } = review;
-    const level = observedValue * observedScale;
+    const level = observedScale == null ? 0 : observedValue * observedScale;
     const chain = flag.split(":")[1];
     const rebase = accepted && review.acceptsLevel === true;
     const reopens = !rebase || level >= 1e6;
     const summary = drift({
       nowSec: Date.parse(date) / 1000, chainTvlDispositions: [review],
       previousCandidates: [{ flag, baselineValue: baselineValue * baselineScale, observedValue, consecutiveRuns: 122 }],
-      currentChainTvl: { [chain]: level },
+      currentChainTvl: observedScale == null ? { ethereum: 1e7 } : { [chain]: level },
     });
     expect(summary.cohortDriftFlags).toEqual(accepted ? [] : [flag]);
     expect(summary.qualityDriftFlags).toEqual(summary.cohortDriftFlags);
@@ -287,14 +287,14 @@ describe("computeDexLiquidityDriftSummary cohort drops", () => {
     expect(persisted.qualityDriftAccepted).toEqual(accepted ? [expect.objectContaining({
       flag, expiresAt, evidenceUrls: [...evidenceUrls],
     })] : []);
+    expect(persisted.qualityDriftRebaselined).toEqual(rebase ? [{
+      flag, baselineValue, acceptedValue: level, runs: 123, reviewedAt, expiresAt, evidenceUrls, reason,
+    }] : []);
     if (!accepted) return;
     const run = (value: number, previous: number, previousCandidates: DexLiquidityDriftCandidate[], date = rebase ? reviewedAt : expiresAt) => drift({
       nowSec: Date.parse(date) / 1000, chainTvlDispositions: [review],
       previousCandidates, previousChainTvl: { [chain]: previous }, currentChainTvl: { [chain]: value },
     });
-    expect(persisted.qualityDriftRebaselined).toEqual(rebase ? [{
-      flag, baselineValue, acceptedValue: level, runs: 123, reviewedAt, expiresAt, evidenceUrls, reason,
-    }] : []);
     const next = run(level, level, readCandidates(summary), expiresAt);
     expect(next.qualityDriftCandidates.map((c) => c.flag)).toEqual(rebase ? [] : [flag]);
     expect(next.qualityDriftRebaselined).toEqual([]);

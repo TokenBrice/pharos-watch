@@ -130,20 +130,40 @@ interface ExistingMethodologyRow {
   event_id: string;
   source_row_id: string;
   ts: number;
-  payload_json: string;
+  title: string;
+  summary: string | null;
+  severity: string;
+  payload_effective_at: number | null;
+  payload_date: string | null;
+  payload_chars: number | null;
 }
 
 const METHODOLOGY_TRANSITION = "updated";
+
+function hasValidEffectiveAt(entry: MethodologyChangelogEntry): boolean {
+  return Number.isSafeInteger(entry.effectiveAt) && entry.effectiveAt > 0;
+}
+
+function validChangelogEntries(spec: MethodologyDomain): MethodologyChangelogEntry[] {
+  const valid: MethodologyChangelogEntry[] = [];
+  for (const entry of spec.changelog) {
+    if (!hasValidEffectiveAt(entry)) {
+      console.warn(
+        `[project-tape] Skipping methodology entry ${spec.domain} v${entry.version}: invalid effectiveAt (${String(entry.effectiveAt)})`,
+      );
+      continue;
+    }
+    valid.push(entry);
+  }
+  return valid;
+}
 
 function buildMethodologyEvent(
   spec: MethodologyDomain,
   entry: MethodologyChangelogEntry,
 ): TapeEventInsert {
   const type = `methodology.bumped:${spec.domain}`;
-  const tsSec = Number.isFinite(entry.effectiveAt) && entry.effectiveAt > 0
-    ? entry.effectiveAt
-    : Math.floor(Date.now() / 1000);
-  const tsMs = tsSec * 1000;
+  const tsMs = entry.effectiveAt * 1000;
 
   return {
     eventId: buildTapeEventId({
@@ -184,54 +204,66 @@ export async function projectMethodologyBumps(
   options?: ProjectorOptions,
 ): Promise<ProjectorResult> {
   let total = 0;
+  const validByDomain: Array<{ spec: MethodologyDomain; entries: MethodologyChangelogEntry[] }> = [];
   for (const spec of METHODOLOGY_DOMAINS) {
+    const entries = validChangelogEntries(spec);
+    if (entries.length === 0) continue;
+    validByDomain.push({ spec, entries });
     const result = await projectStaticCatalogEntries(db, {
-      entries: spec.changelog,
+      entries,
       buildEvent: (entry) => buildMethodologyEvent(spec, entry),
     }, options);
     total += result.projected;
   }
 
-  if (options?.dryRun !== true) {
-    const reconcileSpecs = METHODOLOGY_DOMAINS.filter((spec) => spec.changelog.length > 0);
-    if (reconcileSpecs.length > 0) {
-      const existingResults = await runWithOverloadRetry(
-        () =>
-          db.batch<ExistingMethodologyRow>(
-            reconcileSpecs.map((spec) =>
-              db.prepare(
-                `SELECT event_id, source_row_id, ts, payload_json
-                   FROM tape_events INDEXED BY idx_tape_source_key
-                  WHERE source_table = ? AND transition = ? AND type = ?`,
-              ).bind(`methodology:${spec.domain}`, METHODOLOGY_TRANSITION, `methodology.bumped:${spec.domain}`),
-            ),
+  if (options?.dryRun !== true && validByDomain.length > 0) {
+    const existingResults = await runWithOverloadRetry(
+      () =>
+        db.batch<ExistingMethodologyRow>(
+          validByDomain.map(({ spec }) =>
+            db.prepare(
+              `SELECT event_id, source_row_id, ts, title, summary, severity,
+                      CASE WHEN json_valid(payload_json) THEN json_extract(payload_json, '$.effectiveAt') END AS payload_effective_at,
+                      CASE WHEN json_valid(payload_json) THEN json_extract(payload_json, '$.date') END AS payload_date,
+                      length(payload_json) AS payload_chars
+                 FROM tape_events INDEXED BY idx_tape_source_key
+                WHERE source_table = ? AND transition = ? AND type = ?`,
+            ).bind(`methodology:${spec.domain}`, METHODOLOGY_TRANSITION, `methodology.bumped:${spec.domain}`),
           ),
-        3,
-      );
-      const updates: D1PreparedStatement[] = [];
-      for (let index = 0; index < reconcileSpecs.length; index += 1) {
-        const spec = reconcileSpecs[index]!;
-        const existingRows = existingResults[index]?.results ?? [];
-        if (existingRows.length === 0) continue;
-        const existingByVersion = new Map(existingRows.map((row) => [row.source_row_id, row]));
-        for (const entry of spec.changelog) {
-          if (!Number.isFinite(entry.effectiveAt) || entry.effectiveAt <= 0) continue;
-          const existing = existingByVersion.get(entry.version);
-          if (!existing) continue;
-          const event = buildMethodologyEvent(spec, entry);
-          const expectedPayloadJson = JSON.stringify(event.payload);
-          if (existing.ts !== event.ts || existing.payload_json !== expectedPayloadJson) {
-            updates.push(
-              db.prepare(
-                `UPDATE tape_events SET ts = ?, payload_json = ? WHERE event_id = ?`,
-              ).bind(event.ts, expectedPayloadJson, existing.event_id),
-            );
-          }
+        ),
+      3,
+    );
+    const updates: D1PreparedStatement[] = [];
+    for (let index = 0; index < validByDomain.length; index += 1) {
+      const { spec, entries } = validByDomain[index]!;
+      const existingRows = existingResults[index]?.results ?? [];
+      if (existingRows.length === 0) continue;
+      const existingByVersion = new Map(existingRows.map((row) => [row.source_row_id, row]));
+      for (const entry of entries) {
+        const existing = existingByVersion.get(entry.version);
+        if (!existing) continue;
+        const event = buildMethodologyEvent(spec, entry);
+        const expectedPayloadJson = JSON.stringify(event.payload);
+        const expectedPayloadChars = Array.from(expectedPayloadJson).length;
+        if (
+          existing.ts !== event.ts ||
+          existing.title !== event.title ||
+          existing.summary !== event.summary ||
+          existing.severity !== event.severity ||
+          existing.payload_effective_at !== entry.effectiveAt ||
+          existing.payload_date !== entry.date ||
+          existing.payload_chars !== expectedPayloadChars
+        ) {
+          updates.push(
+            db.prepare(
+              `UPDATE tape_events SET ts = ?, title = ?, summary = ?, severity = ?, payload_json = ? WHERE event_id = ?`,
+            ).bind(event.ts, event.title, event.summary, event.severity, expectedPayloadJson, existing.event_id),
+          );
         }
       }
-      if (updates.length > 0) {
-        await batchExecute(db, updates);
-      }
+    }
+    if (updates.length > 0) {
+      await batchExecute(db, updates);
     }
   }
 

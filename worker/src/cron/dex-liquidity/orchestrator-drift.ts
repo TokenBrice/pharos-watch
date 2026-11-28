@@ -424,7 +424,10 @@ export function computeDexLiquidityDriftSummary(params: {
       CHAIN_TVL_DROP_FLAG_PREFIX,
       COHORT_MIN_PREVIOUS_TVL_USD,
     )) {
-      const currentTvl = params.currentChainTvl[chain] ?? 0;
+      const hasCurrentTvl =
+        Object.prototype.hasOwnProperty.call(params.currentChainTvl, chain) &&
+        Number.isFinite(params.currentChainTvl[chain]);
+      const currentTvl = hasCurrentTvl ? params.currentChainTvl[chain] : 0;
       const flag = `${CHAIN_TVL_DROP_FLAG_PREFIX}${chain}`;
       confirmCohortCondition(
         flag,
@@ -433,14 +436,16 @@ export function computeDexLiquidityDriftSummary(params: {
         (baselineValue) => currentTvl < baselineValue * (1 - COHORT_DROP_RATIO),
       );
       const candidate = candidates.find((entry) => entry.flag === flag);
-      const review = (params.chainTvlDispositions ?? REVIEWED_CHAIN_TVL_DISPOSITIONS).find((entry) => entry.flag === flag
-        && entry.baselineValue === candidate?.baselineValue
-        && (entry.retiredStablecoinId == null || FROZEN_IDS.has(entry.retiredStablecoinId))
-        && nowSec >= Date.parse(entry.reviewedAt) / 1000 && nowSec < Date.parse(entry.expiresAt) / 1000
-        // Archived liquidity of a frozen coin only winds down; growth past the band reopens it.
-        && (entry.retiredStablecoinId != null
-          ? currentTvl <= entry.observedValue * 1.02
-          : Math.abs(currentTvl - entry.observedValue) <= entry.observedValue * 0.02));
+      const review = hasCurrentTvl
+        ? (params.chainTvlDispositions ?? REVIEWED_CHAIN_TVL_DISPOSITIONS).find((entry) => entry.flag === flag
+            && entry.baselineValue === candidate?.baselineValue
+            && (entry.retiredStablecoinId == null || FROZEN_IDS.has(entry.retiredStablecoinId))
+            && nowSec >= Date.parse(entry.reviewedAt) / 1000 && nowSec < Date.parse(entry.expiresAt) / 1000
+            // Archived liquidity of a frozen coin only winds down; growth past the band reopens it.
+            && (entry.retiredStablecoinId != null
+              ? currentTvl <= entry.observedValue * 1.02
+              : Math.abs(currentTvl - entry.observedValue) <= entry.observedValue * 0.02))
+        : undefined;
       if (review && candidate) {
         qualityDriftAccepted.push({ ...review, evidenceUrls: [...review.evidenceUrls] });
         if ("acceptsLevel" in review && review.acceptsLevel) {
