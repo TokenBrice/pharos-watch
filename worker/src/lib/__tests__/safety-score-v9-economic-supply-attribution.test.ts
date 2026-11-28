@@ -835,15 +835,12 @@ describe("reviewed same-chain provider partition", () => {
 });
 
 describe("reviewed CCIP vault-share plans", () => {
-  function reviewedFixture(assetId: string, options: { planScopedMeta?: boolean } = {}): EconomicFixture {
+  function reviewedFixture(assetId: string): EconomicFixture {
     const plan = structuredClone(REVIEWED_ECONOMIC_SUPPLY_PLANS.get(assetId)!), escrow = plan.escrows[0]!, source = escrow.inFlightSource;
     if (!source || !("kind" in source) || source.kind !== "evm-ccip-pending") throw new Error("Expected a reviewed CCIP vault plan");
     const clockSec = Math.max(plan.reviewedAtSec, ...source.lanes.map(lane =>
       lane.sourceStartWitness?.kind === "reviewed-creation" ? lane.sourceStartWitness.reviewedAtSec : 0)) + 60;
-    const rawMeta = ACTIVE_META_BY_ID.get(assetId)!, planKeys = new Set(plan.deployments.map(row => row.deploymentKey));
-    const meta = options.planScopedMeta
-      ? { ...rawMeta, contracts: (rawMeta.contracts ?? []).filter(c => planKeys.has(`${c.chain}:${c.address.toLowerCase()}`)) }
-      : rawMeta;
+    const meta = ACTIVE_META_BY_ID.get(assetId)!;
     const canonical = plan.deployments.find(row => row.deploymentKey === escrow.canonicalDeploymentKey)!;
     const raw = (units: number, decimals: number) => (BigInt(units) * 10n ** BigInt(decimals)).toString();
     const observations: EconomicSupplyObservation[] = plan.deployments.map(row => ({
@@ -855,6 +852,7 @@ describe("reviewed CCIP vault-share plans", () => {
     const amount = raw(1, canonical.decimals!);
     const proof: NonNullable<EconomicSupplyObservation["ccipPendingProof"]> = {
       sourceDigest: digest(source), checkpointDigest: "c".repeat(64), discoveryDigest: "d".repeat(64),
+      ...(source.lockBoxes ? { lockBoxes: source.lockBoxes.map(({ account, tokenPoolAddress }) => ({ account, tokenPoolAddress })) } : {}),
       pins: [...new Set(source.lanes.flatMap(lane => [lane.source.chainId, lane.destination.chainId]))]
         .map(chainId => ({ chainId, anchor: 100, anchorHash: `0x${"a".repeat(64)}`, observedAtSec: clockSec - 60 })),
       lanes: source.lanes.map((lane, index) => ({
@@ -882,7 +880,7 @@ describe("reviewed CCIP vault-share plans", () => {
   it.each(["syrupusdt-maple", "sdola-inverse-finance", "susdat-saturn"])(
     "%s deducts the lockbox once and keeps failed in-flight claims visible",
     assetId => {
-      const input = reviewedFixture(assetId, { planScopedMeta: assetId === "susdat-saturn" });
+      const input = reviewedFixture(assetId);
       const packet = derivePartition(input)!;
       expect(packet).not.toBeNull();
       expect(packet.deployments.find(row => row.deploymentKey === input.plan.escrows[0]!.canonicalDeploymentKey)?.currentSupplyUsd)
@@ -894,14 +892,11 @@ describe("reviewed CCIP vault-share plans", () => {
     },
   );
 
-  it("keeps susdat/syrupusdt on D02 state and fails closed on susdat live catalog", () => {
-    expect(buildReviewedEconomicDeploymentInventory("susdat-saturn")).toBeNull();
-    expect(derivePartition(reviewedFixture("susdat-saturn"))).toBeNull();
-    for (const id of ["susdat-saturn", "syrupusdt-maple"]) {
-      const p = REVIEWED_ECONOMIC_SUPPLY_PLANS.get(id)!;
-      expect(p.reviewer).toContain("D02 evidence lane");
-      expect([p.reviewedAtSec, p.expiresAtSec]).toEqual([1793120053, 1795712053]);
-    }
+  it("keeps syrupusdt on D02 state and admits susdat's X Layer catalog", () => {
+    expect(buildReviewedEconomicDeploymentInventory("susdat-saturn")?.plan.deployments.some(row => row.chainId === "xlayer")).toBe(true);
+    const p = REVIEWED_ECONOMIC_SUPPLY_PLANS.get("syrupusdt-maple")!;
+    expect(p.reviewer).toContain("D02 evidence lane");
+    expect([p.reviewedAtSec, p.expiresAtSec]).toEqual([1793120053, 1795712053]);
   });
 
   it("enforces multi-account escrow equality, lockbox proofs, and schema gates", () => {
@@ -942,7 +937,7 @@ describe("reviewed CCIP vault-share plans", () => {
   it.each(["missing", "digest", "review-clock", "initial-sequence"] as const)(
     "rejects a %s origin certificate even with a self-consistent response digest",
     mismatch => {
-      const input = reviewedFixture("susdat-saturn", { planScopedMeta: true });
+      const input = reviewedFixture("susdat-saturn");
       expect(derivePartition(input)).not.toBeNull();
       const observation = input.inFlight[0]!, proof = observation.ccipPendingProof!, lane = proof.lanes.find(row => row.historyOrigin)!;
       if (mismatch === "missing") delete lane.historyOrigin;
@@ -957,7 +952,7 @@ describe("reviewed CCIP vault-share plans", () => {
   it.each(["receipt", "pending", "historical lane", "holding pin"] as const)(
     "does not publish an sUSDat subtotal with missing or mismatched %s",
     failure => {
-      const input = reviewedFixture("susdat-saturn", { planScopedMeta: true });
+      const input = reviewedFixture("susdat-saturn");
       expect(derivePartition(input)).not.toBeNull();
       if (failure === "receipt") input.observations.splice(1, 1);
       if (failure === "pending") input.inFlight = [];

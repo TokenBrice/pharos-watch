@@ -94,11 +94,13 @@ const CENSUS_STATE_PUBLIC_RPCS: Record<string, readonly Pick<RpcEndpoint, "url" 
   ],
 };
 
-/** Finalized, hash-pinned state and historical CCIP logs verified 2026-10-05. */
-const CCIP_ARCHIVE_ALCHEMY_CHAINS: Readonly<Record<string, string>> = {
-  monad: ALCHEMY_RPC_NAMES.monad,
-  ink: ALCHEMY_RPC_NAMES.ink,
-  berachain: ALCHEMY_RPC_NAMES.berachain,
+/** Finalized, hash-pinned state and historical CCIP logs, by probe date. */
+const CCIP_ARCHIVE_ALCHEMY_CHAINS: Readonly<Record<string, { slug: string; verifiedAt: string }>> = {
+  monad: { slug: ALCHEMY_RPC_NAMES.monad, verifiedAt: "2026-10-05" },
+  ink: { slug: ALCHEMY_RPC_NAMES.ink, verifiedAt: "2026-10-05" },
+  berachain: { slug: ALCHEMY_RPC_NAMES.berachain, verifiedAt: "2026-10-05" },
+  // Archive state, finalized headers and 10,000-block ramp logs probed 2026-11-27 (#2325).
+  xlayer: { slug: ALCHEMY_RPC_NAMES.xlayer, verifiedAt: "2026-11-27" },
 };
 
 /** Reviewed keyless routes; state-only probes do not admit archive/log inventory. */
@@ -196,6 +198,8 @@ const ALCHEMY_LOG_BLOCK_SPANS: Readonly<Record<string, number>> = {
   "opt-mainnet": 2_000_000,
   // Historical ramp pages re-probed 2026-10-19; state retention is unchanged.
   "monad-mainnet": 100_000,
+  // Wider ranges return -32600 "up to a 10000 block range" (2026-11-27).
+  "xlayer-mainnet": 10_000,
 };
 
 /** Inclusive eth_getLogs block spans probed on public registry endpoints. */
@@ -389,12 +393,12 @@ export function buildChainRpcs(
     }
   }
   if (alchemyApiKey) {
-    for (const [chainId, slug] of Object.entries(CCIP_ARCHIVE_ALCHEMY_CHAINS)) {
+    for (const [chainId, { slug, verifiedAt }] of Object.entries(CCIP_ARCHIVE_ALCHEMY_CHAINS)) {
       const endpoint: RpcEndpoint = {
         url: buildAlchemyRpcUrl(slug, alchemyApiKey),
         operator: "alchemy", keyed: true, position: "registry",
         stateHistory: "archive", logsHistory: "full",
-        maxLogBlockSpan: ALCHEMY_LOG_BLOCK_SPANS[slug] ?? 1000, noBatch: false, verifiedAt: "2026-10-05",
+        maxLogBlockSpan: ALCHEMY_LOG_BLOCK_SPANS[slug] ?? 1000, noBatch: false, verifiedAt,
       };
       const existing = map.get(chainId);
       map.set(chainId, rpcConfig(chainId, "evm", [

@@ -43,6 +43,7 @@ export const ALCHEMY_RPC_NAMES = {
   monad: "monad-mainnet",
   ink: "ink-mainnet",
   berachain: "berachain-mainnet",
+  xlayer: "xlayer-mainnet",
   fraxtal: "frax-mainnet",
   rootstock: "rootstock-mainnet",
   arc: "arc-mainnet",

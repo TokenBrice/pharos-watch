@@ -596,7 +596,8 @@ function assertPreviousReaderSource() {
   // PR-1A NZD: core.ts adds "NZD" to PEG_CURRENCY_VALUES (vocabulary-additive); no public card/breakdown/trace schema changed (substituting origin/main restores de9af139…).
   // Bluechip retirement: report-card-grade.ts drops its comment on the retired vendor grade enum; comment-only, no schema changed (substituting origin/main restores 5a7816d1…).
   // PR-4 Canton onboarding: chain-identity.ts adds `canton` and `canton-network` alias (additive chain identity only; no public card/breakdown/trace schema changed; substituting origin/main restores 7f0a6279…).
-  if (hash.digest("hex") !== "d7886218f1d9f237550dcd23adab2394f23cb665a642ae5e118e2cd4a4e717fe") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // X Layer CCIP archive route (#2325): chain-identity.ts adds the `xlayer` Alchemy RPC name only (no public card/breakdown/trace schema changed; substituting origin/main restores d7886218…).
+  if (hash.digest("hex") !== "a4ed387bacd2d3239d7549e694cd1424b60d6d6f928b6bf4a9aa5a4bd1b1707f") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {
