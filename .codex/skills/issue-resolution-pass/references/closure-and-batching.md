@@ -22,13 +22,14 @@ The plan carries these for the executor. Apply them when ordering lanes and writ
 
 - Plan no release that changes Safety Score inputs or its evaluation-build manifest to activate between the hourly `:16` preparation and the `:22` publication, and observe the next accepted publication before the next such release. An urgent fix that must land inside the window is named as urgent in the plan, with the publication it is expected to skip.
 - A paired Liquidity/Pricing methodology release deploys both Workers in one window and avoids `:08`–`:17`.
-- A green deploy is activation proof only. Each release names the first production execution that proves it; if that falls after the session, it becomes a follow-up issue.
+- A green deploy is activation proof only. Each release names the first production execution that proves it. If an unmonitored check falls after the session, keep the owning issue open with a moved `Due:`, or bundle the pass's post-session acceptance into at most one rollout issue with rolling `Due:`. Skip filing when `post-deploy-acceptance`, `nightly-validation`, or `cron-liveness` already catches failure.
 
 ## Closure Audit
 
-1. Close an issue only when every `Done when` clause is verified by evidence read after the change is live. The closing comment cites the evidence per clause (run IDs, UTC times, observed values) within the public-repo limits.
-2. A partial advance gets a comment stating what moved and what remains, and its `Due:` line moves to the next gate.
-3. File one `ops:followup` per distinct observation date; never bundle checks that become observable on different dates under one `Due:`.
-4. The executor's first step posts each settled ruling as a dated comment, `Owner decision, YYYY-MM-DD: …`, on the owning issue.
-5. The closure summary reconciles every plan row as closed, advanced, excluded, held or reopened, and records post-merge rework and later waves. Update it whenever work continues after it was written.
-6. Remove the worktrees and bulky scratch the pass created ([Cleanup Rule](../../../../docs/process/agent-artifacts.md#cleanup-rule)); never unrelated dirty files.
+1. Close an issue when every `Done when` clause is verified by evidence read after the change is live, or when closing a `close-redundant` row with a pointer to its surviving issue or standing tracker. Closing comments cite evidence per clause (run IDs, UTC times, observed values) within the public-repo limits.
+2. A partial advance keeps the existing issue open, comments what moved and what remains, and moves its `Due:` line to the earliest remaining gate — never close an issue solely to replace it with spin-off tickets.
+3. Keep **one issue per theme or multi-PR rollout**, advancing `Due:` to the earliest remaining gate. Separate issues only for genuinely unrelated domains. Never open a child follow-up while its owning parent stays open, and never duplicate `#945`, `#1302`, `npm run digest:curation`, or dated registry fields (`reviewBy`, `expiresAtSec`).
+4. Executor filing gate: fix material review findings before merge; leave non-blocking council polish, optional refactors, and unverified hypotheses in the PR comment or closure summary — do not file them as `ops:followup`. Before opening any new issue, search open issues (`gh issue list --state open`) and standing trackers so findings fold into existing owners.
+5. The executor's first step posts each settled ruling as a dated comment, `Owner decision, YYYY-MM-DD: …`, on the owning issue.
+6. The closure summary reconciles every plan row as closed, advanced, excluded, held or reopened, reports net issue delta (`closed − newly filed`), and records post-merge rework and later waves. Update it whenever work continues after it was written.
+7. Remove the worktrees and bulky scratch the pass created ([Cleanup Rule](../../../../docs/process/agent-artifacts.md#cleanup-rule)); never unrelated dirty files.

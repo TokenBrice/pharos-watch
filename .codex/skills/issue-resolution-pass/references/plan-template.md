@@ -12,6 +12,8 @@ Write `agents/<YYYY-MM-DD>-issue-resolution/PLAN.md` in the main checkout. The e
 ## 1. Scope rollup
 | Verdict | Count | Issues |
 (every open issue exactly once; counts sum to the inventory)
+- Expected net issue delta: closed (<n>) − newly filed (<n>) = <delta>
+- Consolidation / pruning: <tracker duplicates, split-date merges, and retired low-value rows>
 
 ## 2. Owner decisions
 (the decision table, rulings verbatim; unanswered rows marked)
@@ -51,12 +53,12 @@ Every write lane gets an independent diff review before integration. Cap: 3 roun
 | Lane | Issues | Worktree / branch | Status | Review rounds | PR | Merge SHA | Deploy run | Acceptance | Notes |
 
 ## 11. Closure rules
-<the closure audit from references/closure-and-batching.md; follow-ups to file, one per date>
+<the closure audit from references/closure-and-batching.md; proposed new issues (default none — each must pass the filing bar and name why no existing open issue or standing tracker can hold it)>
 ```
 
 ## Filling Rules
 
-- Section 3 holds only `close-now`, `fix`, `partial-advance` and `design-first` rows; a `partial-advance` row names the clauses that stay open and their gate.
+- Section 3 holds only `close-now`, `close-redundant`, `fix`, `partial-advance` and `design-first` rows; a `partial-advance` row names the clauses that stay open and their gate.
 - Every hypothesis cites the evidence that supports it. A hypothesis with no supporting read goes under `Unverified`, not under `Root-cause hypothesis`.
 - A lane's write scope is a file or directory list. Two lanes that write the same file are one lane or strictly ordered.
 - Section 7 follows [Operational Acceptance](../../../../docs/deployment-process.md#operational-acceptance); copy the constraint that applies to each release and name the production execution that proves it.

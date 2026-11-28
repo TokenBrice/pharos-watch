@@ -33,4 +33,4 @@ Assigned verifier checks are authoring feedback, not release proof. Readiness an
 
 ## Completion Evidence
 
-Report commits, focused verifier feedback and generated-artifact changes, PR/run/deploy proof (PR head and merge SHAs, deploy run ID, activated Worker versions), operational acceptance or its pending window, excluded dirty files and skipped checks with reasons. Never label pending operational acceptance as success; a pending observation that outlives the session is the dated follow-up issue the acceptance companion describes, reported by number.
+Report commits, focused verifier feedback and generated-artifact changes, PR/run/deploy proof (PR head and merge SHAs, deploy run ID, activated Worker versions), operational acceptance or its pending window, excluded dirty files and skipped checks with reasons. Never label pending operational acceptance as success; when an unmonitored pending observation meets the bar in the acceptance companion, update the owning open issue (or file one rollout issue) and report its number, otherwise report `Follow-ups: none`.

@@ -46,15 +46,15 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 - CI failures: collect every failed leaf, fix all causal defects in one revision, rerun focused checks, then push once ([workflow incidents](docs/runbooks/workflow-incidents.md)). `check:release` is only an explicit production rehearsal; GitHub Actions owns the release gate.
 - Commit thematically with a descriptive subject and a why-focused body. There are no Git hooks: regenerate affected artifacts explicitly (`npm run check:generated-artifacts` names stale ones) and commit them with their source; hosted CI enforces freshness (`docs/scripts.md#operational-notes`).
 - Do not create a branch, worktree, or PR unless asked. A request to push/publish/release authorizes the protected-main PR path; never push `main` directly. Merge release PRs with `gh pr merge --merge`; never squash or rebase them.
-- A green deploy is not runtime health: for cron, scheduler, memory, migration, or ingestion changes, observe the first production execution before claiming success. If it falls after the session, that check is a follow-up issue.
+- A green deploy is not runtime health: for cron, scheduler, memory, migration, or ingestion changes, observe the first production execution before claiming success. If it falls after the session and no automated monitor alerts on failure, reuse the owning open issue (moving `Due:`) or file one follow-up per rollout.
 
 ## Do this last
 
-Agents here run with memory off: the next session knows only the repo, GitHub and local `agents/` scratch. A follow-up left in your final message or in scratch is lost.
+Agents run with memory off, so required post-session loops go in GitHub issues — **default to `Follow-ups: none`**.
 
-- When the session ends, file a GitHub issue for each loop the next session must pick up: work deferred or left partial, a dated or event-gated check (first production run not yet observed, soak, readout, review expiry), or an owner decision still unanswered at the end. Issues record follow-ups, never plans: ask decisions while the owner is in the session, keep plans, audits and proposals in `agents/`, and open a tracking issue only when the owner asks for one. Filing at session end is a standing authorization. Optional ideas stay in the report; delegated workers pass their loops to the lead agent.
-- Use the labels and body contract in `docs/process/agent-artifacts.md#follow-up-issues`. The daily reminder reads only `ops:followup` issues with a `Due: YYYY-MM-DD` line, so an event-gated loop gets the date of its next re-check.
-- The repo is public: no credentials, row-level D1 data, chat IDs, partner or commercial detail, or unpatched security gaps (private advisory) in issues, PRs, commits or comments.
+- Standing authorization at session end applies **only** to loops that would silently slip: unmonitored post-deploy checks on high-risk Worker/D1/ingestion changes (when no owning issue is open), confirmed material out-of-scope `bug`s, hard external deadlines or multi-week readouts untracked elsewhere, or unanswered owner decisions.
+- **Do not file** for: items already tracked by `#945`, `#1302`, `digest:curation`, `reviewBy`/`expiresAtSec`, or CI/liveness monitors (`ci:nightly-red`, `cron-liveness`, `worker-memory-monitor`); review polish, optional refactors, or unverified notes; plans/next waves (`agents/`); or extra tickets when an existing open issue can advance its `Due:`. Delegated workers pass loops to the lead.
+- Follow the bar, labels, `Due:` and body contract in `docs/process/agent-artifacts.md#follow-up-issues`. Public repo: no credentials, row-level D1 data, chat IDs, partner/commercial detail, or unpatched security gaps (private advisory).
 - End the final report with `Follow-ups:` and the issue numbers, or `none`.
 
 <!-- BEGIN:nextjs-agent-rules -->

@@ -30,7 +30,16 @@ A campaign README, per-artifact rows (path/kind/owner/status/dates/source/destin
 
 ### Follow-up issues
 
-Agents run with memory off, so an open loop that outlives the session goes in a GitHub issue, never only in a final message or scratch. When the session ends, file one issue per loop the next session must pick up: work deferred or left partial, a dated or event-gated check, or an owner decision still unanswered at the end. Issues record follow-ups, never plans: ask decisions while the owner is in the session, keep plans, audits and proposals in `agents/`, and open a tracking issue only when the owner asks for one. A plan under review is not an open loop. Root [Do this last](../../AGENTS.md#do-this-last) makes filing at session end a standing authorization. Issues are public: write them as if published, with no row-level D1 data, chat IDs, partner or commercial detail, security gaps (use a private advisory) or credentials. Labels: `ops:followup` (a dated or event-gated check), `ops:decision` (only a decision left unanswered when the session ends), `ops:campaign` (only owner-approved multi-PR work the owner asked to track); plain defects keep `bug`. Use a milestone only when a campaign spans several PRs. The body must stand alone after the session ends and `agents/` is cleaned:
+Agents run with memory off, so truly required post-session loops belong in GitHub issues rather than only in a final message or scratch — **default to `Follow-ups: none`** and file only loops that would silently slip without a ticket. Root [Do this last](../../AGENTS.md#do-this-last) makes filing at session end a standing authorization **only** within this bar:
+
+- **File:** (1) unmonitored post-deploy verification of high-risk Worker/D1/ingestion/methodology changes whose first proving execution falls after the session, only when no owning issue is open; (2) confirmed, material out-of-scope defects (`bug`) that cannot be fixed in-session; (3) hard external deadlines (statutory dates, issuer wind-downs, key rotations) or multi-week experiment readouts not tracked by any repo calendar; (4) owner decisions still unanswered when the session ends (`ops:decision`).
+- **Do not file:**
+  - Items already tracked by automated standing trackers or machine-checked calendars (`#945` Safety Score expiry sweep, `#1302` Agent maintenance candidates, `npm run digest:curation`, `reviewBy`/`expiresAtSec`/`nextReviewAt` registries, `ci:nightly-red`, `cron-liveness`, `worker-memory-monitor`). Record special renewal caveats (such as immutable checkpoint keys) in the registry entry's note or owning doc instead of opening a duplicate issue.
+  - Close-and-replace spin-offs or child tickets while a parent stays open: if an issue still has remaining soak/acceptance/7d clauses, keep the existing issue open and advance its `Due:`.
+  - Split-date tickets for one feature or multi-PR rollout: keep **one** issue per theme/rollout and advance `Due:` to the earliest remaining gate; separate issues only for genuinely unrelated domains.
+  - Review/council polish, optional refactors, unverified hypotheses, or unrequested plans/next waves (`agents/`). Ask decisions in-session; open `ops:campaign` only when the owner asks to track multi-PR work.
+
+Issues are public: write them as if published, with no row-level D1 data, chat IDs, partner or commercial detail, security gaps (use a private advisory) or credentials. Labels: `ops:followup` (a dated or event-gated check), `ops:decision` (only a decision left unanswered when the session ends), `ops:campaign` (only owner-approved multi-PR work the owner asked to track); plain defects keep `bug`. Use a milestone only when a campaign spans several PRs. The body must stand alone after the session ends and `agents/` is cleaned:
 
 ```
 Due: YYYY-MM-DD          (required with ops:followup; read by .github/workflows/ops-followups.yml)
@@ -40,7 +49,7 @@ Done when: closing condition
 Evidence: agents/<path> (local, may be gone)
 ```
 
-The daily reminder reads only `ops:followup` issues with a `Due:` line, so every one carries it: an event-gated check takes the date of its next re-check, and a dated check gets its own issue because a bundle of unrelated items cannot carry one date. Before opening an issue, search (`gh issue list --state all --search "<terms>"`) and add evidence as a comment on the existing one instead of a duplicate; move its `Due:` when the check is rescheduled. Close with the PR (`Closes #N`) or a comment naming the evidence; distill durable truth into its owning doc first. Do not duplicate CI-failure issues or user intake.
+The daily reminder reads only `ops:followup` issues with a `Due:` line, so every `ops:followup` carries one: an event-gated check takes the date of its next re-check, and an issue with stepped gates (e.g. 1d then 7d) carries the earliest remaining date and advances `Due:` as each gate passes. Before opening an issue, search (`gh issue list --state all --search "<terms>"`) and add evidence as a comment on the existing one instead of a duplicate; move its `Due:` when rescheduled. Close with the PR (`Closes #N`) or a comment naming the evidence; distill durable truth into its owning doc first. Do not duplicate CI-failure issues or user intake.
 
 ## Pinned On-Chain Evidence
 

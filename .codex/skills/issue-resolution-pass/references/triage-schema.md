@@ -19,12 +19,13 @@ One row per open issue. Columns, in order:
 | Group | Verdict | Enter only when |
 | --- | --- | --- |
 | Resolvable today | `close-now` | Every `Done when` clause is already met by evidence read this session; no repo change. |
+| Resolvable today | `close-redundant` | Duplicate of another open issue, split-date sibling consolidated into one surviving issue, fully owned by an automated tracker/calendar (`#945`, `#1302`, `npm run digest:curation`, `reviewBy`/`expiresAtSec`), or a self-monitored/low-value check retired by owner ruling. No repo change. |
 | Resolvable today | `fix` | Every open clause can be met by work merged and observed today. |
-| Resolvable today | `partial-advance` | Some clauses move today and the issue stays open; name the remaining clauses and their gate. A fix whose acceptance observation falls after the session belongs here. |
+| Resolvable today | `partial-advance` | Some clauses move today and the issue stays open; name the remaining clauses and move `Due:` to the earliest remaining gate (never close-and-spin-off). A fix whose unmonitored acceptance observation falls after the session belongs here. |
 | Resolvable today | `design-first` | The change touches architecture, methodology, schema or listing scope; today's deliverable is a written design reviewed before any build. |
-| Excluded | `excluded-dated` | The next step is an observation or readout that cannot happen before a date; record the date and flag a `Due:` line that disagrees. |
+| Excluded | `excluded-dated` | The next step is an observation or readout that cannot happen before a date **and** the row is not `close-redundant`; record the date and flag a `Due:` line that disagrees. |
 | Excluded | `excluded-blocked` | An upstream, external, credential or owner-only prerequisite blocks it; name the blocker and the re-check date. |
-| Excluded | `standing-tracker` | An automated tracker that never closes; list only the items inside their lead time as today's action. |
+| Excluded | `standing-tracker` | An automated tracker that never closes; act on items inside their lead time directly in the pass, and never spawn manual `ops:followup` issues for queued/future items the tracker already owns. |
 | Needs owner | `needs-decision` | Policy, scope, methodology, listing or two defensible readings. Transient: re-verdict after the ruling; a row still here at session end is an unanswered decision. |
 
 ## Per-Issue Verification
@@ -35,6 +36,7 @@ One row per open issue. Columns, in order:
 4. For a runtime claim, make one read-only production read (the issue's `Check`, a public API or status surface) and record its time.
 5. For an overdue `Due:`, run the `Check` now and record a due-check verdict.
 6. List what could not be verified. Never upgrade a guess to a verdict.
+7. Backlog hygiene check (applies to future-dated rows too): flag duplicates of automated trackers (`#945`, `#1302`, `npm run digest:curation`, `reviewBy`/`expiresAtSec`), split-date siblings of one feature/rollout, and self-monitored or low-value polish tickets for `close-redundant` or a batched owner retirement decision. Stay scoped to the open backlog; do not run open-ended audits that manufacture non-bug tickets.
 
 Order the plan by urgency flags found here: `ci:nightly-red`, a review or waiver expiring before the next session (`npm run digest:curation` prints the expiry lookahead), an overdue `Due:`, and test-corpus headroom ([Test corpus budget](../../../../docs/testing.md#test-corpus-budget)).
 
