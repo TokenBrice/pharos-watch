@@ -281,7 +281,10 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
   describe("Queue stage resource and canonical parity gates", { timeout: 420_000 }, () => {
     // Cap concurrency to 2 after solo contagion so 4-vCPU hosted runners avoid contention.
     // Run the heaviest cohorts first to minimize total makespan.
-    it.concurrent.each([[343, "commit-expiry", "default"], [560, "none", "default"], [343, "eval", "default"], [450, "none", "640"], [343, "none", "default"]] as const)(
+    // The 450/640 qualification cohort (#1827) runs only outside PR validation (8-minute PR job).
+    const queueCohorts = ([[343, "commit-expiry", "default"], [560, "none", "default"], [343, "eval", "default"], [450, "none", "640"], [343, "none", "default"]] as const)
+      .filter(([, , catalog]) => catalog === "default" || process.env.PHAROS_V9_RESOURCE_EXTENDED !== "0");
+    it.concurrent.each(queueCohorts)(
       "bounds Queue stage resources and matches canonical publication at %i assets (escalation=%s, catalog=%s)",
       async (count, escalation, catalog) => runQueueSlot(async () => {
         const name = `queue-${count}-${escalation}-${catalog}`;
