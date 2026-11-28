@@ -698,9 +698,12 @@ export async function observeCcipPending(input: {
         const row = parsed.data, height = Number(BigInt(row.blockNumber));
         // A migrated token shares this ramp across reviewed pools: a message
         // carried by a sibling lane's pool is that lane's evidence, proved by
-        // its own discovery. An unreviewed pool still rejects.
+        // its own discovery. Siblings are the same directed lane of the same
+        // source token; another token's or an unreviewed pool still rejects.
         const siblings = input.source.lanes.filter(other => other !== lane && other.version === lane.version &&
-          other.onRampAddress === lane.onRampAddress && other.destination.chainSelector === lane.destination.chainSelector);
+          other.onRampAddress === lane.onRampAddress && other.source.chainId === lane.source.chainId &&
+          other.source.chainSelector === lane.source.chainSelector && other.source.tokenAddress === lane.source.tokenAddress &&
+          other.destination.chainSelector === lane.destination.chainSelector);
         let sibling = false;
         const found = row.logs.some(raw => {
           if (!raw || typeof raw !== "object" || !("address" in raw) || typeof raw.address !== "string" ||

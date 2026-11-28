@@ -244,8 +244,8 @@ beforeEach(() => {
     const oldPeerPin = at && typeof at === "object" && "blockHash" in at && at.blockHash === word(102);
     if (peersRemoved && !oldPeerPin && selector === sel("getRemoteToken(uint64)")) return encodeAbiParameters(parseAbiParameters("bytes"), ["0x"]);
     if (peersRemoved && !oldPeerPin && selector === sel("getRemotePools(uint64)")) return encodeAbiParameters(parseAbiParameters("bytes[]"), [[]]);
-    if (selector === sel("getRemoteToken(uint64)")) return encodeAbiParameters(parseAbiParameters("bytes"), [word(chain === "ethereum" ? 20 : 10)]);
-    if (selector === sel("getRemotePools(uint64)")) return encodeAbiParameters(parseAbiParameters("bytes[]"), [chain === "ethereum" ? [word(21)] : [word(11), word(13)]]);
+    if (selector === sel("getRemoteToken(uint64)")) return encodeAbiParameters(parseAbiParameters("bytes"), [word(chain === "ethereum" ? 20 : to === addr(23) ? 14 : 10)]);
+    if (selector === sel("getRemotePools(uint64)")) return encodeAbiParameters(parseAbiParameters("bytes[]"), [chain === "ethereum" ? [word(21), word(23)] : [word(11), word(13)]]);
     if (selector === sel("getStaticConfig()")) {
       if (chain === "ethereum" && protocol === "1.5") return encodeAbiParameters(parseAbiParameters("(address,uint64,uint64,uint64,uint96,address,address,address)"), [[addr(50), 1n, 2n, 0n, 0n, addr(0), addr(51), addr(52)]]);
       if (chain === "ethereum" && (protocol === "2.0.0" || to === addr(32))) return encodeAbiParameters(parseAbiParameters("(uint64,address,uint32,address)"), [[1n, addr(50), 1, addr(52)]]);
@@ -469,6 +469,10 @@ describe("authenticated CCIP pending quantities", () => {
     sent = [send20(1)]; indexed = [sent[0]!.topics[3]!];
     expect(await observeCcipPending(input(read))).toMatchObject({ status: "accepted", amount: "10" });
     read.lanes.shift();
+    expect(await observeCcipPending(input(read))).toEqual({ status: "rejected", reason: "indexer-send-unproved" });
+    read.lanes = [lane, { ...lane, id: "b", source: { ...lane.source, tokenAddress: addr(14), tokenPoolAddress: addr(13) }, destination: { ...lane.destination, tokenPoolAddress: addr(23) } }];
+    tokOvr[addr(13)] = 14; const discover = jsonMock.getMockImplementation()!;
+    jsonMock.mockImplementation(async (url, ...rest) => url.includes(`=${addr(10)}&`) ? { response: new Response("{}"), body: { data: [] } } : discover(url, ...rest));
     expect(await observeCcipPending(input(read))).toEqual({ status: "rejected", reason: "indexer-send-unproved" });
   });
   it.each(["1.6", "2.0.0"] as const)("routes mixed-destination %s receipts independently of log order", async version => {
