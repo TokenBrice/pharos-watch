@@ -12,10 +12,10 @@
  * or `production-capture` mode (replayed against a production capture).
  *
  * Gate contract:
- *  - active registry cardinality ≤ `SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS` (397;
- *    no override);
- *  - tracked catalog cardinality ≤ `SAFETY_SCORE_V9_CATALOG_MAX_ASSETS` (560;
- *    no override; applies to any added coin file including pre-launch stubs);
+ *  - active registry cardinality ≤ `SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS` (397)
+ *    and tracked catalog cardinality ≤ `SAFETY_SCORE_V9_CATALOG_MAX_ASSETS`
+ *    (560); no override, checked for any added coin file including pre-launch
+ *    stubs, and a non-integer or negative count fails closed as unverifiable;
  *  - ≤ `NEW_ASSET_OPEN_QUESTION_LIMIT` own open questions rooted at the asset;
  *  - zero own non-documentation `missing-mint-authority` datums (U2; no
  *    override);
@@ -531,41 +531,44 @@ export function evaluateNewAssetEvidencePacket({
   const fail = (candidate: NewAssetGateCandidate, kind: NewAssetGateFailureKind, message: string): void => {
     report.failures.push({ assetId: candidate.assetId, origin: candidate.origin, kind, message });
   };
-  const activeCapacityExceeded =
-    activeAssetCount !== undefined &&
-    (!Number.isSafeInteger(activeAssetCount) || activeAssetCount < 0 || activeAssetCount > SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS);
-  const catalogCapacityExceeded =
-    catalogAssetCount !== undefined &&
-    (!Number.isSafeInteger(catalogAssetCount) || catalogAssetCount < 0 || catalogAssetCount > SAFETY_SCORE_V9_CATALOG_MAX_ASSETS);
-  const catalogCapacityMessage =
-    `catalog stablecoin count ${catalogAssetCount} exceeds SAFETY_SCORE_V9_CATALOG_MAX_ASSETS ` +
-    `(${SAFETY_SCORE_V9_CATALOG_MAX_ASSETS}); cannot admit catalog addition without raising V9 capacity ` +
-    "(this condition has no override)";
+  // An unreadable count fails closed like an overage, but names a registry-load defect, not a cap to raise.
+  const capacityFailureMessage = (
+    scope: "active" | "catalog",
+    count: number | undefined,
+    limitName: string,
+    limit: number,
+    admits: string,
+  ): string | null => {
+    if (count === undefined) return null;
+    if (!Number.isSafeInteger(count) || count < 0) {
+      return `${scope} stablecoin count ${count} is not a non-negative integer, so ${limitName} (${limit}) cannot be ` +
+        "verified; fix the registry count, not the cap (this condition has no override)";
+    }
+    return count > limit
+      ? `${scope} stablecoin count ${count} exceeds ${limitName} (${limit}); cannot admit ${admits} without raising V9 ` +
+        "capacity (this condition has no override)"
+      : null;
+  };
+  const capacityFailures = [
+    ["active", "active-capacity-exceeded", capacityFailureMessage("active", activeAssetCount,
+      "SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS", SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS, "active listing or promotion")],
+    ["catalog", "catalog-capacity-exceeded", capacityFailureMessage("catalog", catalogAssetCount,
+      "SAFETY_SCORE_V9_CATALOG_MAX_ASSETS", SAFETY_SCORE_V9_CATALOG_MAX_ASSETS, "catalog addition")],
+  ] as const;
 
-  if (catalogCapacityExceeded && candidates.length === 0) {
-    report.failures.push({
-      assetId: "catalog",
-      origin: "catalog",
-      kind: "catalog-capacity-exceeded",
-      message: catalogCapacityMessage,
-    });
+  // A stub-only diff has no candidate to carry the registry-wide caps, so each over-cap count reports once.
+  if (candidates.length === 0) {
+    for (const [assetId, kind, message] of capacityFailures) {
+      if (message !== null) report.failures.push({ assetId, origin: "catalog", kind, message });
+    }
   }
 
   for (const candidate of candidates) {
     let failed = false;
-    if (activeCapacityExceeded) {
+    for (const [, kind, message] of capacityFailures) {
+      if (message === null) continue;
       failed = true;
-      fail(
-        candidate,
-        "active-capacity-exceeded",
-        `active stablecoin count ${activeAssetCount} exceeds SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS ` +
-          `(${SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS}); cannot admit active listing or promotion without raising V9 capacity ` +
-          "(this condition has no override)",
-      );
-    }
-    if (catalogCapacityExceeded) {
-      failed = true;
-      fail(candidate, "catalog-capacity-exceeded", catalogCapacityMessage);
+      fail(candidate, kind, message);
     }
     if (!ASSET_ID_PATTERN.test(candidate.assetId)) {
       fail(candidate, "invalid-asset-id", `asset id "${candidate.assetId}" cannot name a receipt file; fix the per-coin id`);

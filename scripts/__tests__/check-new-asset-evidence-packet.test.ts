@@ -1,5 +1,7 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX } from "@shared/lib/report-cards-base-input-identity";
 import { SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS, SAFETY_SCORE_V9_CATALOG_MAX_ASSETS } from "@shared/lib/safety-score-v9-capacity-limits";
@@ -13,12 +15,14 @@ import {
   PROSPECTIVE_ADMISSION_INPUT_ID_PREFIX,
   classifyNewAssetGateCandidates,
   evaluateNewAssetEvidencePacket,
+  inspectNewAssetEvidencePacket,
   isPerCoinAssetPath,
   parseCoinAdmissionSnapshot,
   type EvaluateNewAssetEvidencePacketInput,
   type NewAssetGateCandidate,
   type NewAssetGateReport,
 } from "../ci/check-new-asset-evidence-packet";
+import { PER_COIN_SOURCE_DIR } from "../lib/stablecoin-catalog-sources";
 
 const REGISTRY_FINGERPRINT = "a".repeat(64);
 const EVALUATION_BUILD_DIGEST = "e".repeat(64);
@@ -305,27 +309,46 @@ describe("new-asset evidence packet gate", () => {
   it("enforces active and catalog V9 capacity caps without override", () => {
     const valid = receiptJson({ questions: openQuestions(1) });
     expect(failKinds(evaluate(valid))).toEqual([]);
-    const catalogOnly = (catalogAssetCount: number, override = false) => evaluateNewAssetEvidencePacket({
-      candidates: [], registryFingerprint: REGISTRY_FINGERPRINT, catalogAssetCount, override, readReceipt: () => null,
+    // A stub-only diff has no candidate: registry-wide caps report once each.
+    const registryOnly = (counts: { activeAssetCount?: number; catalogAssetCount?: number }, override = false) => evaluateNewAssetEvidencePacket({
+      candidates: [], registryFingerprint: REGISTRY_FINGERPRINT, ...counts, override, readReceipt: () => null,
     });
-    expect(failKinds(catalogOnly(SAFETY_SCORE_V9_CATALOG_MAX_ASSETS))).toEqual([]);
+    expect(failKinds(registryOnly({ activeAssetCount: SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS, catalogAssetCount: SAFETY_SCORE_V9_CATALOG_MAX_ASSETS }))).toEqual([]);
     for (const override of [false, true]) {
       for (const [opts, kind] of [
         [{ activeAssetCount: SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS + 1 }, "active-capacity-exceeded"],
+        [{ activeAssetCount: -1 }, "active-capacity-exceeded"],
         [{ catalogAssetCount: SAFETY_SCORE_V9_CATALOG_MAX_ASSETS + 1 }, "catalog-capacity-exceeded"],
+        [{ catalogAssetCount: 1.5 }, "catalog-capacity-exceeded"],
       ] as const) {
         const report = evaluate(valid, { ...opts, override });
-        expect(failKinds(report)).toEqual([kind]);
-        expect(report.passed).toEqual([]);
+        const overage = Object.values(opts).every((count) => Number.isSafeInteger(count) && count >= 0);
+        expect([failKinds(report), report.passed]).toEqual([[kind], []]);
+        expect([/ exceeds /.test(report.failures[0]!.message), /not a non-negative integer/.test(report.failures[0]!.message)]).toEqual([overage, !overage]);
+        expect(registryOnly(opts, override).failures).toEqual([{ ...report.failures[0]!, assetId: kind.split("-")[0], origin: "catalog" }]);
       }
-      const over = catalogOnly(SAFETY_SCORE_V9_CATALOG_MAX_ASSETS + 1, override);
-      expect(failKinds(over)).toEqual(["catalog-capacity-exceeded"]);
-      expect(over.failures[0]).toMatchObject({ assetId: "catalog", origin: "catalog" });
     }
     expect(failKinds(evaluate(valid, {
       activeAssetCount: SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS + 1,
       catalogAssetCount: SAFETY_SCORE_V9_CATALOG_MAX_ASSETS + 1,
     }))).toEqual(["active-capacity-exceeded", "catalog-capacity-exceeded"]);
+  });
+
+  it("loads both registry caps for a stub-only diff", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-new-asset-"));
+    try {
+      const git = (...args: string[]) => execFileSync("git", ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", ...args], { cwd: root, stdio: "pipe" });
+      git("init", "-q", "-b", "main"); git("commit", "-q", "--allow-empty", "-m", "base");
+      mkdirSync(join(root, PER_COIN_SOURCE_DIR), { recursive: true });
+      writeFileSync(join(root, PER_COIN_SOURCE_DIR, "stub-test.json"), JSON.stringify({ id: "stub-test", status: "pre-launch" }));
+      git("add", "-A"); git("commit", "-qm", "stub");
+      const result = await inspectNewAssetEvidencePacket({ base: "HEAD~1", head: "HEAD", receiptDir: NEW_ASSET_RECEIPT_DIR, override: false, cwd: root });
+      const { ACTIVE_STABLECOINS, TRACKED_SOURCE_COINS } = await import("@shared/lib/stablecoins/registry");
+      expect([result.report.candidates, result.skipped.map((entry) => entry.reason), result.activeAssetCount, result.catalogAssetCount])
+        .toEqual([[], ["not-a-listing (pre-launch)"], ACTIVE_STABLECOINS.length, TRACKED_SOURCE_COINS.length]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("verifies prospective-offline receipts fail-closed and enforces the dedicated 7d admission clock bound", () => {
