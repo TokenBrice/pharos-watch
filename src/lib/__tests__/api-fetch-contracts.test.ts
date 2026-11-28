@@ -8,14 +8,8 @@ import { DEFAULT_REQUEST_TIMEOUT_MS } from "../request-lifecycle";
 import { jsonResponse, mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockAbortableFetch, mockJsonOnce } from "@/test-utils/api-fetch";
 import {
-  apiRequest,
-  apiFetch,
-  apiFetchWithMeta,
-  ApiFetchError,
-  buildRequestUrl,
-  fetchStablecoinReserves,
-  resolveApiBase,
-  SchemaValidationError,
+  apiRequest, apiFetch, apiFetchWithMeta as fetchMeta, ApiFetchError,
+  buildRequestUrl, fetchStablecoinReserves as fetchReserves, resolveApiBase, SchemaValidationError,
 } from "../api";
 import { SAFETY_SCORE_PUBLICATION_AGE_REASON } from "@pharos/contracts/api-meta";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -24,704 +18,292 @@ import { deriveDataHealth, isPublicWarning } from "../data-health";
 import { DATA_HEALTH_PRESETS } from "../data-health-config";
 import { PUBLIC_API_ACCEPT } from "../api-request-policy";
 
-/** Minimal schema-valid live-reserve payload; override only the field under test. */
-function reserveBody(overrides: Record<string, unknown> = {}) {
-  return {
-    stablecoinId: "iusd-infinifi",
-    mode: "live",
-    reserves: [{ name: "Test Farm", pct: 100, risk: "low" }],
-    estimated: false,
-    provenance: {
-      evidenceClass: "independent",
-      sourceModel: "dynamic-mix",
-      scoringEligible: true,
-    },
-    ...overrides,
-  };
-}
+const OK = z.object({ ok: z.boolean() });
+const PH = "pharos.watch", OPS = "ops.pharos.watch", STABLECOINS = "/api/stablecoins", SITE = "/_site-data";
+const M200 = { updatedAt: 200, ageSeconds: 20, status: "fresh" } as const;
+const DDR_WARN = "Forecast from Pharos historical data. Not investment advice or a credit rating.";
+const stubHost = (hostname = PH) => vi.stubGlobal("window", { location: { hostname } });
+const utc = (hms: string) => Date.parse(`2026-06-23T${hms}.000Z`) / 1000;
+const setClock = (iso = "2026-06-23T10:05:00.000Z") => vi.setSystemTime(new Date(iso));
+const advance = (ms: number) => vi.advanceTimersByTimeAsync(ms);
+const spyFetch = () => vi.spyOn(globalThis, "fetch");
+const okWith = (headers: Record<string, string>) => mockJsonOnce({ ok: true }, 200, headers);
+const abortErr = (msg: string) => new DOMException(msg, "AbortError");
+const reserveBody = (ov: Record<string, unknown> = {}) => ({
+  stablecoinId: "iusd-infinifi", mode: "live", reserves: [{ name: "Test Farm", pct: 100, risk: "low" }],
+  estimated: false, provenance: { evidenceClass: "independent", sourceModel: "dynamic-mix", scoringEligible: true }, ...ov,
+});
 
 describe("api contract validation policy", () => {
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
   it("throws SchemaValidationError on strict endpoint schema mismatch", async () => {
     mockJsonOnce({ ok: true });
-
-    await expect(
-      apiFetch("/api/stablecoins", z.object({ peggedAssets: z.array(z.object({ id: z.string() })) })),
-    ).rejects.toBeInstanceOf(SchemaValidationError);
+    await expect(apiFetch(STABLECOINS, z.object({ peggedAssets: z.array(z.object({ id: z.string() })) }))).rejects.toBeInstanceOf(SchemaValidationError);
   });
 
-  it("returns raw successful payloads when no schema is provided", async () => {
+  it("returns raw payloads without schema and keeps permissive behavior only in explicit warn mode", async () => {
     const body = { ok: true, count: 2 };
     mockJsonOnce(body);
-
     await expect(apiFetch("/api/custom")).resolves.toEqual(body);
-  });
 
-  it("keeps permissive behavior only when warn mode is explicit", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const raw = { something: "unexpected" };
     mockJsonOnce(raw);
-
-    const result = await apiFetch("/api/daily-digest", z.object({ digest: z.string() }), undefined, "warn");
-
-    expect(result).toEqual(raw);
+    expect(await apiFetch("/api/daily-digest", z.object({ digest: z.string() }), undefined, "warn")).toEqual(raw);
     expect(warn).toHaveBeenCalledOnce();
   });
 
   it("throws on strict endpoint mismatch in apiFetchWithMeta", async () => {
-    const bodyWithMeta = {
-      _meta: { updatedAt: 100, ageSeconds: 10, status: "fresh" },
-      wrong: true,
+    mockJsonOnce({ _meta: { updatedAt: 100, ageSeconds: 10, status: "fresh" }, wrong: true });
+    await expect(fetchMeta(STABLECOINS, z.object({ peggedAssets: z.array(z.unknown()) }))).rejects.toBeInstanceOf(SchemaValidationError);
+  });
+
+  it("field-compares a current Worker freshness envelope and drops malformed dependency metadata", async () => {
+    const _meta = {
+      ...M200, status: "degraded", assessedAt: 220, freshBudgetSec: 1800, degradedBudgetSec: 3600, warning: null,
+      dependencies: { reportCards: { updatedAt: 180, ageSeconds: 40, status: "fresh", reason: null } },
     };
+    mockJsonOnce({ _meta, summary: null, coins: [] });
+    const full = await fetchMeta("/api/peg-summary", z.object({ summary: z.null(), coins: z.array(z.unknown()) }));
+    expect([full.data, full.meta]).toEqual([{ summary: null, coins: [] }, _meta]);
 
-    mockJsonOnce(bodyWithMeta);
-
-    await expect(
-      apiFetchWithMeta("/api/stablecoins", z.object({ peggedAssets: z.array(z.unknown()) })),
-    ).rejects.toBeInstanceOf(SchemaValidationError);
+    const price = { updatedAt: null, ageSeconds: null, status: "unavailable", reason: null };
+    mockJsonOnce({ _meta: { ...M200, dependencies: { bad: { status: "offline", ageSeconds: 50 }, price } }, ok: true });
+    expect((await fetchMeta("/api/chains", OK, undefined, "warn")).meta).toEqual({ ...M200, dependencies: { price } });
   });
 
-  it("field-compares a current Worker freshness envelope", async () => {
-    const bodyWithMeta = {
+  it("validates meta-aware response schemas and preserves endpoint-owned _meta without a schema", async () => {
+    const t = 1779723422;
+    const ddr = {
       _meta: {
-        updatedAt: 200,
-        ageSeconds: 20,
-        status: "degraded",
-        assessedAt: 220,
-        freshBudgetSec: 1800,
-        degradedBudgetSec: 3600,
-        warning: null,
-        dependencies: {
-          reportCards: {
-            updatedAt: 180,
-            ageSeconds: 40,
-            status: "fresh",
-            reason: null,
-          },
-        },
-      },
-      summary: null,
-      coins: [],
-    };
-
-    mockJsonOnce(bodyWithMeta);
-
-    const result = await apiFetchWithMeta(
-      "/api/peg-summary",
-      z.object({ summary: z.null(), coins: z.array(z.unknown()) }),
-    );
-
-    expect(result.data).toEqual({ summary: null, coins: [] });
-    expect(result.meta).toEqual(bodyWithMeta._meta);
-  });
-
-  it("drops malformed dependency metadata while preserving valid _meta", async () => {
-    mockJsonOnce({
-      _meta: {
-        updatedAt: 200,
-        ageSeconds: 20,
-        status: "fresh",
-        dependencies: {
-          bad: { status: "offline", ageSeconds: 50 },
-          price: { updatedAt: null, ageSeconds: null, status: "unavailable", reason: null },
-        },
-      },
-      ok: true,
-    });
-
-    const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }), undefined, "warn");
-
-    expect(result.meta).toEqual({
-      updatedAt: 200,
-      ageSeconds: 20,
-      status: "fresh",
-      dependencies: {
-        price: { updatedAt: null, ageSeconds: null, status: "unavailable", reason: null },
-      },
-    });
-  });
-
-  it("validates meta-aware response schemas that intentionally retain _meta", async () => {
-    const ddrPayload = {
-      _meta: {
-        schemaVersion: 2,
-        dataAsOf: 1779723422,
-        modelAsOf: 1779723422,
-        computedAt: 1779723422,
-        expiresAt: 1779725222,
-        snapshotToken: null,
-        snapshotGeneration: null,
-        publicPredictionIds: [],
-        publicPredictionRowHashes: {},
-        basePayloadHash: null,
-        readOverlay: {
-          degradedLockDeferralIncidentKeys: [],
-          closedPendingReviewIncidentKeys: [],
-          suppressedIncidentKeys: [],
-        },
-        degraded: false,
-        degradedReason: null,
-        publicWarning: "Forecast from Pharos historical data. Not investment advice or a credit rating.",
-        resolutionRubricVersion: "resolution-rubric-v1",
-        durationModelVersion: "duration-landmark-v1",
-        incidentGroupingVersion: "incident-group-v1",
-        supportRulesVersion: "support-rules-v1",
-        lineage: null,
+        schemaVersion: 2, dataAsOf: t, modelAsOf: t, computedAt: t, expiresAt: t + 1800,
+        snapshotToken: null, snapshotGeneration: null, publicPredictionIds: [], publicPredictionRowHashes: {}, basePayloadHash: null,
+        readOverlay: { degradedLockDeferralIncidentKeys: [], closedPendingReviewIncidentKeys: [], suppressedIncidentKeys: [] },
+        degraded: false, degradedReason: null, publicWarning: DDR_WARN,
+        resolutionRubricVersion: "resolution-rubric-v1", durationModelVersion: "duration-landmark-v1",
+        incidentGroupingVersion: "incident-group-v1", supportRulesVersion: "support-rules-v1", lineage: null,
       },
       rows: [],
-      methodology: {
-        version: "1.0",
-        versionLabel: "v1.0",
-        currentVersion: "1.0",
-        currentVersionLabel: "v1.0",
-        changelogPath: "/methodology/depeg-resolver-changelog/",
-        asOf: 1779723422,
-        isCurrent: true,
-      },
+      methodology: { version: "1.0", versionLabel: "v1.0", currentVersion: "1.0", currentVersionLabel: "v1.0", changelogPath: "/methodology/depeg-resolver-changelog/", asOf: t, isCurrent: true },
     };
+    mockJsonOnce(ddr, 200, { "X-Data-Age": "0" });
+    const parsed = await fetchMeta("/api/depeg-resolver", DdrResponseSchema);
+    expect([parsed.data._meta.computedAt, parsed.data.rows]).toEqual([t, []]);
+    expect(parsed.meta).toMatchObject({ ageSeconds: 0, status: "fresh" });
 
-    mockJsonOnce(ddrPayload, 200, { "X-Data-Age": "0" });
-
-    const result = await apiFetchWithMeta("/api/depeg-resolver", DdrResponseSchema);
-
-    expect(result.data._meta.computedAt).toBe(1779723422);
-    expect(result.data.rows).toEqual([]);
-    expect(result.meta).toMatchObject({
-      ageSeconds: 0,
-      status: "fresh",
-    });
+    const minimal = { _meta: { schemaVersion: 2, computedAt: t, degraded: false, degradedReason: null, publicWarning: DDR_WARN }, rows: [], methodology: { currentVersionLabel: "v1.0" } };
+    mockJsonOnce(minimal, 200, { "X-Data-Age": "30" });
+    const raw = await fetchMeta("/api/depeg-resolver");
+    expect(raw.data).toEqual(minimal);
+    expect(raw.meta).toMatchObject({ ageSeconds: 30, status: "fresh" });
   });
 
-  it("preserves endpoint-owned _meta when no schema is provided", async () => {
-    const ddrPayload = {
-      _meta: {
-        schemaVersion: 2,
-        computedAt: 1779723422,
-        degraded: false,
-        degradedReason: null,
-        publicWarning: "Forecast from Pharos historical data. Not investment advice or a credit rating.",
-      },
-      rows: [],
-      methodology: {
-        currentVersionLabel: "v1.0",
-      },
-    };
+  it("validates stablecoin chart points and open reserve metadata details", () => {
+    const pt = { date: 1771977600, aggregateUniverse: "legacy-provider-all-stablecoins-v1", totalCirculatingUSD: { peggedUSD: 1, peggedEUR: 2 } };
+    expect(StablecoinChartResponseSchema.parse([pt])).toEqual([pt]);
+    expect(() => StablecoinChartResponseSchema.parse([{ ...pt, date: "1771977600" }])).toThrow();
 
-    mockJsonOnce(ddrPayload, 200, { "X-Data-Age": "30" });
-
-    const result = await apiFetchWithMeta("/api/depeg-resolver");
-
-    expect(result.data).toEqual(ddrPayload);
-    expect(result.meta).toMatchObject({
-      ageSeconds: 30,
-      status: "fresh",
-    });
+    const ts = 1_761_235_200;
+    const parsed = StablecoinReservesResponseSchema.parse(reserveBody({
+      liveAt: ts, source: "infinifi", displayUrl: "https://example.com/reserves", evidenceUrls: ["https://example.com/proof"], displayBadge: { kind: "live", label: "Live" },
+      metadata: { freshnessMode: "not-applicable", yieldBasisCollateralPct: 89.7, adapterSpecificField: { retained: true }, details: { nestedAdapterTelemetry: { retained: true } }, redemption: { capacityUsd: 1000, routeStatus: "open", adapterSpecificRedemptionField: "retained" } },
+      provenance: { evidenceClass: "independent", sourceModel: "dynamic-mix", freshnessMode: "not-applicable", scoringEligible: true },
+      sync: { enabled: true, status: "ok", stale: false, bootstrap: false, lastAttemptedAt: ts, lastSuccessAt: ts },
+    }));
+    expect([parsed.metadata?.details, parsed.metadata?.adapterSpecificField, parsed.metadata?.redemption?.adapterSpecificRedemptionField])
+      .toEqual([{ nestedAdapterTelemetry: { retained: true } }, { retained: true }, "retained"]);
   });
 
-  it("validates stablecoin chart points before chart consumers use them", () => {
-    const point = {
-      date: 1771977600,
-      aggregateUniverse: "legacy-provider-all-stablecoins-v1",
-      totalCirculatingUSD: { peggedUSD: 1, peggedEUR: 2 },
-    };
+  it.each([
+    [PH, "", "https://api.pharos.watch"],
+    ["c0e7dcc0.stablecoin-dashboard.pages.dev", "", "https://api.pharos.watch"],
+    [PH, "https://custom.example", "https://custom.example"],
+  ] as const)("resolves API base for host=%s env=%s", (h, env, expected) => { expect(resolveApiBase(h, env)).toBe(expected); });
 
-    expect(StablecoinChartResponseSchema.parse([point])).toEqual([point]);
+  const PUB_HIST = "/api/public-status-history", PULSE = "/api/telegram-pulse", POST = { method: "POST" } as const;
+  it.each<[string, string, RequestInit | undefined, string]>([
+    [PH, STABLECOINS, undefined, `${SITE}/stablecoins`],
+    [PH, `${PUB_HIST}?limit=10`, undefined, `${SITE}/public-status-history?limit=10`],
+    [PH, PUB_HIST, undefined, `${SITE}/public-status-history`],
+    [PH, PULSE, undefined, `${SITE}/telegram-pulse`],
+    [OPS, STABLECOINS, undefined, `${SITE}/stablecoins`],
+    [OPS, PUB_HIST, undefined, `${SITE}/public-status-history`],
+    [OPS, PULSE, undefined, `${SITE}/telegram-pulse`],
+    [PH, "/api/donor-key-claims", POST, "/api/donor-key-claims"],
+    [PH, "/api/feedback", POST, "/api/feedback"],
+    [PH, "/api/og/stablecoin/usdt-tether", undefined, "/api/og/stablecoin/usdt-tether"],
+    [PH, "/api/admin/status", undefined, "/api/admin/status"],
+  ])("routes %s %s to %s", (host, path, init, expected) => { stubHost(host); expect(buildRequestUrl(path, init)).toBe(expected); });
 
-    // Only `date` differs from the accepted point, so the numeric rule is the sole cause.
-    expect(() => StablecoinChartResponseSchema.parse([{ ...point, date: "1771977600" }])).toThrow();
-  });
+  it("adds the Pharos browser Accept marker and passes request methods into browser URL lane selection", async () => {
+    stubHost();
+    const acceptSpy = mockJsonOnce({ ok: true });
+    await apiFetch(STABLECOINS, OK, undefined, "warn");
+    expect(new Headers((acceptSpy.mock.calls[0]?.[1] as RequestInit | undefined)?.headers).get("Accept")).toContain(PHAROS_WEB_ACCEPT_MARKER);
 
-  it("parses valid stablecoin reserve payloads with open metadata details", () => {
-    const parsed = StablecoinReservesResponseSchema.parse({
-      stablecoinId: "iusd-infinifi",
-      mode: "live",
-      reserves: [{ name: "Test Farm", pct: 100, risk: "low" }],
-      estimated: false,
-      liveAt: 1_761_235_200,
-      source: "infinifi",
-      displayUrl: "https://example.com/reserves",
-      evidenceUrls: ["https://example.com/proof"],
-      displayBadge: { kind: "live", label: "Live" },
-      metadata: {
-        freshnessMode: "not-applicable",
-        yieldBasisCollateralPct: 89.7,
-        adapterSpecificField: { retained: true },
-        details: {
-          nestedAdapterTelemetry: { retained: true },
-        },
-        redemption: {
-          capacityUsd: 1000,
-          routeStatus: "open",
-          adapterSpecificRedemptionField: "retained",
-        },
-      },
-      provenance: {
-        evidenceClass: "independent",
-        sourceModel: "dynamic-mix",
-        freshnessMode: "not-applicable",
-        scoringEligible: true,
-      },
-      sync: {
-        enabled: true,
-        status: "ok",
-        stale: false,
-        bootstrap: false,
-        lastAttemptedAt: 1_761_235_200,
-        lastSuccessAt: 1_761_235_200,
-      },
-    });
-
-    expect(parsed.metadata?.details).toEqual({
-      nestedAdapterTelemetry: { retained: true },
-    });
-    expect(parsed.metadata?.adapterSpecificField).toEqual({ retained: true });
-    expect(parsed.metadata?.redemption?.adapterSpecificRedemptionField).toBe("retained");
-  });
-
-  it("resolves production API base from known hostnames when env is empty", () => {
-    expect(resolveApiBase("pharos.watch", "")).toBe("https://api.pharos.watch");
-    expect(resolveApiBase("c0e7dcc0.stablecoin-dashboard.pages.dev", "")).toBe("https://api.pharos.watch");
-  });
-
-  it("prefers explicit env API base over hostname inference", () => {
-    expect(resolveApiBase("pharos.watch", "https://custom.example")).toBe("https://custom.example");
-  });
-
-  it("routes browser data requests through same-origin site-data on the site and ops hosts", () => {
-    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
-    expect(buildRequestUrl("/api/stablecoins")).toBe("/_site-data/stablecoins");
-    expect(buildRequestUrl("/api/public-status-history?limit=10")).toBe("/_site-data/public-status-history?limit=10");
-    expect(buildRequestUrl("/api/public-status-history")).toBe("/_site-data/public-status-history");
-    expect(buildRequestUrl("/api/telegram-pulse")).toBe("/_site-data/telegram-pulse");
-
-    vi.stubGlobal("window", { location: { hostname: "ops.pharos.watch" } });
-    expect(buildRequestUrl("/api/stablecoins")).toBe("/_site-data/stablecoins");
-    expect(buildRequestUrl("/api/public-status-history")).toBe("/_site-data/public-status-history");
-    expect(buildRequestUrl("/api/telegram-pulse")).toBe("/_site-data/telegram-pulse");
-  });
-
-  it("keeps browser public POST and non-site-data GET routes off the site-data proxy", () => {
-    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
-
-    expect(buildRequestUrl("/api/donor-key-claims", { method: "POST" })).toBe("/api/donor-key-claims");
-    expect(buildRequestUrl("/api/feedback", { method: "POST" })).toBe("/api/feedback");
-    expect(buildRequestUrl("/api/og/stablecoin/usdt-tether")).toBe("/api/og/stablecoin/usdt-tether");
-  });
-
-  it("keeps admin and explicit-base requests off the site-data proxy", () => {
-    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
-    expect(buildRequestUrl("/api/admin/status")).toBe("/api/admin/status");
-    expect(resolveApiBase("pharos.watch", "https://custom.example")).toBe("https://custom.example");
-  });
-
-  it("adds the Pharos browser Accept marker for browser-side public API requests", async () => {
-    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
-    const fetchSpy = mockJsonOnce({ ok: true });
-
-    await apiFetch("/api/stablecoins", z.object({ ok: z.boolean() }), undefined, "warn");
-
-    const [, init] = fetchSpy.mock.calls[0] ?? [];
-    const headers = new Headers((init as RequestInit | undefined)?.headers);
-    expect(headers.get("Accept")).toContain(PHAROS_WEB_ACCEPT_MARKER);
-  });
-
-  it("passes request methods into browser URL lane selection", async () => {
-    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
-    const fetchSpy = mockJsonOnce({ ok: true });
-
-    await apiRequest("/api/donor-key-claims", (response) => response.json(), { method: "POST" });
-
-    expect(fetchSpy.mock.calls[0]?.[0]).toBe("/api/donor-key-claims");
+    vi.restoreAllMocks();
+    const postSpy = mockJsonOnce({ ok: true });
+    await apiRequest("/api/donor-key-claims", (r) => r.json(), POST);
+    expect(postSpy.mock.calls[0]?.[0]).toBe("/api/donor-key-claims");
   });
 
   it("keeps explicit request options signal precedence over RequestInit", async () => {
-    const initController = new AbortController();
-    const optionsController = new AbortController();
-    let capturedSignal: AbortSignal | undefined;
-    vi.spyOn(globalThis, "fetch").mockImplementation(
-      (_input, init) =>
-        new Promise<Response>((_resolve, reject) => {
-          capturedSignal = init?.signal ?? undefined;
-          capturedSignal?.addEventListener("abort", () => reject(capturedSignal?.reason), { once: true });
-        }),
-    );
-
-    const pending = apiRequest(
-      "/api/stablecoins",
-      (response) => response.json(),
-      { signal: initController.signal },
-      { signal: optionsController.signal, timeoutMs: null },
-    );
-    initController.abort(new DOMException("init aborted", "AbortError"));
-    expect(capturedSignal?.aborted).toBe(false);
-
-    optionsController.abort(new DOMException("options aborted", "AbortError"));
+    const [initCtl, optsCtl] = [new AbortController(), new AbortController()];
+    let sig: AbortSignal | undefined;
+    spyFetch().mockImplementation((_i, init) => new Promise<Response>((_res, rej) => {
+      sig = init?.signal ?? undefined;
+      sig?.addEventListener("abort", () => rej(sig?.reason), { once: true });
+    }));
+    const pending = apiRequest(STABLECOINS, (r) => r.json(), { signal: initCtl.signal }, { signal: optsCtl.signal, timeoutMs: null });
+    initCtl.abort(abortErr("init aborted"));
+    expect(sig?.aborted).toBe(false);
+    optsCtl.abort(abortErr("options aborted"));
     await expect(pending).rejects.toMatchObject({ name: "AbortError", message: "options aborted" });
   });
 
-  it("applies the default shared API timeout when callers do not provide one", async () => {
-    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
+  it.each([
+    ["default", DEFAULT_REQUEST_TIMEOUT_MS, () => apiRequest(STABLECOINS, (r) => r.json())],
+    ["override", 250, () => apiFetch(STABLECOINS, undefined, undefined, undefined, { timeoutMs: 250 })],
+  ] as const)("applies %s API timeout (%sms)", async (_l, ms, run) => {
+    stubHost();
     vi.useFakeTimers();
     mockAbortableFetch(new DOMException("timed out", "TimeoutError"));
-
-    const requestPromise = apiRequest("/api/stablecoins", (response) => response.json());
-    const rejection = expect(requestPromise).rejects.toMatchObject({
-      name: "TimeoutError",
-      message: `API request timed out after ${DEFAULT_REQUEST_TIMEOUT_MS}ms`,
-    });
-    await vi.advanceTimersByTimeAsync(DEFAULT_REQUEST_TIMEOUT_MS);
-
-    await rejection;
+    const rej = expect(run()).rejects.toMatchObject({ name: "TimeoutError", message: `API request timed out after ${ms}ms` });
+    await advance(ms);
+    await rej;
   });
 
-  it("allows callers to override the shared timeout through apiFetch options", async () => {
-    vi.stubGlobal("window", { location: { hostname: "pharos.watch" } });
-    vi.useFakeTimers();
-    mockAbortableFetch(new DOMException("timed out", "TimeoutError"));
-
-    const requestPromise = apiFetch("/api/stablecoins", undefined, undefined, undefined, { timeoutMs: 250 });
-    const rejection = expect(requestPromise).rejects.toMatchObject({
-      name: "TimeoutError",
-      message: "API request timed out after 250ms",
-    });
-    await vi.advanceTimersByTimeAsync(250);
-
-    await rejection;
-  });
-
-  it("throws ApiFetchError carrying the status, path, and body text of a non-OK response", async () => {
+  it("throws ApiFetchError with status/path/bodyText, handles unreadable error bodies, and returns transformed schema output", async () => {
     mockJsonOnce({ error: "nope" }, 503);
+    const err = await apiFetch(STABLECOINS).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiFetchError);
+    expect(err).toMatchObject({ status: 503, path: STABLECOINS, bodyText: '{"error":"nope"}', message: `Failed to fetch ${STABLECOINS}: 503` });
 
-    const thrown = await apiFetch("/api/stablecoins").catch((error: unknown) => error);
+    const unreadable = new ReadableStream<Uint8Array>({ start(c) { c.error(new Error("stream broke")); } });
+    spyFetch().mockResolvedValueOnce(new Response(unreadable, { status: 500 }));
+    const err2 = await apiFetch(STABLECOINS).catch((e: unknown) => e);
+    expect(err2).toBeInstanceOf(ApiFetchError);
+    expect(err2).toMatchObject({ status: 500, path: STABLECOINS, bodyText: null });
 
-    expect(thrown).toBeInstanceOf(ApiFetchError);
-    expect(thrown).toMatchObject({
-      status: 503,
-      path: "/api/stablecoins",
-      bodyText: JSON.stringify({ error: "nope" }),
-      message: "Failed to fetch /api/stablecoins: 503",
-    });
-  });
-
-  it("reports a null body when an error response body cannot be read", async () => {
-    const unreadableBody = new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.error(new Error("stream broke"));
-      },
-    });
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(unreadableBody, { status: 500 }));
-
-    const thrown = await apiFetch("/api/stablecoins").catch((error: unknown) => error);
-
-    expect(thrown).toBeInstanceOf(ApiFetchError);
-    expect(thrown).toMatchObject({ status: 500, path: "/api/stablecoins", bodyText: null });
-  });
-
-  it("returns schema output rather than the raw payload when a schema transforms it", async () => {
     mockJsonOnce({ count: 2 });
-
-    const result = await apiFetch(
-      "/api/custom",
-      z.object({ count: z.number() }).transform((value) => ({ doubled: value.count * 2 })),
-    );
-
-    expect(result).toEqual({ doubled: 4 });
+    expect(await apiFetch("/api/custom", z.object({ count: z.number() }).transform((v) => ({ doubled: v.count * 2 })))).toEqual({ doubled: 4 });
   });
 
-  it("fetchStablecoinReserves inherits the shared null-on-404 behavior", async () => {
-    mockFetch([{ match: "/api/stablecoin-reserves/usdc-circle", body: "Not found", status: 404 }], { requireMatch: true });
-    const result = await fetchStablecoinReserves("usdc-circle");
-    expect(result).toBeNull();
-  });
+  it("handles fetchStablecoinReserves 404/valid/invalid/abort contracts and default 404 throwing", async () => {
+    const stubRes = (id: string, body: unknown, status = 200) => mockFetch([{ match: `/api/stablecoin-reserves/${id}`, body, status }], { requireMatch: true });
+    stubRes("usdc-circle", "Not found", 404);
+    expect(await fetchReserves("usdc-circle")).toBeNull();
 
-  it("fetchStablecoinReserves rejects with the caller abort reason while the request is pending", async () => {
-    const controller = new AbortController();
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
-      (_input, init) =>
-        new Promise<Response>((resolve, reject) => {
-          const signal = init?.signal;
-          // A dropped caller signal must surface as a resolved reserve payload,
-          // not as a hung request, so this case fails loudly instead of timing out.
-          if (!signal) {
-            resolve(jsonResponse(reserveBody()));
-            return;
-          }
-          const rejectAborted = () => reject(signal.reason ?? new DOMException("aborted", "AbortError"));
-          if (signal.aborted) {
-            rejectAborted();
-            return;
-          }
-          signal.addEventListener("abort", rejectAborted, { once: true });
-        }),
-    );
+    const body = reserveBody();
+    stubRes("iusd-infinifi", body);
+    await expect(fetchReserves("iusd-infinifi")).resolves.toEqual(body);
 
-    const pending = fetchStablecoinReserves("iusd-infinifi", { signal: controller.signal });
-    const rejection = expect(pending).rejects.toMatchObject({
-      name: "AbortError",
-      message: "reserve panel unmounted",
-    });
-    controller.abort(new DOMException("reserve panel unmounted", "AbortError"));
+    stubRes("iusd-infinifi", reserveBody({ reserves: [{ name: "Test Farm", pct: "100", risk: "low" }] }));
+    await expect(fetchReserves("iusd-infinifi")).rejects.toBeInstanceOf(SchemaValidationError);
 
-    await rejection;
+    stubRes("test", "Not found", 404);
+    await expect(apiFetch("/api/stablecoin-reserves/test")).rejects.toThrow(ApiFetchError);
+
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    const ctl = new AbortController();
+    const fetchSpy = spyFetch().mockImplementation((_i, init) => new Promise<Response>((resolve, reject) => {
+      const sig = init?.signal;
+      if (!sig) { resolve(jsonResponse(reserveBody())); return; }
+      const onAbort = () => reject(sig.reason ?? abortErr("aborted"));
+      if (sig.aborted) { onAbort(); return; }
+      sig.addEventListener("abort", onAbort, { once: true });
+    }));
+    const rej = expect(fetchReserves("iusd-infinifi", { signal: ctl.signal })).rejects.toMatchObject({ name: "AbortError", message: "reserve panel unmounted" });
+    ctl.abort(abortErr("reserve panel unmounted"));
+    await rej;
     expect(fetchSpy).toHaveBeenCalledOnce();
   });
 
-  it("fetchStablecoinReserves validates successful reserve responses", async () => {
-    const body = reserveBody();
-    mockFetch([{ match: "/api/stablecoin-reserves/iusd-infinifi", body }], { requireMatch: true });
-
-    await expect(fetchStablecoinReserves("iusd-infinifi")).resolves.toEqual(body);
-  });
-
-  it("fetchStablecoinReserves rejects a reserve payload whose only defect is a non-numeric pct", async () => {
-    mockFetch([{
-      match: "/api/stablecoin-reserves/iusd-infinifi",
-      body: reserveBody({ reserves: [{ name: "Test Farm", pct: "100", risk: "low" }] }),
-    }], { requireMatch: true });
-
-    await expect(fetchStablecoinReserves("iusd-infinifi")).rejects.toBeInstanceOf(SchemaValidationError);
-  });
-
-  it("still throws on 404 when nullOn404 is not set", async () => {
-    mockFetch([{ match: "/api/stablecoin-reserves/test", body: "Not found", status: 404 }], { requireMatch: true });
-    await expect(apiFetch("/api/stablecoin-reserves/test")).rejects.toThrow(ApiFetchError);
-  });
-
   it("keeps age metadata unknown for a freshness warning when no age source exists", async () => {
-    mockJsonOnce({ ok: true }, 200, { Warning: '110 - "Response is degraded"' });
-
-    const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }), undefined, "warn");
-
-    expect(result.meta).toEqual({
-      status: "degraded",
-      warning: '110 - "Response is degraded"',
-    });
-    expect(result.meta).not.toHaveProperty("updatedAt");
-    expect(result.meta).not.toHaveProperty("ageSeconds");
+    okWith({ Warning: '110 - "Response is degraded"' });
+    const res = await fetchMeta("/api/daily-digest", OK, undefined, "warn");
+    expect(res.meta).toEqual({ status: "degraded", warning: '110 - "Response is degraded"' });
+    expect(res.meta).not.toHaveProperty("updatedAt");
+    expect(res.meta).not.toHaveProperty("ageSeconds");
   });
 
   it.each(["stale", "unknown"] as const)("preserves %s producer authority from body and header metadata", async (status) => {
     const metadata = { updatedAt: null, ageSeconds: null, status, reason: "producer-history-missing" };
-    for (const bodyMetadata of [true, false]) {
-      mockJsonOnce({ ok: true, ...(bodyMetadata ? { _meta: metadata } : {}) }, 200, {
-        "X-Data-Age": "unavailable",
-        "X-Data-Freshness": status,
-        "X-Data-Freshness-Reason": metadata.reason,
-        Warning: '199 - "Producer authority unavailable"',
+    const warning = '199 - "Producer authority unavailable"';
+    for (const bodyMeta of [true, false]) {
+      mockJsonOnce({ ok: true, ...(bodyMeta ? { _meta: metadata } : {}) }, 200, {
+        "X-Data-Age": "unavailable", "X-Data-Freshness": status, "X-Data-Freshness-Reason": metadata.reason, Warning: warning,
       });
-      const result = await apiFetchWithMeta("/api/events", z.object({ ok: z.boolean() }));
-      expect(result.data).toEqual({ ok: true });
-      expect(result.meta).toEqual({ ...metadata, warning: '199 - "Producer authority unavailable"' });
+      const res = await fetchMeta("/api/events", OK);
+      expect([res.data, res.meta]).toEqual([{ ok: true }, { ...metadata, warning }]);
     }
   });
 
-  it("combines warning-only body metadata with a header-derived producer clock", async () => {
-    vi.setSystemTime(new Date("2026-06-23T10:05:00.000Z"));
-    mockJsonOnce({
-      _meta: { status: "degraded", warning: "dependency unavailable" },
-      ok: true,
-    }, 200, { Age: "120", "X-Data-Age": "30" });
-
-    const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }));
-
-    expect(result.meta).toEqual({
-      updatedAt: Date.parse("2026-06-23T10:02:30.000Z") / 1000,
-      ageSeconds: 30,
-      status: "degraded",
-      warning: "dependency unavailable",
-    });
-  });
-
-  it("preserves producer status while attaching a Warning header", async () => {
-    mockJsonOnce({
-      _meta: {
-        updatedAt: 200,
-        ageSeconds: 20,
-        status: "fresh",
-        dependencies: {
-          reportCards: {
-            updatedAt: 100,
-            ageSeconds: 120,
-            status: "stale",
-            reason: "stale cache",
-          },
-        },
-      },
-      ok: true,
-    }, 200, { Warning: '110 - "Response is degraded (20s old, max 600s)"' });
-
-    const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }), undefined, "warn");
-
-    expect(result.meta).toEqual({
-      updatedAt: 200,
-      ageSeconds: 20,
-      status: "fresh",
-      warning: '110 - "Response is degraded (20s old, max 600s)"',
-      dependencies: {
-        reportCards: {
-          updatedAt: 100,
-          ageSeconds: 120,
-          status: "stale",
-          reason: "stale cache",
-        },
-      },
-    });
-  });
-
-  it("keeps fresh _meta fresh for non-freshness advisory warnings", async () => {
-    mockJsonOnce({
-      _meta: { updatedAt: 200, ageSeconds: 20, status: "fresh" },
-      ok: true,
-    }, 200, { Warning: '199 - "Latest sync-dex-liquidity run shows medium quality drift"' });
-
-    const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined, "warn");
-
-    expect(result.meta).toEqual({
-      updatedAt: 200,
-      ageSeconds: 20,
-      status: "fresh",
-      warning: '199 - "Latest sync-dex-liquidity run shows medium quality drift"',
-    });
+  const STALE_DEP = { reportCards: { updatedAt: 100, ageSeconds: 120, status: "stale", reason: "stale cache" } };
+  const W_DEG = '110 - "Response is degraded (20s old, max 600s)"';
+  const W_DRIFT = '199 - "Latest sync-dex-liquidity run shows medium quality drift"';
+  it.each<[string, string, Record<string, unknown>, Record<string, string>, Record<string, unknown>, "warn" | undefined]>([
+    ["warning-only body metadata with header-derived producer clock", "/api/chains", { _meta: { status: "degraded", warning: "dependency unavailable" }, ok: true }, { Age: "120", "X-Data-Age": "30" }, { updatedAt: utc("10:02:30"), ageSeconds: 30, status: "degraded", warning: "dependency unavailable" }, undefined],
+    ["producer status with Warning header and dependencies", "/api/chains", { _meta: { ...M200, dependencies: STALE_DEP }, ok: true }, { Warning: W_DEG }, { ...M200, warning: W_DEG, dependencies: STALE_DEP }, "warn"],
+    ["fresh _meta for non-freshness advisory warnings", "/api/dex-liquidity", { _meta: M200, ok: true }, { Warning: W_DRIFT }, { ...M200, warning: W_DRIFT }, "warn"],
+    ["X-Data-Age threshold classification left to data health", "/api/dex-liquidity", { ok: true }, { "X-Data-Age": "1122" }, { ageSeconds: 1122, status: "fresh" }, undefined],
+    ["edge Age with X-Data-Age as only producer clock", "/api/dex-liquidity", { ok: true }, { Age: "120", "X-Data-Age": "30" }, { updatedAt: utc("10:02:30"), ageSeconds: 30, status: "fresh" }, undefined],
+    ["body _meta updatedAt ignoring edge Age", "/api/chains", { _meta: M200, ok: true }, { Age: "120", "X-Data-Age": "30" }, M200, undefined],
+    ["server Date header with X-Data-Age", "/api/dex-liquidity", { ok: true }, { Date: "Tue, 23 Jun 2026 10:00:00 GMT", "X-Data-Age": "30" }, { updatedAt: utc("09:59:30"), ageSeconds: 30, status: "fresh" }, undefined],
+    ["absolute producer timestamps despite Date, Age and receipt", "/api/stablecoin/usdt-tether", { ok: true }, { Date: "Tue, 23 Jun 2026 10:00:00 GMT", Age: "120", "X-Data-Updated-At": String(utc("08:00:00")), "X-Data-Age": "30", "X-Data-Freshness": "stale", Warning: '110 - "Response is stale"' }, { updatedAt: utc("08:00:00"), ageSeconds: 7500, status: "stale", warning: '110 - "Response is stale"' }, undefined],
+  ])("resolves %s", async (_l, path, body, headers, expectedMeta, mode) => {
+    setClock();
+    mockJsonOnce(body, 200, headers);
+    const res = await fetchMeta(path, OK, undefined, mode);
+    if ("updatedAt" in expectedMeta) expect(res.meta).toEqual(expectedMeta);
+    else expect(res.meta).toMatchObject(expectedMeta);
   });
 
   it("preserves body-level API warnings in meta-aware fetches", async () => {
-    mockJsonOnce({
-      current: null,
-      history: [],
-      warning: "Yield history freshness lookup failed; falling back to cache metadata.",
-      methodology: {
-        version: "7.45",
-        currentVersion: "7.45",
-        changelogPath: "/methodology/yield-changelog/",
-      },
-    }, 200, { "X-Data-Age": "60" });
-
-    const result = await apiFetchWithMeta(
-      "/api/yield-history?stablecoin=usdt-tether",
-      z.object({
-        current: z.null(),
-        history: z.array(z.unknown()),
-        warning: z.string().optional(),
-        methodology: z.object({
-          version: z.string(),
-          currentVersion: z.string(),
-          changelogPath: z.string(),
-        }),
-      }),
-      undefined,
-    );
-
-    expect(result.data.warning).toContain("freshness lookup failed");
-    expect(result.meta).toMatchObject({
-      ageSeconds: 60,
-      status: "fresh",
-      warning: "Yield history freshness lookup failed; falling back to cache metadata.",
-    });
-  });
-
-  it("leaves X-Data-Age threshold classification to data health", async () => {
-    mockJsonOnce({ ok: true }, 200, { "X-Data-Age": "1122" });
-
-    const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined);
-    expect(result.meta?.status).toBe("fresh");
-    expect(result.meta?.ageSeconds).toBe(1122);
-  });
-
-  it("accounts for edge Age when X-Data-Age is the only producer clock", async () => {
-    vi.setSystemTime(new Date("2026-06-23T10:05:00.000Z"));
-    mockJsonOnce({ ok: true }, 200, { Age: "120", "X-Data-Age": "30" });
-
-    const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }));
-
-    expect(result.meta?.updatedAt).toBe(Date.parse("2026-06-23T10:02:30.000Z") / 1000);
-  });
-
-  it("preserves absolute producer timestamps despite edge Date, Age and a new request receipt", async () => {
-    vi.setSystemTime(new Date("2026-06-23T10:05:00.000Z"));
-    const updatedAt = Date.parse("2026-06-23T08:00:00.000Z") / 1000;
-    mockJsonOnce({ ok: true }, 200, {
-      Date: "Tue, 23 Jun 2026 10:00:00 GMT", Age: "120",
-      "X-Data-Updated-At": String(updatedAt), "X-Data-Age": "30", "X-Data-Freshness": "stale",
-      Warning: '110 - "Response is stale"',
-    });
-    const result = await apiFetchWithMeta("/api/stablecoin/usdt-tether", z.object({ ok: z.boolean() }));
-    expect(result.meta).toMatchObject({ updatedAt, ageSeconds: 7500, status: "stale", warning: '110 - "Response is stale"' });
+    const warning = "Yield history freshness lookup failed; falling back to cache metadata.";
+    mockJsonOnce({ current: null, history: [], warning, methodology: { version: "7.45", currentVersion: "7.45", changelogPath: "/methodology/yield-changelog/" } }, 200, { "X-Data-Age": "60" });
+    const res = await fetchMeta("/api/yield-history?stablecoin=usdt-tether", z.object({ current: z.null(), history: z.array(z.unknown()), warning: z.string().optional(), methodology: z.object({ version: z.string(), currentVersion: z.string(), changelogPath: z.string() }) }));
+    expect(res.data.warning).toContain("freshness lookup failed");
+    expect(res.meta).toMatchObject({ ageSeconds: 60, status: "fresh", warning });
   });
 
   it("reads the Safety Score consumer fail-close as degraded, aged against the Report Cards band", async () => {
     const nowMs = Date.parse("2026-10-22T12:00:00.000Z");
     vi.setSystemTime(new Date(nowMs));
-    const response = (ageSec: number, reason: string) => mockJsonOnce({ ok: true }, 200, {
-      "X-Data-Updated-At": String(nowMs / 1000 - ageSec), "X-Data-Age": String(ageSec),
-      "X-Data-Freshness": "stale", "X-Data-Freshness-Reason": reason, "X-Safety-Score-Status": "stale",
-      Warning: '110 - "Safety Score publication is stale (consumer budget 3600s)"',
-    });
     const health = async (ageSec: number, reason = SAFETY_SCORE_PUBLICATION_AGE_REASON) => {
-      response(ageSec, reason);
-      const { meta } = await apiFetchWithMeta("/api/report-cards/v9-detail?stablecoin=paxg-paxos", z.object({ ok: z.boolean() }));
+      okWith({
+        "X-Data-Updated-At": String(nowMs / 1000 - ageSec), "X-Data-Age": String(ageSec),
+        "X-Data-Freshness": "stale", "X-Data-Freshness-Reason": reason, "X-Safety-Score-Status": "stale",
+        Warning: '110 - "Safety Score publication is stale (consumer budget 3600s)"',
+      });
+      const { meta } = await fetchMeta("/api/report-cards/v9-detail?stablecoin=paxg-paxos", OK);
       return deriveDataHealth({ ...DATA_HEALTH_PRESETS.reportCards, dataUpdatedAt: nowMs, hasData: true, meta }, nowMs);
     };
     const bandSec = FRESHNESS_RATIOS.DEGRADED * API_FRESHNESS_MAX_AGE_SEC.reportCards;
-    for (const ageSec of [3_660, 3 * 3_600, bandSec]) {
-      const entry = await health(ageSec);
-      expect(entry.state).toBe("degraded");
-      expect(isPublicWarning(entry)).toBe(false);
-    }
+    for (const ageSec of [3_660, 3 * 3_600, bandSec]) { const e = await health(ageSec); expect([e.state, isPublicWarning(e)]).toEqual(["degraded", false]); }
     expect(isPublicWarning(await health(bandSec + 1))).toBe(true);
-    // Any other server stale reason keeps its floor.
     expect((await health(3_660, "future-timestamp")).state).toBe("stale");
   });
 
   it.each(["", "unavailable", "invalid", "-1"])("does not replace invalid absolute producer clock %s with receipt time", async (updatedAt) => {
-    mockJsonOnce({ ok: true }, 200, { "X-Data-Updated-At": updatedAt, "X-Data-Age": "0" });
-    const result = await apiFetchWithMeta("/api/stablecoin/usdt-tether", z.object({ ok: z.boolean() }));
-    expect(result.meta).toMatchObject({ updatedAt: null, ageSeconds: null, status: "unknown" });
-  });
-
-  it("does not apply edge Age when body _meta provides updatedAt", async () => {
-    mockJsonOnce({
-      _meta: { updatedAt: 200, ageSeconds: 20, status: "fresh" },
-      ok: true,
-    }, 200, { Age: "120", "X-Data-Age": "30" });
-
-    const result = await apiFetchWithMeta("/api/chains", z.object({ ok: z.boolean() }));
-
-    expect(result.meta?.updatedAt).toBe(200);
-  });
-
-  it("derives X-Data-Age updatedAt from the server Date header when available", async () => {
-    vi.setSystemTime(new Date("2026-06-23T10:05:00.000Z"));
-    mockJsonOnce({ ok: true }, 200, { Date: "Tue, 23 Jun 2026 10:00:00 GMT", "X-Data-Age": "30" });
-
-    const result = await apiFetchWithMeta("/api/dex-liquidity", z.object({ ok: z.boolean() }), undefined);
-
-    expect(result.meta).toEqual({
-      updatedAt: Date.parse("2026-06-23T09:59:30.000Z") / 1000,
-      ageSeconds: 30,
-      status: "fresh",
-    });
+    okWith({ "X-Data-Updated-At": updatedAt, "X-Data-Age": "0" });
+    expect((await fetchMeta("/api/stablecoin/usdt-tether", OK)).meta).toMatchObject({ updatedAt: null, ageSeconds: null, status: "unknown" });
   });
 });
 
 describe("browser session gate", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-11-16T12:00:00Z"));
-  });
+  const EXP_KEY = "pharos-site-session-exp", SESS_URL = `${SITE}/session`;
+  beforeEach(() => { vi.useFakeTimers(); setClock("2026-11-16T12:00:00Z"); });
+  afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.resetModules(); });
 
-  afterEach(() => {
-    vi.clearAllTimers();
-    vi.useRealTimers();
-    vi.restoreAllMocks();
-    vi.unstubAllEnvs();
-    vi.unstubAllGlobals();
-    vi.resetModules();
-  });
+  const nowSec = () => Math.floor(Date.now() / 1000);
+  const okJson = () => jsonResponse({ ok: true });
+  const sessionRes = (skew = 0) => new Response(null, { status: 204, headers: { "X-Pharos-Session-Expires": String(nowSec() + 604800 + skew) } });
+  const required = () => new Response("session required", { status: 401, headers: { "X-Pharos-Session": "required" } });
+  const vis = (visibilityState: "visible" | "hidden") => vi.stubGlobal("document", { visibilityState });
+  const calls = (fn: { mock: { calls: unknown[] } }) => fn.mock.calls.length;
 
   async function setup(flag = "true", siteKey = "test-site-key") {
     vi.resetModules();
@@ -729,212 +311,168 @@ describe("browser session gate", () => {
     vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", siteKey);
     vi.stubEnv("NEXT_PUBLIC_API_BASE", "");
     const values = new Map<string, string>();
-    const storage = {
-      getItem: vi.fn((key: string) => values.get(key) ?? null),
-      setItem: vi.fn((key: string, value: string) => { values.set(key, value); }),
-      removeItem: vi.fn((key: string) => { values.delete(key); }),
-    };
-    vi.stubGlobal("window", {
-      location: { hostname: "pharos.watch", origin: "https://pharos.watch", pathname: "/" },
-      localStorage: storage,
-    });
+    const storage = { getItem: vi.fn((k: string) => values.get(k) ?? null), setItem: vi.fn((k: string, v: string) => { values.set(k, v); }), removeItem: vi.fn((k: string) => { values.delete(k); }) };
+    vi.stubGlobal("window", { location: { hostname: PH, origin: `https://${PH}`, pathname: "/" }, localStorage: storage });
     const api = await import("../api");
     expect((await import("../site-session-gate")).getSiteSessionGate()).toBeNull();
-    return { api, session: await import("../site-session-client"), storage };
+    const s = await import("../site-session-client");
+    const fetchCoins = (opts?: Parameters<typeof api.apiFetch>[4]) => api.apiFetch(STABLECOINS, undefined, undefined, undefined, opts);
+    return {
+      api, storage, fetchCoins, reg: s.registerSiteSessionChallenge, recover: s.registerSiteSessionRecovery,
+      ensure: s.ensureSession, renew: s.renewSiteSessionIfNeeded,
+      state: s.getSiteSessionState, valid: s.hasValidSiteSession, paused: s.isSiteSessionPaused,
+    };
   }
-  const sessionResponse = () => new Response(null, {
-    status: 204, headers: { "X-Pharos-Session-Expires": String(Math.floor(Date.now() / 1000) + 604800) },
-  });
-  const required = () => new Response("session required", { status: 401, headers: { "X-Pharos-Session": "required" } });
 
   it.each([["false", "key"], ["true", ""]])("fetches with flag=%s, key=%s", async (flag, key) => {
-    const { api, session } = await setup(flag, key);
-    const challenge = vi.fn();
-    session.registerSiteSessionChallenge(challenge);
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(required());
-    await expect(api.apiFetch("/api/stablecoins")).rejects.toBeInstanceOf(api.ApiFetchError);
-    expect(fetchSpy).toHaveBeenCalledOnce();
-    expect(fetchSpy.mock.calls[0]?.[0]).toBe("/_site-data/stablecoins");
-    expect(challenge).not.toHaveBeenCalled();
+    const { api, fetchCoins, reg } = await setup(flag, key), ch = vi.fn();
+    reg(ch);
+    const spy = spyFetch().mockResolvedValueOnce(required());
+    await expect(fetchCoins()).rejects.toBeInstanceOf(api.ApiFetchError);
+    expect([calls(spy), spy.mock.calls[0]?.[0], calls(ch)]).toEqual([1, `${SITE}/stablecoins`, 0]);
   });
 
   it("loads before widget", async () => {
     await setup();
     vi.resetModules();
     const api = await import("../api");
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) =>
-      url === "/_site-data/session" ? sessionResponse() : jsonResponse({ ok: true }));
-    const pending = api.apiFetch("/api/stablecoins");
-    const session = await import("../site-session-client");
-    session.registerSiteSessionChallenge(async () => "token");
+    const spy = spyFetch().mockImplementation(async (u) => u === SESS_URL ? sessionRes() : okJson());
+    const pending = api.apiFetch(STABLECOINS);
+    const s = await import("../site-session-client");
+    s.registerSiteSessionChallenge(async () => "token");
     await expect(pending).resolves.toEqual({ ok: true });
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(session.hasValidSiteSession()).toBe(true);
+    expect([calls(spy), s.hasValidSiteSession()]).toEqual([2, true]);
   });
 
   it.each([-600, 600, -605400])("shares local expiry (skew %s)", async (skew) => {
-    const { api, session, storage } = await setup();
-    const gtag = vi.fn();
+    const { api, storage, fetchCoins, reg, state } = await setup();
+    const gtag = vi.fn(), mark = vi.spyOn(performance, "mark");
     window.gtag = gtag;
-    const mark = vi.spyOn(performance, "mark");
-    let send!: (token: string) => void;
+    let send!: (t: string) => void;
     const solve = vi.fn(() => new Promise<string>((done) => { send = done; }));
-    session.registerSiteSessionChallenge(solve);
-    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) =>
-      url === "/_site-data/session" ? new Response(null, {
-        status: 204, headers: { "X-Pharos-Session-Expires": String(Math.floor(Date.now() / 1000) + 604800 + skew) },
-      }) : jsonResponse({ ok: true }));
-    const reads = [api.apiFetch("/api/stablecoins"), api.apiFetch("/api/daily-digest")];
+    reg(solve);
+    const spy = spyFetch().mockImplementation(async (u) => u === SESS_URL ? sessionRes(skew) : okJson());
+    const reads = [fetchCoins(), api.apiFetch("/api/daily-digest")];
     await Promise.resolve();
-    expect(fetch).not.toHaveBeenCalled();
-    expect(solve).toHaveBeenCalledOnce();
+    expect([calls(spy), calls(solve)]).toEqual([0, 1]);
     send("single-use-token");
     await expect(Promise.all(reads)).resolves.toEqual([{ ok: true }, { ok: true }]);
-    expect(fetch).toHaveBeenCalledTimes(3);
-    expect(fetch.mock.calls[0]).toEqual(["/_site-data/session", expect.objectContaining({
-      method: "POST", credentials: "same-origin", body: '{"token":"single-use-token"}',
-    })]);
-    expect(storage.setItem).toHaveBeenCalledWith("pharos-site-session-exp", expect.stringMatching(/^\d+$/));
-    expect(session.getSiteSessionState()).toBe("ready");
-    expect(mark.mock.calls.map(([name]) => name)).toEqual(["pharos-session-token", "pharos-session-ready"]);
+    expect(spy).toHaveBeenCalledTimes(3);
+    expect(spy.mock.calls[0]).toEqual([SESS_URL, expect.objectContaining({ method: "POST", credentials: "same-origin", body: '{"token":"single-use-token"}' })]);
+    expect(storage.setItem).toHaveBeenCalledWith(EXP_KEY, expect.stringMatching(/^\d+$/));
+    expect([state(), mark.mock.calls.map(([n]) => n)]).toEqual(["ready", ["pharos-session-token", "pharos-session-ready"]]);
     expect(gtag).toHaveBeenCalledExactlyOnceWith("event", "site_session_ready", {});
-    expect(Number(storage.setItem.mock.calls[0]![1])).toBeCloseTo(Math.floor(Date.now() / 1000) + 604800, 0);
+    expect(Number(storage.setItem.mock.calls[0]![1])).toBeCloseTo(nowSec() + 604800, 0);
   });
 
   it.each([200, 401])("retries hinted 401 once (final %s)", async (status) => {
-    const { api, session, storage } = await setup();
-    storage.setItem("pharos-site-session-exp", String(Math.floor(Date.now() / 1000) + 7200));
-    const challenge = vi.fn(async () => "token");
-    const recover = vi.fn();
-    session.registerSiteSessionRecovery(recover);
-    session.registerSiteSessionChallenge(challenge);
-    const fetchSpy = vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(required()).mockResolvedValueOnce(sessionResponse())
-      .mockResolvedValueOnce(status === 200 ? jsonResponse({ ok: true }) : required());
-    const result = api.apiFetch("/api/stablecoins");
-    if (status === 200) await expect(result).resolves.toEqual({ ok: true });
+    const { api, storage, fetchCoins, reg, recover: onRec, valid } = await setup();
+    storage.setItem(EXP_KEY, String(nowSec() + 7200));
+    const [ch, rec] = [vi.fn(async () => "token"), vi.fn()];
+    onRec(rec);
+    reg(ch);
+    const spy = spyFetch().mockResolvedValueOnce(required()).mockResolvedValueOnce(sessionRes()).mockResolvedValueOnce(status === 200 ? okJson() : required());
+    const res = fetchCoins();
+    if (status === 200) await expect(res).resolves.toEqual({ ok: true });
     else {
-      await expect(result).rejects.toMatchObject({ name: "ApiFetchError", status: 401, bodyText: "session required" });
-      await expect(result).rejects.toBeInstanceOf(api.SiteSessionRequiredError);
+      await expect(res).rejects.toMatchObject({ name: "ApiFetchError", status: 401, bodyText: "session required" });
+      await expect(res).rejects.toBeInstanceOf(api.SiteSessionRequiredError);
     }
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
-    expect(storage.removeItem).toHaveBeenCalledWith("pharos-site-session-exp");
-    expect(challenge).toHaveBeenCalledOnce();
-    expect(session.hasValidSiteSession()).toBe(status === 200);
-    expect(recover).toHaveBeenCalledOnce();
+    expect(storage.removeItem).toHaveBeenCalledWith(EXP_KEY);
+    expect([calls(spy), calls(ch), valid(), calls(rec)]).toEqual([3, 1, status === 200, 1]);
   });
 
   it("handles hinted bootstrap 401", async () => {
-    const { api, session } = await setup();
-    session.registerSiteSessionChallenge(async () => "token");
+    const { fetchCoins, reg } = await setup();
+    reg(async () => "token");
     window.__pharosDataBootstrap = {
       version: 1, route: "/", expiresAt: Date.now() + 10000, discard: vi.fn(),
       entries: new Map([[JSON.stringify(["test"]), {
-        url: "/_site-data/stablecoins", accept: PUBLIC_API_ACCEPT, controller: new AbortController(),
-        outcome: Promise.resolve({ ok: true as const, body: {
-          status: 401, headers: [["X-Pharos-Session", "required"]] as [string, string][], bodyText: "required",
-        } }),
+        url: `${SITE}/stablecoins`, accept: PUBLIC_API_ACCEPT, controller: new AbortController(),
+        outcome: Promise.resolve({ ok: true as const, body: { status: 401, headers: [["X-Pharos-Session", "required"]] as [string, string][], bodyText: "required" } }),
       }]]),
     };
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(sessionResponse()).mockResolvedValueOnce(jsonResponse({ ok: true }));
-    await expect(api.apiFetch("/api/stablecoins", undefined, undefined, undefined, { bootstrapQueryKey: ["test"] })).resolves.toEqual({ ok: true });
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    const spy = spyFetch().mockResolvedValueOnce(sessionRes()).mockResolvedValueOnce(okJson());
+    await expect(fetchCoins({ bootstrapQueryKey: ["test"] })).resolves.toEqual({ ok: true });
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 
   it("bounds waits; honors abort", async () => {
-    const { api, session } = await setup();
-    session.registerSiteSessionChallenge((signal) => new Promise((_resolve, reject) => {
-      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
-    }));
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ ok: true }));
-    const pending = api.apiFetch("/api/stablecoins");
-    const controller = new AbortController();
-    const aborted = expect(api.apiFetch("/api/stablecoins", undefined, undefined, undefined, { signal: controller.signal }))
-      .rejects.toMatchObject({ name: "AbortError" });
-    controller.abort();
+    const { fetchCoins, reg, state } = await setup();
+    reg((sig) => new Promise((_res, rej) => { sig.addEventListener("abort", () => rej(sig.reason), { once: true }); }));
+    const spy = spyFetch().mockResolvedValueOnce(okJson());
+    const pending = fetchCoins(), ctl = new AbortController();
+    const aborted = expect(fetchCoins({ signal: ctl.signal })).rejects.toMatchObject({ name: "AbortError" });
+    ctl.abort();
     await aborted;
-    await vi.advanceTimersByTimeAsync(2999);
-    expect(fetchSpy).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(1);
+    await advance(2999);
+    expect(spy).not.toHaveBeenCalled();
+    await advance(1);
     await expect(pending).resolves.toEqual({ ok: true });
-    await vi.advanceTimersByTimeAsync(50_000);
-    expect(session.getSiteSessionState()).toBe("unavailable");
+    await advance(50_000);
+    expect(state()).toBe("unavailable");
   });
 
   it("caps retries despite blocked storage", async () => {
-    const { api, session, storage } = await setup();
-    storage.getItem.mockImplementation(() => { throw new Error("blocked"); });
-    storage.removeItem.mockImplementation(() => { throw new Error("blocked"); });
-    const challenge = vi.fn(async () => { throw new Error("blocked"); });
-    session.registerSiteSessionChallenge(challenge);
-    const first = session.ensureSession();
-    expect(session.ensureSession()).toBe(first);
+    const { api, storage, fetchCoins, reg, ensure, state, paused } = await setup();
+    const blocked = () => { throw new Error("blocked"); };
+    storage.getItem.mockImplementation(blocked);
+    storage.removeItem.mockImplementation(blocked);
+    const ch = vi.fn(async () => { throw new Error("blocked"); });
+    reg(ch);
+    const first = ensure();
+    expect(ensure()).toBe(first);
     const failed = expect(first).rejects.toThrow("unavailable");
-    await vi.advanceTimersByTimeAsync(999);
-    expect(challenge).toHaveBeenCalledOnce();
-    await vi.advanceTimersByTimeAsync(2001);
+    await advance(999);
+    expect(ch).toHaveBeenCalledOnce();
+    await advance(2001);
     await failed;
-    expect(challenge).toHaveBeenCalledTimes(3);
-    expect(session.getSiteSessionState()).toBe("unavailable");
-    expect(session.isSiteSessionPaused()).toBe(false);
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => required());
-    await expect(api.apiFetch("/api/stablecoins")).rejects.toBeInstanceOf(api.ApiFetchError);
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(challenge).toHaveBeenCalledTimes(3);
-    expect(session.isSiteSessionPaused()).toBe(true);
+    expect([calls(ch), state(), paused()]).toEqual([3, "unavailable", false]);
+    const spy = spyFetch().mockImplementation(async () => required());
+    await expect(fetchCoins()).rejects.toBeInstanceOf(api.ApiFetchError);
+    expect([calls(spy), calls(ch), paused()]).toEqual([2, 3, true]);
   });
 
   it("bypasses admin and direct API", async () => {
-    const { api, session } = await setup();
-    const challenge = vi.fn();
-    session.registerSiteSessionChallenge(challenge);
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => required());
+    const { api, fetchCoins, reg } = await setup(), ch = vi.fn();
+    reg(ch);
+    const spy = spyFetch().mockImplementation(async () => required());
     await expect(api.apiFetch("/api/admin/status")).rejects.toBeInstanceOf(api.ApiFetchError);
     vi.stubEnv("NEXT_PUBLIC_API_BASE", "https://api.pharos.watch");
-    await expect(api.apiFetch("/api/stablecoins")).rejects.toBeInstanceOf(api.ApiFetchError);
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(challenge).not.toHaveBeenCalled();
+    await expect(fetchCoins()).rejects.toBeInstanceOf(api.ApiFetchError);
+    expect([calls(spy), calls(ch)]).toEqual([2, 0]);
   });
 
   it.each([204, 503])("renews visibly within 24h (%s)", async (status) => {
-    const { api, session, storage } = await setup();
-    const time = Date.now();
-    storage.setItem("pharos-site-session-exp", String(Math.floor(time / 1000) + 86400));
+    const { storage, fetchCoins, reg, renew, ensure, state, valid, paused } = await setup(), time = Date.now();
+    storage.setItem(EXP_KEY, String(Math.floor(time / 1000) + 86400));
     storage.setItem.mockImplementation(() => { throw new Error("blocked"); });
     const solve = vi.fn(() => new Promise<string>((done) => setTimeout(done, 4000, "token")));
-    session.registerSiteSessionChallenge(solve);
-    vi.stubGlobal("document", { visibilityState: "visible" });
-    session.renewSiteSessionIfNeeded();
-    expect(session.getSiteSessionState()).toBe("ready");
-    expect(solve).not.toHaveBeenCalled();
+    reg(solve);
+    vis("visible");
+    renew();
+    expect([state(), calls(solve)]).toEqual(["ready", 0]);
     vi.setSystemTime(time + 1000);
-    vi.stubGlobal("document", { visibilityState: "hidden" });
-    session.renewSiteSessionIfNeeded();
+    vis("hidden");
+    renew();
     expect(solve).not.toHaveBeenCalled();
-    const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) =>
-      url === "/_site-data/session" ? (status === 204 ? sessionResponse() : new Response(null, { status })) : jsonResponse({ ok: true }));
-    vi.stubGlobal("document", { visibilityState: "visible" });
-    session.renewSiteSessionIfNeeded();
-    const task = session.ensureSession(true).catch(() => {});
-    await expect(api.apiFetch("/api/stablecoins")).resolves.toEqual({ ok: true });
-    await vi.advanceTimersByTimeAsync(15000);
+    const spy = spyFetch().mockImplementation(async (u) => u === SESS_URL ? (status === 204 ? sessionRes() : new Response(null, { status })) : okJson());
+    vis("visible");
+    renew();
+    const task = ensure(true).catch(() => {});
+    await expect(fetchCoins()).resolves.toEqual({ ok: true });
+    await advance(15000);
     await task;
-    expect(spy).toHaveBeenCalledTimes(status === 204 ? 2 : 4);
-    expect(session.hasValidSiteSession()).toBe(true);
-    expect(session.getSiteSessionState()).toBe("ready");
-    expect(session.isSiteSessionPaused()).toBe(false);
+    expect([calls(spy), valid(), state(), paused()]).toEqual([status === 204 ? 2 : 4, true, "ready", false]);
   });
 
   it.each(["", "NaN", "1.5", "9999999999999999"])("never stores invalid expiry %s", async (expiry) => {
-    const { session, storage } = await setup();
-    session.registerSiteSessionChallenge(async () => "token");
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(null, {
-      status: 204, headers: { "X-Pharos-Session-Expires": expiry },
-    }));
-    const failed = expect(session.ensureSession()).rejects.toThrow("unavailable");
-    await vi.advanceTimersByTimeAsync(3000);
+    const { storage, reg, ensure, valid } = await setup();
+    reg(async () => "token");
+    spyFetch().mockImplementation(async () => new Response(null, { status: 204, headers: { "X-Pharos-Session-Expires": expiry } }));
+    const failed = expect(ensure()).rejects.toThrow("unavailable");
+    await advance(3000);
     await failed;
-    expect(storage.setItem).not.toHaveBeenCalled();
-    expect(session.hasValidSiteSession()).toBe(false);
+    expect([calls(storage.setItem), valid()]).toEqual([0, false]);
   });
 });
