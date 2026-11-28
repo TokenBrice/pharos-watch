@@ -17,7 +17,7 @@
     "version": "6.55",
     "title": "New Zealand Dollar peg closure and daily-fixing admission bands",
     "date": "2026-11-26",
-    "effectiveAt": 1795734000,
+    "effectiveAt": 1795733816,
     "summary": "Registers New Zealand Dollar (NZD / peggedNZD) in the exhaustive reference-market closure and daily-fixing admission tables at the documented conservative fallback bands until NZD completes historical L18 calibration. Existing active assets, formulas, weights, and stored events are unchanged.",
     "impact": [
       "Reference closure and daily-fixing admission (`shared/lib/depeg-config.ts`, `shared/lib/reference-admission.ts`): adds `NZD` to `REFERENCE_CLOSURE_HOLD_BANDS_BPS` (`{ weekend: 2500, extended: 2500 }`) and `CALIBRATED_FIXING_BANDS` (`{ 1: 500, 2: 500, 3: 500 }`), matching the documented conservative fallback row for uncalibrated supported FX units.",

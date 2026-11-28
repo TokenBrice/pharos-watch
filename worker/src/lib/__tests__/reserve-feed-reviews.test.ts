@@ -10,6 +10,11 @@ import { YUZU_REVIEW as review } from "./live-reserves-store.test-support";
 
 const accountable = "primary:http-json: Accountable ";
 const http = "primary:http-html: HTTP 403 for https://www.fidelitydigitalassets.com/stablecoin?timestamp=changed";
+// Independent fixtures: the stored primary-endpoint 403s the StraitsX reviews acknowledge (#2353).
+const reviewedHttp: Record<string, string> = {
+  "xsgd-straitsx": "primary:http-html: HTTP 403 for https://www.straitsx.com/xsgd",
+  "xusd-straitsx": "primary:http-html: HTTP 403 for https://www.straitsx.com/xusd",
+};
 function state(r = review, overrides: Partial<State> = {}): State {
   const now = r.reviewedAt + 1;
   return {
@@ -17,7 +22,7 @@ function state(r = review, overrides: Partial<State> = {}): State {
     lastAttemptedAt: now, lastSuccessAt: now, lastStatus: r.failureCategory === null ? "degraded" : "error",
     warningCount: r.warningCodes.length,
     warnings: r.warningCodes.map((code) => ({ code, message: code, severity: "warning", effect: "degraded" })),
-    lastError: r.errorClass ? http : r.errorPrefix,
+    lastError: !r.errorClass ? r.errorPrefix : reviewedHttp[r.stablecoinId] ?? http,
     metadata: { failureCategory: r.failureCategory, sourceTimestamp: r.sourceTimestamp ?? now - 1, freshnessMode: "verified" },
     ...overrides,
   };
@@ -35,6 +40,17 @@ function history(r = review, overrides: Record<string, unknown> = {}, failed = f
 const skipped = { lastStatus: "skipped", lastError: null, metadata: { failureCategory: "circuit-open" } } as const;
 
 describe("reserve feed review policy", () => {
+  it("pins the #2353 cohort and keeps each StraitsX 403 bound to its own endpoint", async () => {
+    expect(RESERVE_FEED_REVIEWS.map((r) => [r.stablecoinId, r.adapterKey, r.errorClass ?? null, r.warningCodes, new Date(r.expiresAt * 1000).toISOString()])).toEqual([
+      ["xsgd-straitsx", "straitsx-independent-assurance", "http-403", [], "2026-12-06T12:38:00.000Z"],
+      ["xusd-straitsx", "straitsx-independent-assurance", "http-403", [], "2026-12-06T12:38:00.000Z"],
+      ["apxusd-apyx", "accountable", null, ["reserve-undercollateralized"], "2026-12-06T12:38:00.000Z"],
+    ]);
+    const [xsgd, xusd] = RESERVE_FEED_REVIEWS;
+    await check(state(xsgd, { lastError: reviewedHttp["xusd-straitsx"] }), xsgd, null);
+    await check(state(xusd, { lastError: reviewedHttp["xsgd-straitsx"] }), xusd, null);
+    await check(state(xsgd, { lastError: reviewedHttp["xsgd-straitsx"].replace("403", "429") }), xsgd, null);
+  });
   it("matches authored findings; rejects changed, corrupt, fatal and expired evidence", async () => {
     for (const r of [review, ...RESERVE_FEED_REVIEWS]) {
       const s = state(r);

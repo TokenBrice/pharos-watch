@@ -35,6 +35,8 @@ export const MARKET_PERIMETER_MARKERS: readonly MarketPerimeterMarker[] = [
 
 /**
  * changedAt is first publication of the redefined quantity; evidence may have been read earlier.
+ * Fences compare observation clocks, so when the first published packet carries an earlier
+ * supply observation (JLTXX: finalized-block read), changedAt sits at that observation instead.
  * marketWide marks a step large enough to break whole-market comparisons (total all-time high,
  * market trajectories and ranges); other entries only withhold their own asset's comparisons.
  */
@@ -196,31 +198,33 @@ export const SUPPLY_PERIMETER_CHANGES = [
   // Re-admit WTGXX (8-chain native), TBILL (5-chain native excl. XRPL hotwallet),
   // JLTXX (2-chain finalized Ethereum + Solana Token-2022 pinned shares), and CETES
   // (6-chain native incl. Stellar Horizon SAC) on preferred native supply plans.
-  // Provisional cutover aligned to 2026-11-27T09:00:00Z PR-1B release window; reconcile to first observed native sync.
+  // The 10:45:15 UTC sync (first on the PR-1B Worker) first published WTGXX, TBILL and CETES;
+  // JLTXX first published on the 11:00:31 UTC sync, but that packet's finalized-block supply
+  // observation is 10:43:35 UTC; the fence compares observation clocks, so it sits there.
   {
     stablecoinId: "wtgxx-wisdomtree",
-    changedAt: Date.parse("2026-11-27T09:00:00Z") / 1000,
+    changedAt: Date.parse("2026-11-27T10:45:15Z") / 1000,
     chainIds: ["arbitrum", "avalanche", "base", "ethereum", "optimism", "plume", "stellar", "solana"],
     evidenceUrl: "https://stellar.wisdomtree.com/.well-known/stellar.toml",
     marketWide: false,
   },
   {
     stablecoinId: "tbill-openeden",
-    changedAt: Date.parse("2026-11-27T09:00:00Z") / 1000,
+    changedAt: Date.parse("2026-11-27T10:45:15Z") / 1000,
     chainIds: ["ethereum", "arbitrum", "solana", "xrpl", "bsc"],
     evidenceUrl: "https://docs.openeden.com/tbill/smart-contract-addresses",
     marketWide: false,
   },
   {
     stablecoinId: "jltxx-jpmorgan",
-    changedAt: Date.parse("2026-11-27T09:00:00Z") / 1000,
+    changedAt: Date.parse("2026-11-27T10:43:35Z") / 1000,
     chainIds: ["ethereum", "solana"],
     evidenceUrl: "https://www.sec.gov/Archives/edgar/data/1659326/000119312526410014/d172947d497.htm",
     marketWide: false,
   },
   {
     stablecoinId: "cetes-etherfuse",
-    changedAt: Date.parse("2026-11-27T09:00:00Z") / 1000,
+    changedAt: Date.parse("2026-11-27T10:45:15Z") / 1000,
     chainIds: ["solana", "base", "polygon", "monad", "stellar", "avalanche"],
     evidenceUrl: "https://api.etherfuse.com/statement/attestation/9fa9cef5-3077-435d-9bcf-9f3990256ab3.pdf",
     marketWide: false,
@@ -228,9 +232,10 @@ export const SUPPLY_PERIMETER_CHANGES = [
   // === Listing Policy v2 PR-3 mGLO six-chain native supply plan (Pricing v7.0) ===
   // Admit Midas Fasanara Global Open (mGLO) on reviewed 6-chain additive native supply
   // (Base, Robinhood Chain, Ethereum, X Layer, Optimism, Monad; preferMcap: true).
+  // The first PR-3 sync at 16:00:29 UTC withheld mGLO; the 16:15:39 UTC sync first published it.
   {
     stablecoinId: "mglo-midas-fasanara",
-    changedAt: Date.parse("2026-11-27T16:00:00Z") / 1000,
+    changedAt: Date.parse("2026-11-27T16:15:39Z") / 1000,
     chainIds: ["base", "robinhood", "ethereum", "xlayer", "optimism", "monad"],
     evidenceUrl: "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json",
     marketWide: false,

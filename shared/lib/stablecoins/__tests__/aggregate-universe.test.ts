@@ -38,6 +38,7 @@ import {
 import { getListingClass, isTokenizedFundId } from "../listing-governance";
 import {
   getLatestSupplyPerimeterChange,
+  isEarlierSupplyPerimeter,
   MARKET_PERIMETER_MARKERS,
   SUPPLY_PERIMETER_CHANGES,
 } from "../../supply-perimeter-changes";
@@ -205,6 +206,18 @@ describe("core stablecoin aggregate universe", () => {
           expect(CORE_AGGREGATE_V1_MEMBER_IDS.has(id), `${id} was excluded at 1b79da4cb`).toBe(false);
         }
       }
+    }
+  });
+
+  it("keeps each Listing v2 re-admission's first new-perimeter supply observation on the new perimeter", () => {
+    // First admitted observation clocks read from production (#2417, #2425); fences compare observedAt.
+    for (const [id, firstObservedAt] of [
+      ["wtgxx-wisdomtree", "2026-11-27T10:45:23Z"], ["tbill-openeden", "2026-11-27T10:45:23Z"],
+      ["cetes-etherfuse", "2026-11-27T10:45:23Z"], ["jltxx-jpmorgan", "2026-11-27T10:43:35Z"],
+      ["mglo-midas-fasanara", "2026-11-27T16:16:22Z"],
+    ] as const) {
+      expect(isEarlierSupplyPerimeter(id, Date.parse(firstObservedAt) / 1000), id).toBe(false);
+      expect(isEarlierSupplyPerimeter(id, Date.parse("2026-11-27T00:00:00Z") / 1000), id).toBe(true);
     }
   });
 

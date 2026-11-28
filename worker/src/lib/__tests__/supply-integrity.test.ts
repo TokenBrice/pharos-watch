@@ -141,8 +141,8 @@ function timedDatabase() {
   return fixtures.open();
 }
 
-function loadReport(options: Parameters<typeof database>[0], now = NOW) {
-  return loadSupplyIntegrityReport(database(options), now);
+function loadReport(options: Parameters<typeof database>[0], now = NOW, rebaselines?: typeof REVIEWED_SUPPLY_VALUE_REBASELINES) {
+  return loadSupplyIntegrityReport(database(options), now, { rebaselines });
 }
 
 function conditionOf(report: SupplyIntegrityReport, id: string) {
@@ -481,33 +481,30 @@ describe("supply integrity", () => {
   });
 
   it("honours reviewed re-baselines", async () => {
+    expect(REVIEWED_SUPPLY_VALUE_REBASELINES).toEqual([]);
+    const start = Date.parse("2026-11-23T12:54:00Z") / 1000;
+    const review = (stablecoinId: string, baselineUsd: number) =>
+      ({ stablecoinId, baselineUsd, reviewedAt: start, expiresAt: start + 7 * 86400, evidenceUrls: [], reason: "fixture" });
+    const reviews = [review("ethenausdc-steakhouse", 4_536_003.46), review("sparkusdc-spark", 3_574_943.02)];
     const a = normalAssets();
     a[0] = { ...a[0], id: "ethenausdc-steakhouse", current: 4_536_003.46, previous: 44_945_335 };
     a[1] = { ...a[1], id: "usdglo-glo", current: 300_000, previous: 300_000 };
     const r = await loadReport({
       assets: a,
       confirmState: { "value-drift": { signature: "x", runs: 2, held: { "ethenausdc-steakhouse": 44_945_335, "usdglo-glo": 2_900_000 } } },
-    }, Date.parse("2026-11-23T12:54:00Z") / 1000);
+    }, start, reviews);
     expect(r.value).toMatchObject({ driftFindings: [], heldDriftFindings: [{ stablecoinId: "usdglo-glo" }] });
-    expect(REVIEWED_SUPPLY_VALUE_REBASELINES.map((entry) => entry.stablecoinId)).toEqual([
-      "ethenausdc-steakhouse", "sparkusdc-spark",
-    ]);
-    const epoch = Date.parse("2026-11-07T19:48:00Z") / 1000;
-    for (const [id, current, previous, start = epoch] of [
-      ["sparkusdtbc-spark", 850_692.45, 50_307_247.03],
-      ["sparkusdc-spark", 3_574_943.02, 164_420_938.01, Date.parse("2026-11-23T12:54:00Z") / 1000],
+    const [id, current, previous] = ["sparkusdc-spark", 3_574_943.02, 164_420_938.01] as const;
+    for (const [now, value, accepted, rebaselines] of [
+      [start - 1, current, false, reviews], [start, current, true, reviews], [start, current, false, undefined],
+      [start, current * 0.97, false, reviews], [start + 7 * 86400 + 1, current, false, reviews],
     ] as const) {
-      for (const [now, value, accepted] of [
-        [start - 1, current, false], [start, current, id !== "sparkusdtbc-spark"],
-        [start, current * 0.97, false], [start + 7 * 86400 + 1, current, false],
-      ] as const) {
-        const report = await loadReport({
-          assets: [{ id, current: value, previous }],
-          confirmState: { "value-drift": { signature: "x", runs: 2, held: { [id]: previous } } },
-        }, now);
-        expect(report.value.driftFindings.length + report.value.heldDriftFindings.length).toBe(accepted ? 0 : 1);
-        expect(report.value.heldDriftBaselines[id]).toBe(accepted ? undefined : previous);
-      }
+      const report = await loadReport({
+        assets: [{ id, current: value, previous }],
+        confirmState: { "value-drift": { signature: "x", runs: 2, held: { [id]: previous } } },
+      }, now, rebaselines);
+      expect(report.value.driftFindings.length + report.value.heldDriftFindings.length).toBe(accepted ? 0 : 1);
+      expect(report.value.heldDriftBaselines[id]).toBe(accepted ? undefined : previous);
     }
   });
 

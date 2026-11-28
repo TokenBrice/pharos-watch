@@ -33,7 +33,6 @@ import {
   findStaleVenueRiskScoresByEntries,
 } from "../../shared/lib/yield-source-risk-registry.ts";
 import { REVIEWED_CHAIN_TVL_DISPOSITIONS } from "../../worker/src/cron/dex-liquidity/orchestrator-drift.ts";
-import { REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION } from "../../worker/src/cron/dex-liquidity/reviewed-anchor-correction.ts";
 import { REVIEWED_CHAIN_SUPPLY_COLLAPSES } from "../../worker/src/cron/sync-stablecoins/chain-dropout-seed.ts";
 import {
   DEPEG_BLIND_EVENT_REVIEWS,
@@ -453,13 +452,6 @@ export function buildDatedReviewRegistries(horizonMs) {
     {
       registry: "DEX chain-TVL dispositions (REVIEWED_CHAIN_TVL_DISPOSITIONS)",
       entries: REVIEWED_CHAIN_TVL_DISPOSITIONS.map((entry) => ({ id: entry.flag, expiresAt: entry.expiresAt })),
-    },
-    {
-      registry: "DEX anchor-correction review (REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION)",
-      entries: [{
-        id: REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION.stablecoinId,
-        expiresAt: REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION.expiresAt,
-      }],
     },
     {
       registry: "DEX coverage waivers (DEX_COVERAGE_WAIVERS)",

@@ -273,7 +273,7 @@ describe("DEX deployment coverage ownership", () => {
     });
 
     expect(missing).toEqual([]);
-    expect(DEX_COVERAGE_WAIVERS).toHaveLength(1);
+    expect(DEX_COVERAGE_WAIVERS).toHaveLength(0);
     for (const waiver of DEX_COVERAGE_WAIVERS) {
       const coin = TRACKED_STABLECOINS.find((meta) => meta.id === waiver.stablecoinId);
       expect(coin, `${waiver.stablecoinId}:${waiver.chain} must remain tracked`).toBeDefined();

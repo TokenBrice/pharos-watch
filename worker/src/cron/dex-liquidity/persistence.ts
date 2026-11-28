@@ -33,8 +33,6 @@ import { DEX_MEASURED_CLOSURE_VALUATION_UNAVAILABLE } from "../measured-executio
 import { buildStoredChallengerPoolsJson, evaluateDexPriceChallengerPoolAdmission } from "./challenger-publish";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import type { DexLiquidityAnchorReviewDecision } from "../../lib/schemas";
-import { REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION } from "./reviewed-anchor-correction";
 import {
   buildDexDeploymentCensusDetail,
   buildDexPlaceholderScoreDetailsJson,
@@ -863,36 +861,13 @@ async function publishDexLiquidityGeneration(
     nowSec: number;
     expectedRowCount: number;
     signal?: AbortSignal;
-    anchorReviewDecision?: DexLiquidityAnchorReviewDecision;
   },
 ): Promise<number> {
   await ensureNoNewerCurrentDexRows(db, params.generationId, params.nowSec, params.signal);
   throwIfAborted(params.signal);
-  const decision = params.anchorReviewDecision;
   await batchExecute(
     db,
     [
-      // A stale comparison or duplicate decision rolls back the publication batch.
-      // The comparison stays current while the reviewed coin's newest published
-      // accepted observation is still the compared generation; unobserved or
-      // zero placeholder publications never displace it.
-      ...(decision ? [db.prepare(
-        `INSERT INTO cache (key, value, updated_at) VALUES (?, CASE WHEN ? = (
-           SELECT r.generation_id FROM dex_liquidity_run_rows r
-           JOIN dex_liquidity_publication_generations g ON g.generation_id = r.generation_id
-           WHERE g.state = 'published' AND r.stablecoin_id = ?
-             AND r.coverage_class IS NOT NULL AND r.coverage_class != 'unobserved'
-             AND r.total_tvl_usd > 0
-           ORDER BY g.started_at DESC, g.generation_id DESC LIMIT 1
-         ) AND ? = ? AND EXISTS (
-           SELECT 1 FROM dex_liquidity_run_rows
-           WHERE generation_id = ? AND stablecoin_id = ? AND total_tvl_usd = ?
-         ) THEN ? END, ?)`,
-      ).bind(REVIEWED_POOL_REJECTION_ANCHOR_CORRECTION.decisionKey, decision.comparedGenerationId,
-        decision.stablecoinId,
-        decision.publicationGenerationId, params.generationId,
-        params.generationId, decision.stablecoinId, decision.acceptedTvlUsd,
-        JSON.stringify(decision), Math.floor(Date.now() / 1000))] : []),
       db.prepare(DEX_LIQUIDITY_PUBLISH_CURRENT_SQL).bind(params.generationId),
       db
         .prepare(
@@ -978,7 +953,6 @@ export async function persistScores(
   signal?: AbortSignal,
   routeRemovalEvidence?: Map<string, DexRouteRemovalEvidence>,
   retainedPoolsByStablecoin?: ReadonlyMap<string, LiquidityMetrics["topPools"]>,
-  anchorReviewDecision?: DexLiquidityAnchorReviewDecision,
   curveIdentityStatus?: CurveIdentityAttachment["status"],
   curveNavRejectionsByStablecoin?: ReadonlyMap<string, ReadonlyArray<CurveNavQuoteRejectionRecord>>,
 ): Promise<PersistScoresResult> {
@@ -1396,7 +1370,6 @@ export async function persistScores(
       nowSec,
       expectedRowCount,
       signal,
-      anchorReviewDecision,
     });
     throwIfAborted(signal);
     await writeFreshnessSentinel(db, "dex-liquidity", nowSec, generationId, signal);
