@@ -894,6 +894,11 @@ describe("handleDexLiquidity DEC-19 volume availability (release A readers)", ()
       }),
     });
     expect(legacy.liquidityScoreUnavailableReason).toBeNull();
+    expect(legacy).not.toHaveProperty("effectiveDepth");
+    const effectiveDepth = { coverage: "unavailable", amountUsd: null, pausedPoolCount: 0, unknownPoolCount: 1 };
+    const withheld = await publish({ liquidity_score: null, effective_tvl_usd: 0,
+      score_components_json: JSON.stringify({ effectiveDepth }) });
+    expect(withheld).toMatchObject({ effectiveTvlUsd: 0, effectiveDepth, scoreComponents: null });
 
     const unknownCode = await publish({
       liquidity_score: null,

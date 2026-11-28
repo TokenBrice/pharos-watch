@@ -1,4 +1,5 @@
 import { SAFETY_SCORE_GAP_CAUSE_LABELS } from "@shared/lib/classification";
+import type { SafetyScoreExitPayoutAssets } from "@shared/types/safety-score-v9-public-breakdowns";
 import type { V9QualityPillar } from "@shared/types/safety-score-v9";
 import type { V9LocalAuthorityExposure } from "@shared/types/safety-score-v9-public";
 import { normalizeChain, prettifyProtocol } from "@/lib/dex-display-constants";
@@ -24,6 +25,31 @@ export function formatLocalAuthorityExposure(exposure: V9LocalAuthorityExposure)
   const coverage = exposure.coveredShare === null ? "across overlapping deployments"
     : `on ${formatLocalAuthorityShare(exposure.coveredShare)} of supply`;
   return `Local admins: ${uniform ? "" : "as low as "}${Number(exposure.worstQuality.toFixed(1))} ${coverage}, priced in the score rather than this Control number.`;
+}
+
+export function describeExitPayout(assets: SafetyScoreExitPayoutAssets | null | undefined): string {
+  return assets?.map((asset) => asset.symbol ?? asset.key.replace(/^fiat:/, "")).join(" + ") ?? "Payout unavailable";
+}
+
+export function describeExitCapacity(
+  capacity: { executableUsd: number; requestedNotionalUsd: number; inputCapacityUsd?: number; testedNotionalUsd?: number; evidenceKind?: string },
+  usd: (value: number) => string,
+  included = true,
+): string {
+  const credit = `${usd(capacity.executableUsd)} of ${usd(capacity.requestedNotionalUsd)} ${included ? "credited" : "valued capacity (excluded)"}`;
+  if (capacity.inputCapacityUsd === undefined || capacity.testedNotionalUsd === undefined) return credit;
+  const basis = capacity.evidenceKind === "reserve-based-amm-simulation" ? "Modeled input" : "Input";
+  return `${basis} ${usd(capacity.inputCapacityUsd)} of ${usd(capacity.testedNotionalUsd)} tested · ${credit}`;
+}
+
+export function describeExitConversion(
+  conversion: { inputCapacityUsd: number | null; requestedNotionalUsd?: number | null; testedNotionalUsd?: number; maxCostBps: number | null },
+  usd: (value: number) => string,
+): string {
+  const tested = conversion.testedNotionalUsd ?? conversion.requestedNotionalUsd;
+  if (conversion.inputCapacityUsd === null || tested == null) return "Conversion input test unavailable";
+  const ceiling = conversion.maxCostBps === null ? "" : ` · ${conversion.maxCostBps} bps ceiling`;
+  return `Conversion input ${usd(conversion.inputCapacityUsd)} of ${usd(tested)} tested${ceiling}`;
 }
 
 /**

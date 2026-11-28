@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 
 import { HomeAltDdrOverview } from "@/components/homepage/home-alt-ddr-overview";
 import { applyDurationStaleness } from "@shared/lib/depeg-resolver/public-contract";
@@ -195,5 +195,10 @@ describe("HomeAltDdrOverview", () => {
     expect(usePegSummaryMock).toHaveBeenCalledWith({ enabled: false });
     expect([screen.getByText("ESC").closest("a")?.textContent, screen.getByText("OLD").closest("a")?.textContent]).toEqual([expect.stringContaining("Escalating"), expect.stringContaining(">30d")]);
     expect(screen.getByText("MISS").closest("a")?.textContent).not.toMatch(/Escalating|>30d/);
+    // The shared horizon clock fails closed for this passive reader while ESC crosses out of its 7d window.
+    cleanup(); vi.useFakeTimers({ now: (COMPUTED_AT + 6 * D) * 1000 });
+    render(<HomeAltDdrOverview />); act(() => { vi.advanceTimersByTime(1); });
+    expect(screen.getByText("ESC").closest("a")?.textContent).not.toMatch(/Escalating|>30d/);
+    vi.useRealTimers();
   });
 });

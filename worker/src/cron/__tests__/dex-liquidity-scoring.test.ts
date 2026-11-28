@@ -1,41 +1,16 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
-vi.mock("../../lib/db", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/db")>();
-  return {
-    ...actual,
-    batchExecute: vi.fn(async (db: D1Database, stmts: D1PreparedStatement[]) => {
-      const state = (db as unknown as { scoringTestState?: ScoringTestState }).scoringTestState;
-      if (state) {
-        for (const s of stmts) {
-          const sql = (s as unknown as { sql?: string }).sql ?? "";
-          if (sql.includes("INSERT INTO dex_price_run_rows")) state.stagedPriceRows++;
-          if (sql.includes("INSERT INTO dex_measured_execution_targets")) state.measuredTargetRows++;
-        }
-      }
-      return stmts.length;
-    }),
-    executeAtomicBatch: vi.fn(async (db: D1Database, stmts: D1PreparedStatement[]) => {
-      const state = (db as unknown as { scoringTestState?: ScoringTestState }).scoringTestState;
-      const sql = stmts.map((s) => (s as unknown as { sql?: string }).sql ?? "").join("\n");
-      if (!state || !sql.includes("DELETE FROM dex_prices")) return stmts.length;
-      const changes = 1 + state.existingPriceRows + state.stagedPriceRows;
-      state.publishedPriceRows = state.stagedPriceRows;
-      return changes;
-    }),
-    isMissingTableError: (error: unknown) => String(error).toLowerCase().includes("no such table"),
-    isMissingColumnError: (error: unknown) => String(error).toLowerCase().includes("no such column"),
-  };
-});
-
-import { batchExecute } from "../../lib/db";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import * as database from "../../lib/db";
+import { makeUsdPricePools, seedPublishedDexGeneration } from "../dex-liquidity/__tests__/scoring-test-support";
+import { buildDexPriceObservationsFromRetainedPools } from "../dex-liquidity/scoring-helpers";
+import type { FluidSwapStatus } from "@shared/types/dex-liquidity";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import { CURVE_R3_METAPOOL_POLICIES, CURVE_USD1_METAPOOL_POLICY } from "@shared/lib/curve-composite-policies";
 import { buildCurveCompositeMeasuredExecutionTarget } from "../measured-execution/curve-composite";
-import type { ExitRouteObservation } from "@shared/types/exit-route";
+import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/exit-route";
 import { buildPoolFingerprint, initSourcePoolGraph } from "../dex-liquidity/pool-helpers";
 import { makePool } from "../dex-liquidity/__tests__/scoring-test-builders";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC, summarizeDexVolumeWindow } from "@shared/lib/dex-volume-availability";
@@ -52,41 +27,13 @@ import type { PoolEntry, SourcePoolGraph } from "../dex-liquidity/types";
 
 const SCORING_CLOCK_SEC = 1_800_000_000;
 
-interface QueryConfig {
-  match: string;
-  all?: Record<string, unknown>[];
-  first?: Record<string, unknown> | null;
-  throwError?: unknown;
-}
-
-interface PreparedStatementWithMeta extends D1PreparedStatement {
-  sql: string;
-  boundValues: unknown[];
-}
-
-interface ScoringTestState {
-  existingPriceRows: number;
-  stagedPriceRows: number;
-  publishedPriceRows: number;
-  measuredTargetRows: number;
-}
-
 interface RouteScoreView {
-  exitRouteObservations?: Array<{
-    scope: { contractOrPoolId?: string };
-    output: { trackedAssetIds?: string[] };
-    evidenceKind: string;
-    scoreEligible: boolean;
-  }>;
-  exitRouteObservationCoverage?: {
-    retainedPoolCount: number;
-    observationCount: number;
-    scoreEligibleObservationCount: number;
-    scoreEligiblePoolCount?: number;
-    scoreEligibleCapabilityPoolCount?: number;
-    unsupportedPoolCount: number;
-    unsupportedReasons: Record<string, number>;
-  };
+  exitRouteObservations?: ExitRouteObservation[];
+  exitRouteObservationCoverage?: ExitRouteObservationCoverage;
+}
+
+function routePoolId(route: ExitRouteObservation) {
+  return route.scope.kind === "chain-contract" ? route.scope.contractOrPoolId : undefined;
 }
 
 function withReadings<T extends PoolEntry>(pools: T[], ageSec = 60): T[] {
@@ -100,56 +47,17 @@ function withReadings<T extends PoolEntry>(pools: T[], ageSec = 60): T[] {
   return pools;
 }
 
-function makeQueryDb(configs: QueryConfig[] = [{ match: "FROM dex_liquidity_history", all: [] }]): D1Database & { scoringTestState: ScoringTestState } {
-  const scoringTestState: ScoringTestState = {
-    existingPriceRows: 0, stagedPriceRows: 0, publishedPriceRows: 0, measuredTargetRows: 0,
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
+
+function makeQueryDb(overrides: MockTableConfig[] = []): D1Database {
+  const { db } = fixtures.open();
+  if (!overrides.length) return db;
+  const reads = mockD1(overrides);
+  return {
+    ...db,
+    prepare: (sql) => (overrides.some(({ match }) => sql.includes(match)) ? reads : db).prepare(sql),
   };
-  const toErr = (v: unknown) => (v instanceof Error ? v : new Error(String(v)));
-
-  function createStatement(sql: string, boundValues: unknown[] = []): PreparedStatementWithMeta {
-    const config = configs.find((e) => sql.includes(e.match));
-    return {
-      sql, boundValues,
-      bind: (...args: unknown[]) => createStatement(sql, args),
-      all: async <T>() => {
-        if (config?.throwError != null) throw toErr(config.throwError);
-        const results = config?.all ?? [];
-        if (sql.includes("SELECT stablecoin_id FROM dex_prices")) scoringTestState.existingPriceRows = results.length;
-        return { results: results as T[], success: true, meta: {} };
-      },
-      first: async <T>() => {
-        if (config?.throwError != null) throw toErr(config.throwError);
-        if (config?.first !== undefined) return config.first as T | null;
-        if (sql.includes("pharos:dex-scoring:current-generation")) {
-          const n = ACTIVE_STABLECOINS.length + 1;
-          return { state: "published", expected_row_count: n, current_row_count: n, staged_row_count: n, public_row_count: n } as T;
-        }
-        if (sql.includes("pharos:dex-scoring:price-stage-coverage")) return { row_count: scoringTestState.stagedPriceRows } as T;
-        if (sql.includes("pharos:dex-scoring:price-publication-coverage")) {
-          return { public_row_count: scoringTestState.publishedPriceRows, generation_row_count: scoringTestState.publishedPriceRows, staged_row_count: scoringTestState.stagedPriceRows } as T;
-        }
-        if (sql.includes("COUNT(*) AS count FROM dex_measured_execution_targets")) return { count: scoringTestState.measuredTargetRows } as T;
-        return (config?.first ?? null) as T | null;
-      },
-      run: async () => {
-        if (config?.throwError != null) throw toErr(config.throwError);
-        if (sql.includes("DELETE FROM dex_price_run_rows WHERE generation_id = ?")) {
-          const changes = scoringTestState.stagedPriceRows;
-          scoringTestState.stagedPriceRows = 0;
-          return { success: true, meta: { changes } };
-        }
-        return { success: true, meta: { changes: 0 } };
-      },
-    } as unknown as PreparedStatementWithMeta;
-  }
-
-  return makeNoopD1({
-    prepare: (sql: string) => createStatement(sql),
-    batch: async () => [],
-    exec: async () => ({ count: 0, duration: 0 }),
-    dump: async () => new ArrayBuffer(0),
-    scoringTestState,
-  });
 }
 
 function ammToken(
@@ -246,11 +154,52 @@ describe("dex-liquidity scoring", () => {
     vi.clearAllMocks();
   });
 
+  it("preserves gross Fluid inventory and volumes while scoring only usable swaps", async () => {
+    const address = "0x97f32e5091d0e6aee24beb398e6592ae111dee9c";
+    const clock = { poolAddress: address, checkedAtSec: SCORING_CLOCK_SEC - 10, maxAgeSec: 3600 };
+    const paused: FluidSwapStatus = { ...clock, status: "paused", reason: "fluid-swaps-paused" };
+    const active: FluidSwapStatus = { ...clock, status: "active", reason: "fluid-swaps-active" };
+    const fluid = (fluidSwapStatus?: FluidSwapStatus) => makePool({ project: "fluid", poolType: "fluid-dex", source: "dl",
+      poolId: "ethereum:defillama:e3a3baab-c962-525b-a9a7-231325714c8b", price: 1, tvlUsd: 2_593_517,
+      volumeUsd1d: 0, volumeUsd7d: 2_770_982,
+      extra: { effectiveTvl: 2_204_489, qualityAdjustedTvl: 2_204_489, balanceRatio: 1, stressIndex: 0, fluidSwapStatus } });
+    const other = () => makePool({ poolId: "other", tvlUsd: 60_000, price: 0.998, volumeUsd1d: 61_000,
+      extra: { effectiveTvl: 5_000, balanceRatio: 0.23, stressIndex: 85 } });
+    const score = (pools: PoolEntry[]) => scoreOne("trusd-tori", "trUSD", withReadings(pools), { nowSec: SCORING_CLOCK_SEC });
+    const before = await score([other()]);
+    const result = await score([other(), fluid(paused)]);
+    const value = result.scores.get("trusd-tori")!;
+    expect(value).toMatchObject({ tvl: 2_653_517, effectiveTvl: 5_000, vol24h: 61_000,
+      effectiveDepth: { coverage: "complete", amountUsd: 5_000, pausedPoolCount: 1, unknownPoolCount: 0 },
+      components: before.scores.get("trusd-tori")!.components, weightedBalanceRatio: 0.23, avgStress: 85,
+      exitRouteObservationCoverage: { unsupportedReasons: { "fluid-swaps-paused": 1 } } });
+    const retained = result.retainedPoolsByStablecoin.get("trusd-tori")!;
+    expect(retained[1]).toMatchObject({ volumeUsd7d: 2_770_982, extra: { effectiveTvl: 0 } });
+    expect(buildDexPriceObservationsFromRetainedPools(result.retainedPoolsByStablecoin, new Map([["trusd-tori", [{
+      protocol: "fluid", chain: "ethereum", price: 1, tvl: 2_593_517, poolKey: retained[1]!.poolId,
+      identityConfidence: "exact", sourceFamily: "direct_api",
+    }, {
+      protocol: "cg-ticker-fluid-ethereum", chain: "orderbook", price: 1, tvl: 0,
+      observedVolumeUsd: 10_000_000, sourceFamily: "cg_tickers",
+    }]]]), true, SCORING_CLOCK_SEC).get("trusd-tori")?.map((row) => row.protocol)).toEqual(["balancer-v3"]);
+    const stale = fluid({ ...active, checkedAtSec: SCORING_CLOCK_SEC - 3600 });
+    const partial = (await score([other(), stale])).scores.get("trusd-tori")!;
+    expect(partial.effectiveDepth).toMatchObject({ amountUsd: 5_000, coverage: "partial", unknownPoolCount: 1 });
+    expect(stale.extra).not.toHaveProperty("effectiveTvl");
+    expect(stale.extra?.fluidSwapStatus?.reason).toBe("fluid-swap-state-expired");
+    expect((await score([fluid()])).scores.get("trusd-tori")).toMatchObject({ score: null, hhi: null, durability: null,
+      liquidityScoreUnavailableReason: "swap-availability-unverified",
+      effectiveDepth: { coverage: "unavailable", reason: "swap-availability-unverified", amountUsd: null } });
+    expect((await score([fluid(paused)])).scores.get("trusd-tori")).toMatchObject({ score: 0, hhi: null,
+      effectiveDepth: { coverage: "complete", amountUsd: 0 } });
+    expect((await score([fluid(active)])).scores.get("trusd-tori")!.effectiveTvl).toBe(2_204_489);
+  });
+
   it("retains original price clocks while scoring a mixed-age pool graph", async () => {
     const result = await scoreOne("usdc-circle", "USDC", withReadings([
       makePool({ poolId: "base:old", price: 0.998, priceObservedAt: SCORING_CLOCK_SEC - 6 * 3600 }),
       makePool({ poolId: "base:fresh", price: 1, priceObservedAt: SCORING_CLOCK_SEC - 60 }),
-    ]), { db: makeQueryDb([]), nowSec: SCORING_CLOCK_SEC });
+    ]), { nowSec: SCORING_CLOCK_SEC });
     expect(result.retainedPoolsByStablecoin.get("usdc-circle")?.map((p) => p.priceObservedAt)).toEqual([
       SCORING_CLOCK_SEC - 6 * 3600, SCORING_CLOCK_SEC - 60,
     ]);
@@ -325,7 +274,7 @@ describe("dex-liquidity scoring", () => {
     });
     const db = makeQueryDb([{
       match: "FROM dex_liquidity_history",
-      all: [
+      rows: [
         ...Array.from({ length: 3 }, (_, i) => row("usdc-circle", i + 1, 100_000, null)),
         row("usdc-circle", 4, 100_000, complete),
         ...Array.from({ length: 3 }, (_, i) => row("usdc-circle", i + 5, 60_000, qualified)),
@@ -347,7 +296,7 @@ describe("dex-liquidity scoring", () => {
     });
     const db = makeQueryDb([{
       match: "FROM dex_liquidity_history",
-      all: [
+      rows: [
         ...Array.from({ length: 10 }, (_, d) => row("paxg-paxos", d + 1, 160_000_000, null)),
         ...Array.from({ length: 9 }, (_, d) => row("paxg-paxos", d + 11, 160_000_000, "6.9")),
         row("paxg-paxos", 20, 160_000_000, "6.91"),
@@ -367,10 +316,10 @@ describe("dex-liquidity scoring", () => {
   it("filters and quarantines pools, truncates visible pools, and computes deduped global aggregates", async () => {
     vi.spyOn(Date, "now").mockReturnValue(Date.UTC(2026, 0, 1));
     const db = makeQueryDb([
-      { match: "depth_stability", all: [{ stablecoin_id: "usdt-tether", depth_stability: 0.9 }, { stablecoin_id: "usdc-circle", depth_stability: 0.8 }] },
+      { match: "depth_stability", rows: [{ stablecoin_id: "usdt-tether", depth_stability: 0.9 }, { stablecoin_id: "usdc-circle", depth_stability: 0.8 }] },
       {
         match: "FROM dex_liquidity_history",
-        all: [
+        rows: [
           ...Array.from({ length: 7 }, () => ({ stablecoin_id: "usdt-tether", total_volume_24h_usd: 100 })),
           ...Array.from({ length: 7 }, () => ({ stablecoin_id: "usdc-circle", total_volume_24h_usd: 0 })),
         ],
@@ -423,8 +372,7 @@ describe("dex-liquidity scoring", () => {
       volumeReading: { volume24hUsd: tvlUsd / 2, volume7dUsd: tvlUsd * 3.5, observedAtSec: SCORING_CLOCK_SEC - 60 },
     });
     const scoreLockedPools = async (pools: PoolEntry[]) => {
-      const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }, { match: "FROM surface_publication_generations", all: [] }]);
-      const { scores } = await scoreOne("usdt-tether", "USDT", pools, { db, nowSec: SCORING_CLOCK_SEC });
+      const { scores } = await scoreOne("usdt-tether", "USDT", pools, { nowSec: SCORING_CLOCK_SEC });
       return scores.get("usdt-tether")?.lockedLiqPct;
     };
 
@@ -497,8 +445,7 @@ describe("dex-liquidity scoring", () => {
     ];
 
     for (const { pool, expectExcluded } of scenarios) {
-      const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }, { match: "FROM surface_publication_generations", all: [] }]);
-      const result = await scoreOne("frax-frax", "FRAX", [pool], { db, nowSec: SCORING_CLOCK_SEC });
+      const result = await scoreOne("frax-frax", "FRAX", [pool], { nowSec: SCORING_CLOCK_SEC });
       expectExcluded(result);
       expect(result.scoredMetrics.get("frax-frax")).toMatchObject({ totalTvlUsd: 0, poolCount: 0 });
       expect(result.scores.get("frax-frax")).toMatchObject({
@@ -724,7 +671,7 @@ describe("dex-liquidity scoring", () => {
     expect(result.scoredMetrics.get("usdc-circle")!.topPools.map((p) => p.poolId)).toEqual(
       Array.from({ length: 10 }, (_, i) => `ethereum:exact-pool-${i}`),
     );
-    expect(routeResult?.exitRouteObservations?.map((o) => o.scope.contractOrPoolId)).toEqual([
+    expect(routeResult?.exitRouteObservations?.map(routePoolId)).toEqual([
       "ethereum:exact-pool-0", "ethereum:exact-pool-1", "ethereum:exact-pool-10",
       "ethereum:exact-pool-2", "ethereum:exact-pool-3", "ethereum:exact-pool-4", "ethereum:exact-pool-5",
     ]);
@@ -760,7 +707,7 @@ describe("dex-liquidity scoring", () => {
     const routeResult = result.scores.get("dai-makerdao") as RouteScoreView | undefined;
 
     expect(routeResult?.exitRouteObservations).toHaveLength(13);
-    expect(routeResult?.exitRouteObservations?.map((o) => o.scope.contractOrPoolId)).toEqual([
+    expect(routeResult?.exitRouteObservations?.map(routePoolId)).toEqual([
       ...Array.from({ length: 3 }, (_, i) => [`ethereum:dai-balancer-three-token-${i}`, `ethereum:dai-balancer-three-token-${i}`]).flat(),
       ...Array.from({ length: 7 }, (_, i) => `ethereum:dai-curve-pool-${i}`),
     ]);
@@ -797,8 +744,8 @@ describe("dex-liquidity scoring", () => {
 
   it("surfaces a missing mandatory liquidity-history table", async () => {
     const db = makeQueryDb([
-      { match: "depth_stability", throwError: new Error("no such table: dex_liquidity") },
-      { match: "FROM dex_liquidity_history", throwError: new Error("no such table: dex_liquidity_history") },
+      { match: "depth_stability", rows: [], throwError: new Error("no such table: dex_liquidity") },
+      { match: "FROM dex_liquidity_history", rows: [], throwError: new Error("no such table: dex_liquidity_history") },
     ]);
     await expect(scoreOne("usdt-tether", "USDT", [poolEntry({ poolId: "ethereum:only", tvlUsd: 25_000, symbol: "USDT-USDC" })], { db }))
       .rejects.toThrow("no such table: dex_liquidity_history");
@@ -872,7 +819,7 @@ describe("dex-liquidity scoring", () => {
     ["USD1 three-token", CURVE_USD1_METAPOOL_POLICY],
     ["depegged msUSD", CURVE_R3_METAPOOL_POLICIES.find((p) => p.stablecoinId === "msusd-metronome")!],
   ] as const)("publishes the ordered %s underlying target only to shadow", async (_label, policy) => {
-    const db = makeQueryDb();
+    const { sqlite, db } = fixtures.open();
     const referencePrice = policy.stablecoinId === "msusd-metronome" ? 0.883 : 1;
     const target = buildCurveCompositeMeasuredExecutionTarget({
       curveData: {
@@ -899,11 +846,11 @@ describe("dex-liquidity scoring", () => {
     expect(result.measuredTargetInventory.shadow[0]!.tokenOut.referencePriceUsd).toBe(0.999);
     await publishStablecoinScoreTargets(db, result.measuredTargetInventory, result.diagnostics, SCORING_CLOCK_SEC);
     expect(result.diagnostics.measuredExecution.shadowTargetPublication).toMatchObject({ status: "published", rowCount: 1 });
-    expect(db.scoringTestState.measuredTargetRows).toBe(1);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets").get()?.count).toBe(1);
   });
 
   it("publishes target-only BSC Uniswap V3 rows without admitting them to active scoring", async () => {
-    const db = makeQueryDb();
+    const { sqlite, db } = fixtures.open();
     const usdt = "0x55d398326f99059ff775485246999027b3197955";
     const usd1 = "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d";
     const target = makeMeasuredTarget({
@@ -921,7 +868,7 @@ describe("dex-liquidity scoring", () => {
     expect(result.diagnostics.measuredExecution.shadowTargetPublication).toEqual({
       status: "skipped", reason: "liquidity-candidate-not-published",
     });
-    expect(db.scoringTestState.measuredTargetRows).toBe(0);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets").get()?.count).toBe(0);
     expect(result.measuredTargetInventory.shadow).toHaveLength(1);
     await publishStablecoinScoreTargets(db, result.measuredTargetInventory, result.diagnostics, 1_700_000_100);
     expect(result.measuredTargetInventory.shadow).toHaveLength(0);
@@ -987,26 +934,21 @@ describe("dex-liquidity scoring", () => {
   it("stops constructing DEX prices after a bounded write aborts", async () => {
     const controller = new AbortController();
     const abortReason = new Error("DEX price publication timed out");
-    const coins = ACTIVE_STABLECOINS.slice(0, 30);
-    const retainedPools = new Map<string, PoolEntry[]>(coins.map((coin, i) => [
-      coin.id,
-      [makePool({
-        poolId: `ethereum:pool-${i}`, project: "curve", chain: "Ethereum", tvlUsd: 100_000,
-        symbol: "PAIR", volumeUsd1d: 0, volumeUsd7d: null, poolType: "generic", price: 1, source: "gecko_terminal",
-      })],
-    ]));
-    const primaryPrices = new Map(coins.map((c) => [c.id, 1] as const));
-    vi.mocked(batchExecute).mockImplementationOnce(async (_db, statements) => {
+    const { db, sqlite } = seedPublishedDexGeneration();
+    onTestFinished(() => sqlite.close());
+    const retainedPools = makeUsdPricePools(30);
+    const primaryPrices = new Map([...retainedPools.keys()].map((id) => [id, 1]));
+    const writeBatch = vi.spyOn(database, "batchExecute").mockImplementationOnce(async (_db, statements) => {
       controller.abort(abortReason);
       return statements.length;
     });
 
     await expect(computeDexPrices({
-      db: makeQueryDb([]), retainedPoolsByStablecoin: retainedPools, nowSec: 1_700_000_000, signal: controller.signal, primaryPrices,
+      db, retainedPoolsByStablecoin: retainedPools, nowSec: 1_700_000_000, signal: controller.signal, primaryPrices,
     })).rejects.toThrow("DEX price publication timed out");
 
-    expect(batchExecute).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(batchExecute).mock.calls[0]?.[1]).toHaveLength(DEX_LIQUIDITY_SCORING_BATCH_SIZE);
+    expect(writeBatch).toHaveBeenCalledTimes(1);
+    expect(writeBatch.mock.calls[0]?.[1]).toHaveLength(DEX_LIQUIDITY_SCORING_BATCH_SIZE);
   });
 });
 

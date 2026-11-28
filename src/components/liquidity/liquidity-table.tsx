@@ -78,12 +78,12 @@ const LIQUIDITY_COLUMNS: readonly DataTableColumn<LiquiditySortKey>[] = [
 
 /** NR plus the producer's reason; a row without a recorded reason says only NR. */
 function NotRatedScore({ reason }: { reason: LiquidityScoreUnavailableReason | null }) {
-  const label = reason ? LIQUIDITY_NR_REASON_LABELS[reason] : undefined;
+  const label = reason && LIQUIDITY_NR_REASON_LABELS[reason];
   return (
     <span
       className="text-muted-foreground"
       data-reason-code={reason ?? undefined}
-      title={label}
+      title={label ?? undefined}
       aria-label={label ? `NR: ${label}` : "NR"}
     >
       NR
@@ -222,7 +222,7 @@ export function LiquidityTable({
                 {liq.liquidityScore != null ? (
                   <span className={getScoreColor(liq.liquidityScore)}>{liq.liquidityScore}</span>
                 ) : (
-                  <NotRatedScore reason={liq.liquidityScoreUnavailableReason ?? null} />
+                  <NotRatedScore reason={liq.liquidityScoreUnavailableReason ?? (liq.effectiveDepth?.coverage === "unavailable" ? "swap-availability-unverified" : null)} />
                 )}
               </TableCell>
               <TableCell className="text-right pharos-numeric">{formatCurrency(liq.totalTvlUsd)}</TableCell>

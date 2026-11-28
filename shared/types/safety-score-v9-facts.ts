@@ -583,6 +583,7 @@ const V9RouteSettlementUsdAmountSchema = NonNegativeUsdSchema.nullable().optiona
  */
 export const V9ExitRouteFactBaseSchema = z
   .object({
+    retainsInputExposure: z.literal(true).optional(),
     routeId: CanonicalTextSchema,
     lane: V9RouteLaneSchema,
     routeSuspension: RedemptionRouteSuspensionSchema.optional(),
@@ -677,6 +678,9 @@ const V9ExitRouteFactV2Schema = V9ExitRouteFactBaseSchema
     ]);
     if ((route.lane === "dex") !== dexEvidence.has(route.evidenceKind)) {
       ctx.addIssue({ code: "custom", path: ["evidenceKind"], message: "Evidence kind does not match its lane" });
+    }
+    if (route.retainsInputExposure && (route.lane !== "dex" || route.scoreEligible)) {
+      issue(ctx, ["retainsInputExposure"], "An exposure-preserving DEX conversion cannot be an eligible exit");
     }
     if (route.coverageClass === "diagnostic" && route.scoreEligible) {
       issue(ctx, ["scoreEligible"], "Diagnostic coverage cannot be score eligible");

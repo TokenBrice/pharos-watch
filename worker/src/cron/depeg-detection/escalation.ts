@@ -375,15 +375,19 @@ export function resolveEscalationUpdateCommand(
 
   // Gate 2: Trusted primary or admitted native same-direction observation with an admitted clock
   // strictly after Day 30. Any intervening escalation-ineligible tick clears an armed candidate
-  // so two non-consecutive qualifying wicks cannot confirm across it.
+  // so two non-consecutive qualifying wicks cannot confirm across it. A replayed quote (at or
+  // before the recorded trusted clock) is not a new tick even when it predates Day 30, so it
+  // reaches the replay branch below instead of clearing on the age gate.
   const observedAt = resolveTrustedEscalationClock(params);
-  if (observedAt == null || observedAt - incidentStartedAt <= DEPEG_LONG_RUNNING_AGE_SEC) {
+  const previousCoverage = rowPriceCoverage(existing);
+  const priorLastTrusted = previousCoverage?.lastTrustedObservationAt ?? null;
+  const replayedClock = observedAt != null && priorLastTrusted != null && observedAt <= priorLastTrusted;
+  if (observedAt == null || (!replayedClock && observedAt - incidentStartedAt <= DEPEG_LONG_RUNNING_AGE_SEC)) {
     return hasStoredCandidate
       ? buildUpdateEscalationIfChanged(existing, effectiveEscalatedAt, effectiveAnchorBps, null, null)
       : null;
   }
 
-  const previousCoverage = rowPriceCoverage(existing);
   // Malformed stored coverage is unreadable evidence (R2): never arm or confirm from it,
   // and clear any transient armed candidate.
   if (existing.price_coverage_json != null && previousCoverage == null) {
@@ -416,11 +420,10 @@ export function resolveEscalationUpdateCommand(
       : null;
   const validStoredCandidateSeenAt = validStoredCandidateAt != null ? storedCandidateSeenAt : null;
 
-  const priorLastTrusted = previousCoverage?.lastTrustedObservationAt ?? null;
   // Re-evaluating the exact same (or older) already-recorded observation cannot seed,
   // reseed, arm, confirm, or shift an armed candidate; only carry-forward sync or
   // invalid-anchor cleanup (if any) applies.
-  if (priorLastTrusted != null && observedAt <= priorLastTrusted) {
+  if (replayedClock) {
     return buildUpdateEscalationIfChanged(
       existing,
       effectiveEscalatedAt,

@@ -1,3 +1,4 @@
+import { CURVE_LITE_DEPLOYMENTS } from "@shared/lib/dex-deployment-coverage";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getCurveCompositePolicy } from "@shared/lib/curve-composite-policies";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
@@ -150,7 +151,12 @@ export function enrichPoolProtocol(
     } else {
       ({ resolvedPoolType, qualityMultiplier } = classifyCurveStableSwapQuality(curveData.A));
     }
-    effectivePoolTvl = curveAddressMatch ? curveData.tvl : pool.tvlUsd;
+    // API Core may report only its priced legs in usdTotal. Keep the exact DL
+    // inventory if any Lite leg is unvalued, even when the pool identity is proven.
+    if (curveAddressMatch && (!CURVE_LITE_DEPLOYMENTS.has(chainNorm) ||
+      (hasMeasuredBalance && Number.isFinite(curveData.tvl) && curveData.tvl >= 0))) {
+      effectivePoolTvl = curveData.tvl;
+    }
     if (curveData.creationTs > 0) {
       poolMaturityDays = Math.floor(
         (Date.now() / 1000 - curveData.creationTs) / DAY_SECONDS,
@@ -207,7 +213,7 @@ export function enrichPoolProtocol(
     organicFraction,
     hasMeasuredOrganicFraction,
     effectivePoolTvl,
-    rawContribTvl: curveAddressMatch ? curveData!.tvl : pool.tvlUsd,
+    rawContribTvl: effectivePoolTvl,
     balanceDetails,
     volumeUsd1d: pool.volumeUsd1d ?? null,
     volumeUsd7d: pool.volumeUsd7d ?? null,

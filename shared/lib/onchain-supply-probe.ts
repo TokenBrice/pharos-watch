@@ -180,8 +180,8 @@ function isStateClockedPreferredNativePlan(meta: Pick<StablecoinMeta, "id">): bo
 
 /**
  * State-clocked preferred plans whose reader already pinned every leg before packets carried
- * `supplyObservedAtKind` (Pricing v7.1), so their unmarked publication still names a pinned clock.
- * ZCHF and EURI stamped the run clock before v7.1 and the Wave 2 checkpoints published DefiLlama
+ * `supplyObservedAtKind` (Pricing v7.2), so their unmarked publication still names a pinned clock.
+ * ZCHF and EURI stamped the run clock before v7.2 and the Wave 2 checkpoints published DefiLlama
  * rows, so any later enrollment admits only a packet the pinned reader marked.
  */
 const UNMARKED_PINNED_STATE_CLOCK_PLAN_IDS: ReadonlySet<string> = new Set([
@@ -1723,7 +1723,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
       supplyProbeChain("fluent", { allowZeroSupply: true }),
     ],
   },
-  // === #2169 Wave 2 non-USD reviewed native supply checkpoints (Pricing v7.1) ===
+  // === #2169 Wave 2 non-USD reviewed native supply checkpoints (Pricing v7.2) ===
   // tGBP: issuer-native StableTokenV1OFT deployments on Ethereum, Base, BSC, Polygon,
   // Avalanche, Arbitrum, Gnosis and Arc plus a Solana SPL mint; LayerZero OFT moves burn
   // and mint, with no lockbox escrow. Pinned 2026-11-27 sum: 19,670,210.774473 tGBP
@@ -1745,7 +1745,7 @@ export const REVIEWED_ONCHAIN_SUPPLY_PLANS: Readonly<Record<string, ReviewedOnch
       supplyProbeChain("arc", { allowZeroSupply: true }),
     ],
   },
-  // === #2393: CADC legacy + successor registers (owner ruling D10, Pricing v7.1) ===
+  // === #2393: CADC legacy + successor registers (owner ruling D10, Pricing v7.2) ===
   // CADC Reserve Trust reissued CADC on six-decimal Ethereum, Base, Polygon and Solana
   // contracts (loon.finance/cadc). The 1:1 migration closed 2026-11-26; legacy CADC stays
   // redeemable for CAD via Paytrie, so both registers are outstanding claims. Migration

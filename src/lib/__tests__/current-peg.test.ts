@@ -133,4 +133,8 @@ it("expires clocked list comparisons and honors a newer refusal for the same quo
   const legEur = makePegSummaryCoin({ id: "eurc-circle", pegCurrency: "EUR", price: 1.1 * (1 - 75.4 / 10_000), priceObservedAt: MONDAY, currentDeviationBps: -75, pegReference: { valueUsd: 1.1, source: "fx", contributorCount: 0, asOf: MONDAY } });
   expect(readUnroundedPublishedDeviation("EUR", legEur).deviationBps).toBeCloseTo(-75.4, 4);
   expect(readPublishedDeviation("EUR", legEur).deviationBps).toBe(-75);
+  // A legacy fixed-USD row keeps its unrounded deviation only when it pairs with the published value.
+  const legUsd = makePegSummaryCoin({ price: 1 - 99.6 / 10_000, priceObservedAt: MONDAY, currentDeviationBps: -100 });
+  expect(readUnroundedPublishedDeviation("USD", legUsd).deviationBps).toBeCloseTo(-99.6, 4);
+  expect(readUnroundedPublishedDeviation("USD", { ...legUsd, currentDeviationBps: -90 }).deviationBps).toBe(-90);
 });

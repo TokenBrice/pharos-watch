@@ -1,3 +1,4 @@
+import { formatCoverageRatio, formatCurrency } from "@shared/lib/format";
 import { getHhiBand } from "@shared/lib/classification";
 import type { DexLiquidityData, DexLiquidityPool } from "@shared/types/dex-liquidity";
 
@@ -63,15 +64,10 @@ export function isLiquidityActivityNotRated(liq: DexLiquidityData): boolean {
 }
 
 export function getLiquidityEvidenceLabel(liq: DexLiquidityData): string | null {
-  switch (liq.liquidityEvidenceClass) {
-    case "measured":
-      return "Measured liquidity evidence";
-    case "partial_measured":
-      if (liq.balanceMeasuredTvlUsd == null) return "Measured balance coverage unavailable";
-      return `Measured balances cover ${Math.round((liq.balanceMeasuredTvlUsd / Math.max(liq.totalTvlUsd, 1)) * 100)}% of observed TVL`;
-    case "observed_unmeasured":
-      return "Observed liquidity without measured pool balances";
-    default:
-      return null;
+  if (liq.totalTvlUsd <= 0) return null;
+  const measured = liq.balanceMeasuredTvlUsd;
+  if (measured == null || !Number.isFinite(measured) || measured < 0 || measured > liq.totalTvlUsd) {
+    return "Measured balance coverage unavailable";
   }
+  return `Measured balances cover ${formatCurrency(measured, 3)} of ${formatCurrency(liq.totalTvlUsd, 3)} retained TVL (${formatCoverageRatio(measured / liq.totalTvlUsd)})`;
 }

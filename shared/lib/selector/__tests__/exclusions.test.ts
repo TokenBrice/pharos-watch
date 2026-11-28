@@ -294,11 +294,11 @@ describe("trading exclusions", () => {
     },
   );
 
-  it("supply-tvl-floor-1h: <$25M effective TVL excluded under 1h", () => {
+  it.each([null, 20_000_000])("requires $25M of observed depth for one-hour exits (%s)", (effectiveTvlUsd) => {
     const fast = makeInput({ profile: "trading", exitSpeed: "1h" });
     expect(
       evaluateExclusions(
-        makeRow({ effectiveTvlUsd: 20_000_000, liquidityScore: 70 }),
+        makeRow({ effectiveTvlUsd, liquidityScore: 70 }),
         fast,
       ),
     ).toEqual(expect.objectContaining({ reason: "supply-tvl-floor-1h" }));

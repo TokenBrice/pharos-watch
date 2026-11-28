@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { DexMeasuredExecutionPublicProfileSchema } from "./measured-execution";
-import { DexExitRouteObservationsSchema, ExitRouteObservationCoverageSchema } from "./exit-route";
+import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS, DexExitRouteObservationsSchema, ExitRouteObservationCoverageSchema } from "./exit-route";
 import { CoinProjectionMetadataSchema } from "./coin-projection";
 import { DexExecutionCapabilityGateSchema } from "./dex-execution";
 import { DexStoredAmmExecutionModelSchema } from "./dex-execution-legacy";
@@ -39,6 +39,7 @@ export const LiquidityScoreUnavailableReasonSchema = z.enum([
   "activity-completeness-unknown",
   "no-retained-pools",
   "invalid-coverage-evidence",
+  "swap-availability-unverified",
 ]);
 export type LiquidityScoreUnavailableReason = z.infer<typeof LiquidityScoreUnavailableReasonSchema>;
 
@@ -159,6 +160,38 @@ export const DexPermanentLiquiditySchema = z.object({
 });
 export type DexPermanentLiquidity = z.infer<typeof DexPermanentLiquiditySchema>;
 
+const fluidDepthPoolCounts = {
+  pausedPoolCount: z.number().int().nonnegative(),
+  unknownPoolCount: z.number().int().nonnegative(),
+};
+export const DexEffectiveDepthSchema = z.discriminatedUnion("coverage", [
+  z.object({ coverage: z.literal("complete"), amountUsd: z.number().nonnegative(), ...fluidDepthPoolCounts, unknownPoolCount: z.literal(0) }),
+  z.object({ coverage: z.literal("partial"), amountUsd: z.number().nonnegative(), ...fluidDepthPoolCounts, unknownPoolCount: z.number().int().positive() }),
+  z.object({ coverage: z.literal("unavailable"), reason: z.literal("swap-availability-unverified").optional(), amountUsd: z.null(), ...fluidDepthPoolCounts, unknownPoolCount: z.number().int().positive() }),
+]);
+export type DexEffectiveDepth = z.infer<typeof DexEffectiveDepthSchema>;
+
+export const FluidSwapUnknownReasonSchema = z.enum([
+  "fluid-swap-state-missing",
+  "fluid-swap-state-expired",
+  "fluid-swap-state-conflicting",
+  "fluid-pool-identity-unverified",
+]);
+const fluidStatusClock = {
+  checkedAtSec: z.number().int().positive(),
+  maxAgeSec: z.number().int().positive(),
+  poolAddress: z.string().regex(/^0x[0-9a-f]{40}$/),
+};
+export const FluidSwapStatusSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("active"), reason: z.literal("fluid-swaps-active"), ...fluidStatusClock }),
+  z.object({ status: z.literal("paused"), reason: z.literal("fluid-swaps-paused"), ...fluidStatusClock }),
+  z.object({
+    status: z.literal("unknown"), reason: FluidSwapUnknownReasonSchema, ...fluidStatusClock,
+    checkedAtSec: fluidStatusClock.checkedAtSec.nullable(), poolAddress: fluidStatusClock.poolAddress.nullable(),
+  }),
+]);
+export type FluidSwapStatus = z.infer<typeof FluidSwapStatusSchema>;
+
 const DexLiquidityPoolSchema = z.object({
   project: z.string(),
   chain: z.string(),
@@ -178,6 +211,7 @@ const DexLiquidityPoolSchema = z.object({
       balanceRatio: z.number().optional(),
       feeTier: z.number().optional(),
       effectiveTvl: z.number().optional(),
+      fluidSwapStatus: FluidSwapStatusSchema.optional(),
       organicFraction: z.number().optional(),
       pairQuality: z.number().optional(),
       stressIndex: z.number().optional(),
@@ -297,6 +331,7 @@ const DexLiquidityDataSchema = z
     priceSourceTvl: z.number().nullable(),
     priceSources: z.array(DexPriceSourceSchema).nullable(),
     effectiveTvlUsd: z.number(),
+    effectiveDepth: DexEffectiveDepthSchema.optional(),
     avgPoolStress: z.number().min(0).max(100).nullable(),
     weightedBalanceRatio: z.number().nullable(),
     organicFraction: z.number().nullable(),
@@ -323,6 +358,10 @@ const DexLiquidityDataSchema = z
     methodologyVersion: z.string(),
     deploymentCoverage: DexDeploymentCoverageSchema.nullable().optional(),
     exitRouteObservations: DexExitRouteObservationsSchema.nullable().optional(),
+    /** Coin detail only. A missing comparable route never represents zero executable depth. */
+    weeklyExitRouteBaselines: z.array(z.object({
+      routeId: z.string().min(1), executableUsd: z.number().finite().nonnegative(), observedAt: z.number().int().positive(),
+    })).max(MAX_DEX_EXIT_ROUTE_OBSERVATIONS).optional(),
     exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
   });
 export type DexLiquidityData = z.infer<typeof DexLiquidityDataSchema>;

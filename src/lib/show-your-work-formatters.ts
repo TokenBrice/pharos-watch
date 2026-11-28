@@ -9,6 +9,7 @@
  * PegScore formatter ships in v1.
  */
 
+import { describeLiquidityErosionInputs } from "@/lib/dews-signal-utils";
 import { formatPercent } from "@shared/lib/format";
 import { computePsiDepegContribution } from "@shared/lib/psi-contribution";
 import { getDisplayedPsi, getDisplayedPsiBasis } from "@shared/lib/psi-view-model";
@@ -30,7 +31,7 @@ import type { StabilityIndexCurrent } from "@shared/types/stability";
 import type { ChainEnvironmentEvidence, ChainHealthFactors } from "@shared/types/chains";
 import { SAFETY_SCORE_V9_RESPONSIBILITY_LABELS } from "@/lib/safety-score-v9-labels";
 import type { V9EvidenceCause } from "@shared/types/safety-score-v9-causes";
-import { describePartialEvidence, formatPartialEvidenceGap, formatPricedUnknown } from "@/lib/safety-score-reason-labels";
+import { describeExitCapacity, describeExitConversion, describeExitPayout, describePartialEvidence, formatPartialEvidenceGap, formatPricedUnknown } from "@/lib/safety-score-reason-labels";
 import { readV9PricedUnknown } from "@/lib/safety-score-v9-consumers";
 
 export interface ShowYourWorkRow {
@@ -188,6 +189,12 @@ export function formatReportCardV9(
         label: `Exit primary route · ${primaryRoute.label} [${primaryRoute.key}]`,
         value: `${fmtNum(primaryRoute.score, 1)} · ${primaryRoute.routeFamily}`,
       });
+      rows.push({ label: "Exit payout", value: describeExitPayout(primaryRoute.capacity?.payoutAssets) });
+      if (primaryRoute.capacity) {
+        const capacity = primaryRoute.capacity;
+        rows.push({ label: "Exit capacity", value: `${describeExitCapacity(capacity, fmtUsd)} · ${capacity.evidenceKind}` });
+        rows.push({ label: "Exit cost ceiling", value: `${fmtNum(capacity.maxCostBps)} bps` });
+      }
       for (const component of primaryRoute.components) {
         rows.push({
           label: `Exit component · ${component.label} [${component.key}]`,
@@ -207,7 +214,9 @@ export function formatReportCardV9(
           value: `${confidence.factor.toFixed(3)}x · ${evidenceCauseLabel(confidence.cause)}` });
       }
       rows.push({ label: "Exit capacity evidence tier", value: primaryRoute.capacityEvidenceTier });
-      rows.push({ label: "Exit raw same-notional cost", value: primaryRoute.rawSameNotionalCostBps === null ? "Not evaluated" : `${fmtNum(primaryRoute.rawSameNotionalCostBps)} bps` });
+      if (primaryRoute.capacity?.costEvidence === "measured" || primaryRoute.rawSameNotionalCostBps !== primaryRoute.capacity?.maxCostBps) {
+        rows.push({ label: "Exit raw same-notional cost", value: primaryRoute.rawSameNotionalCostBps === null ? "Not evaluated" : `${fmtNum(primaryRoute.rawSameNotionalCostBps)} bps` });
+      }
       for (const cap of primaryRoute.capsApplied) {
         rows.push({ label: `Exit route cap · ${cap}`, value: "applied" });
       }
@@ -227,6 +236,8 @@ export function formatReportCardV9(
           route.score === null ? "Not scored" : fmtNum(route.score, 1),
           route.routeFamily,
           route.included ? "included" : route.exclusionReason ?? "excluded",
+          ...(route.capacity ? [describeExitCapacity({ ...route.capacity, ...route.testedInput }, fmtUsd, route.included)] : []),
+          ...(route.conversion ? [describeExitConversion(route.conversion, fmtUsd)] : []),
         ].join(" · "),
       });
     }
@@ -309,6 +320,10 @@ export function formatReportCardV9(
 
 
 function formatDewsSignalValue(key: string, sig: StressSignalEntry["signals"][string]): string {
+  if (key === "liq") {
+    const score = sig.available ? Math.round(sig.value) : "n/a";
+    return `${score} (${describeLiquidityErosionInputs(sig)})`;
+  }
   if (!sig.available) return "n/a";
   const rounded = Math.round(sig.value).toString();
   // The pool signal renormalizes over its readable components when worst-pool detail is unavailable.

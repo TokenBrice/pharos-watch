@@ -271,7 +271,7 @@ function tradingExclusions(row: MergedRow, input: SelectorInput): ExclusionRecor
     if (row.liquidityScore != null && row.liquidityScore < 65) {
       return fail(row.id, "liquidity-floor");
     }
-    if (row.effectiveTvlUsd != null && row.effectiveTvlUsd < 25_000_000) {
+    if (row.effectiveTvlUsd == null || row.effectiveTvlUsd < 25_000_000) {
       return fail(row.id, "supply-tvl-floor-1h");
     }
   } else if (input.exitSpeed === "24h") {

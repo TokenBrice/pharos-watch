@@ -15,13 +15,19 @@ const CONTAGION_CASE = "evaluates a bounded nine-scenario matrix within 256 MiB 
 const vitestReportSchema = z.object({ testResults: z.array(z.object({
   name: z.string(), assertionResults: z.array(z.object({ title: z.string(), status: z.string(), duration: z.number().optional() })),
 })) });
-export const QUEUE_CASES = [[343, "none"], [560, "none"], [343, "eval"], [343, "commit-expiry"]].map(([assets, escalation]) =>
-  `bounds Queue stage resources and matches canonical publication at ${assets} assets (escalation=${escalation})`);
-export function assertRequiredResourceCases(report: unknown, contagionRequired = true): number {
+const queueCaseTitle = ([assets, escalation, catalog]: readonly (number | string)[]) =>
+  `bounds Queue stage resources and matches canonical publication at ${assets} assets (escalation=${escalation}, catalog=${catalog})`;
+export const PR_QUEUE_CASES = [
+  [343, "none", "default"], [560, "none", "default"], [343, "eval", "default"], [343, "commit-expiry", "default"],
+].map(queueCaseTitle);
+// The 450-active / 640-catalog qualification cohort (#1827) adds a third concurrency-2 wave
+// that does not fit the 8-minute PR job, so it runs only without a PR base (nightly/manual/local).
+export const QUEUE_CASES = [...PR_QUEUE_CASES, queueCaseTitle([450, "none", "640"])];
+export function assertRequiredResourceCases(report: unknown, contagionRequired = true, extendedRequired = true): number {
   const cases = vitestReportSchema.parse(report).testResults
     .filter((file) => file.name.replaceAll("\\", "/").endsWith(RESOURCE_TEST_FILE))
     .flatMap((file) => file.assertionResults);
-  for (const title of [...(contagionRequired ? [CONTAGION_CASE] : []), ...QUEUE_CASES]) {
+  for (const title of [...(contagionRequired ? [CONTAGION_CASE] : []), ...(extendedRequired ? QUEUE_CASES : PR_QUEUE_CASES)]) {
     const matching = cases.filter((test) => test.title === title);
     if (matching.length !== 1 || matching[0].status !== "passed") throw new Error(`Required V9 resource case did not pass: ${title}`);
   }
@@ -219,10 +225,11 @@ export async function runV9ResourceLane({
     const result = await runCommand(command, {
       PHAROS_V9_RESOURCE_LANE: "1",
       PHAROS_V9_RESOURCE_QUEUE_TELEMETRY: queueTelemetryPath,
+      PHAROS_V9_RESOURCE_EXTENDED: prContext ? "0" : "1",
     });
     vitestDurationMs = Date.now() - testStarted;
     try {
-      contagion.durationMs = assertRequiredResourceCases(JSON.parse(readFileSync(vitestPath, "utf8")), decision.required);
+      contagion.durationMs = assertRequiredResourceCases(JSON.parse(readFileSync(vitestPath, "utf8")), decision.required, !prContext);
       if (decision.required) contagion.status = "passed";
     } catch (error) {
       if (decision.required) contagion.status = "failed";

@@ -146,10 +146,13 @@ describe("selectV9ExitStressRequest", () => {
   });
 
   it("retains a smaller measured execution as a lower bound at the $1m floor", () => {
-    const result = evalRoutes([route({ coverageClass: "exact-lower-bound", capacityCurve: [pt(100_000, 100_000)] })], { circulatingUsd: 125_000 });
+    const candidate = dexRoute({ evidenceKind: "reserve-based-amm-simulation", outputValueRetention: 0.8,
+      coverageClass: "exact-lower-bound", capacityCurve: [pt(100_000, 100_000)] });
+    const result = evalRoutes([candidate], { circulatingUsd: 125_000 });
     expect(result.stressRequest!.requestedNotionalUsd).toBe(1_000_000);
     expect(result.routes[0]).toMatchObject({
-      included: true, capacityPoint: { requestedNotionalUsd: 1_000_000, executableUsd: 100_000, completionRatio: 0.1 },
+      included: true, testedInput: { testedNotionalUsd: 100_000, inputCapacityUsd: 100_000 },
+      capacityPoint: { requestedNotionalUsd: 1_000_000, executableUsd: 80_000, completionRatio: 0.08 },
     });
     expect(result.reasons).not.toContain("no-viable-exit-path");
   });
@@ -267,6 +270,8 @@ describe("exact physical rail precedence", () => {
 
     const result = evalRoutes([modeled, certificate.route], { circulatingUsd, assetId: certificate.assetId, clockSec: certificate.clockSec });
     const modeledTrace = result.routes.find((e) => e.routeKey === "modeled")!;
+    if (!stale) expect(result.routes.find((trace) => trace.routeKey === "certificate")?.testedInput)
+      .toEqual({ inputCapacityUsd: measured, testedNotionalUsd: measured });
     expect(modeledTrace.included).toBe(!supersedes);
     expect(modeledTrace.score === null).toBe(supersedes);
     expect(result.primaryRouteKey).toBe(supersedes ? "certificate" : "modeled");

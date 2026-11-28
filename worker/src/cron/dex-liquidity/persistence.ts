@@ -431,6 +431,11 @@ export function selectStillFreshDexRouteSetHold(
     return null;
   }
   const candidateIds = new Set(candidateObservations.map((route) => route.routeId));
+  if (previous.observations.some((route) => route.scope.kind === "chain-contract" &&
+    normalizeProtocol(route.scope.protocol) === "fluid" && !candidateIds.has(route.routeId))) {
+    onDecision?.("fluid-route-no-longer-admitted");
+    return null;
+  }
   const previousBestCapacityUsd = Math.max(0, ...previous.observations.map(stressCapacityUsd));
   const candidateBestCapacityUsd = Math.max(0, ...candidateObservations.map(stressCapacityUsd));
   if (valuation && (valuation.rejectedAssetIds.size > 0 || valuation.poolReasons?.size)) {
@@ -467,6 +472,11 @@ export function selectStillFreshDexRouteSetHold(
       onDecision?.("held");
       return { observations, coverage, previousBestCapacityUsd, candidateBestCapacityUsd };
     }
+  }
+  if ((candidate.effectiveDepth?.unknownPoolCount ?? 0) > 0) {
+    // The old coverage denominator cannot certify this generation's unresolved Fluid venues.
+    onDecision?.("fluid-swap-state-unavailable");
+    return null;
   }
   if (candidateObservations.length === 0) {
     onDecision?.("empty-candidate");
@@ -542,6 +552,7 @@ export function buildDexScoreDetailsJson(
     : census?.classification.coverage ?? p4aResult.exitRouteObservationCoverage;
   return JSON.stringify({
     ...scoreResult.components,
+    ...(scoreResult.effectiveDepth ? { effectiveDepth: scoreResult.effectiveDepth } : {}),
     ...(scoreResult.liquidityScoreUnavailableReason != null
       ? { liquidityScoreUnavailableReason: scoreResult.liquidityScoreUnavailableReason }
       : {}),

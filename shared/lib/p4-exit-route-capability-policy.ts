@@ -1,3 +1,5 @@
+import { hasUnresolvedFluidSwaps } from "./fluid-swap-status";
+import type { FluidSwapStatus } from "../types/dex-liquidity";
 import { EXIT_ROUTE_SCORING_TABLES } from "./exit-route-scoring";
 import { buildExitRouteCapacityPoint } from "./exit-route-capacity-point";
 import type {
@@ -781,6 +783,7 @@ export interface P4DexRoutePoolInput {
   poolType: string;
   source: LiquidityPoolSourceFamily;
   extra?: {
+    fluidSwapStatus?: FluidSwapStatus;
     amplificationCoefficient?: number;
     balanceDetails?: Array<{
       symbol: string;
@@ -816,6 +819,7 @@ export interface P4DexRouteObservationResult {
 export function isDexExitRouteCoverageComplete(coverage: ExitRouteObservationCoverage | null | undefined): boolean {
   if (
     coverage?.status !== "populated" ||
+    hasUnresolvedFluidSwaps(coverage.unsupportedReasons) ||
     coverage.capabilityMatrixVersion !== DEX_ROUTE_CAPABILITY_MATRIX_VERSION ||
     coverage.scoreEligiblePoolCount == null ||
     coverage.scoreEligibleCapabilityPoolCount == null
@@ -876,6 +880,7 @@ export function isDexExitRouteCoverageWithinRouteBudget(
 ): boolean {
   if (
     coverage?.status !== "populated" ||
+    hasUnresolvedFluidSwaps(coverage.unsupportedReasons) ||
     coverage.capabilityMatrixVersion !== DEX_ROUTE_CAPABILITY_MATRIX_VERSION ||
     coverage.scoreEligiblePoolCount == null ||
     coverage.scoreEligibleCapabilityPoolCount == null

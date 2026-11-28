@@ -1,3 +1,5 @@
+import { CURVE_LITE_DEPLOYMENTS } from "@shared/lib/dex-deployment-coverage";
+import { buildAmmCapacityCurve } from "@shared/lib/p4-exit-route-amm-simulation";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import {
@@ -15,7 +17,11 @@ import {
 import { initSourcePoolGraph } from "../pool-helpers";
 import { computeStablecoinScores } from "../scoring";
 import { computeDexPrices } from "../dex-price-publisher";
-import type { DexPriceObs, PoolEntry } from "../types";
+import { buildCurveLookups } from "../fetch-primary";
+import { processPoolMetrics } from "../process-pools";
+import { CURVE_CHAINS } from "../constants";
+import { makeApiPool } from "./fetch-primary.test-support";
+import type { CurvePool, DexPriceObs, PoolEntry } from "../types";
 import { seedGeneration } from "../../measured-execution/__tests__/persistence.test-support";
 import { readPublicPriceRows, seedPublishedDexGeneration } from "./scoring-test-support";
 import {
@@ -270,6 +276,96 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
       expect(pool.extra?.executionCapabilityGate).toEqual({ family: "curve-stableswap", reason });
     },
   );
+
+  it("checks Monad Lite factory membership, layout and independent marks at the pinned reserve block", async () => {
+    const poolAddress = "0xd665caad68acb093aff27ec6c71ccc4f29c28147";
+    const ausd = "0x00000000efe302beaa2b3e6e1b18d08d69a9012a";
+    const trusd = "0x770a579ea200784723b31b8668b0773ba80393c9";
+    const deployment = CURVE_LITE_DEPLOYMENTS.get("monad")!;
+    const addresses = new Map([[`monad:${ausd}`, "ausd-agora"], [`monad:${trusd}`, "trusd-tori"]]);
+    const coins = [{ address: ausd, symbol: "AUSD" }, { address: trusd, symbol: "trUSD" }];
+    // Monad block 126118536, 2026-11-28 10:03:41 UTC.
+    const pinned = {
+      balances: [68_217_382_817n, 269_746_505_891_626_352_315_676n],
+      rates: [10n ** 30n, 10n ** 18n], amplification: 1000n, fee: 1_000_000n, offpegFeeMultiplier: 100_000_000_000n,
+    };
+    const failures = {
+      pool: "exact-pool-join-unresolved", factory: "deployment-code-mismatch", zero: "deployment-code-mismatch",
+      missing: "incomplete-exact-capture", meta: "metapool-unsupported", "code-offline": "transport-unavailable",
+      "factory-code": "deployment-code-mismatch", "plain-code": "deployment-code-mismatch",
+      order: "ambiguous-token-identity", decimals: "ambiguous-token-identity",
+      unpriced: "reference-price-unavailable", "same-pool": "reference-price-unavailable",
+    };
+    for (const failure of ["priced", "rest-unpriced", "rest-zero", "rate", ...Object.keys(failures)]) {
+      const complete = !failure.startsWith("rest-");
+      const apiPool = makeApiPool(poolAddress, coins, complete ? 340_000 : failure === "rest-zero" ? 0 : 68_000) as CurvePool;
+      Object.assign(apiPool.coins[1]!, { decimals: "18", poolBalance: String(100_000n * 10n ** 18n), usdPrice: complete ? 1 : 0 });
+      const symbols = new Map([["TRUSD", ["trusd-tori"]]]);
+      const lookups = await buildCurveLookups(CURVE_CHAINS.map((chain) =>
+        chain === "monad" ? { data: { poolData: [apiPool] } } : null), symbols, new Map(), addresses);
+      expect(lookups.priceObservations.size).toBe(0);
+      const { metrics } = processPoolMetrics({
+        pools: [{ pool: poolAddress, chain: "Monad", project: "curve", symbol: "AUSD-trUSD",
+          tvlUsd: 335_000, volumeUsd1d: 11_000, volumeUsd7d: null, stablecoin: true, underlyingTokens: [ausd, trusd],
+          apyBase: 0, apyReward: 0, apy: 0, sigma: 0, exposure: "multi", count: 1 }],
+        dexProjects: new Set(["curve"]), chainAddressToId: addresses, symbolToChainScopedIds: new Map(),
+        uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), ...lookups,
+      });
+      const pool = metrics.get("trusd-tori")!.pools[0]!;
+      expect(pool).toMatchObject({ tvlUsd: complete ? 340_000 : 335_000, extra: {
+        measurement: { priceMeasured: false, balanceMeasured: complete },
+      } });
+      expect(pool.price).toBeUndefined();
+      if (failure === "pool") pool.poolId = `monad:${CURVE_POOL}`;
+      const state = makeCurveNgDeps({
+        ...pinned,
+        coinAddresses: failure === "order" ? [trusd, ausd] : [ausd, trusd],
+        rates: failure === "rate" ? [10n ** 30n, 2n * 10n ** 18n] : pinned.rates,
+        liteFactory: {
+          implementation: failure === "missing" ? null : failure === "zero" ? `0x${"0".repeat(40)}` :
+            failure === "factory" ? CURVE_POOL : deployment.plainImplementation,
+          decimals: failure === "decimals" ? [18n, 6n] : [6n, 18n], isMeta: failure === "meta",
+        },
+      });
+      const marks = makeDexValuationPrices([
+        ["trusd-tori", { priceUsd: 0.9970049453539112, observedAtSec: CURVE_BLOCK_TIMESTAMP, source: "coingecko" }],
+        ["ausd-agora", { priceUsd: 0.9993937256952568, observedAtSec: CURVE_BLOCK_TIMESTAMP, source: "coingecko",
+          ...(failure === "same-pool" ? { pricePoolKeys: [pool.poolId] } : {}) }],
+      ]);
+      const fetchCode = vi.fn(async (_chain, address) => failure === "code-offline" ? { status: "unavailable" } :
+        { status: "available", code: address === deployment.factory ? "factory" : "plain" });
+      const hashCode = (code: string) => failure === `${code}-code` ? "wrong" :
+        code === "factory" ? deployment.factoryCodeHash : deployment.implementationCodeHash;
+      await enrichCurveStableswapRateInputExecutionModels({
+        metrics: makeCurveNgMetrics(pool, "trusd-tori", "trUSD"), chainAddressToId: addresses,
+        stablecoinPriceById: failure === "unpriced" ? undefined : marks,
+        sourceGenerationId: CURVE_GEN, nowSec: CURVE_BLOCK_TIMESTAMP,
+        chainRpcs: new Map([["monad", {} as never]]), dependencies: { ...state, fetchCode, hashCode } as never,
+      });
+      expect(pool.extra?.measurement?.balanceMeasured).toBe(complete);
+      if (failure in failures) {
+        expect(pool.extra?.executionCapabilityGate?.reason).toBe(failures[failure as keyof typeof failures]);
+        expect(pool.extra?.ammExecutionModel).toBeUndefined();
+      } else {
+        const model = pool.extra!.ammExecutionModel!;
+        expect(fetchCode.mock.calls.map((call) => call.slice(0, 3))).toEqual(
+          [deployment.factory, deployment.plainImplementation].map((address) => ["monad", address, CURVE_BLOCK_NUMBER]),
+        );
+        expect(model.tokens.map((t) => t.referencePriceSource)).toEqual(["tracked-market", "tracked-market"]);
+        expect(simulateCurveStableswapNgGetDy({ ...pinned, i: 1, j: 0, dx: 10_000n * 10n ** 18n })?.dy).toBe(9_964_602_793n);
+        if (model.source !== "curve") throw new Error("expected a pinned Curve reserve model");
+        const inputToken = model.tokens[1]!;
+        expect(inputToken.rawUnitPriceUsd).toBe(0.9970049453539112);
+        expect(inputToken.referencePriceUsd).toBe(inputToken.rawUnitPriceUsd! / (failure === "rate" ? 2 : 1));
+        if (failure === "rate") continue;
+        const curve = buildAmmCapacityCurve(model, 0);
+        const capacity = curve[curve.length - 1]!.executableUsd;
+        expect(capacity).toBeGreaterThan(59_000);
+        // At the frozen marks, contract get_dy accepts 60,424 trUSD and exceeds 2% at 60,425.
+        expect(capacity).toBeLessThanOrEqual(60_424 * model.tokens[1]!.referencePriceUsd);
+      }
+    }
+  });
 
   it("does not replace an existing score-facing measured route", async () => {
     const state = makeCurveNgDeps();

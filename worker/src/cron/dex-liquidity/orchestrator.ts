@@ -1,3 +1,4 @@
+import { attachFluidSwapStatuses } from "./fluid-swap-status";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
@@ -996,6 +997,8 @@ async function buildDexLiquidityPoolState(
     },
   });
 
+  const fluidIndex = sourceState.directApiPhase.results.find((entry) => entry.normalizedProtocol === "fluid")?.result.fluidSwapStatuses;
+  attachFluidSwapStatuses(metrics, fluidIndex);
   const staged = await mergeStagedPools(
     ctx.db,
     metrics,
@@ -1009,6 +1012,9 @@ async function buildDexLiquidityPoolState(
     sourceState.priceObservations,
   );
   const { stagedWriteback, observedThisRun } = staged;
+  // Staging can add registry-only Fluid pools after live quote capture.
+  attachFluidSwapStatuses(metrics, fluidIndex);
+  fluidIndex?.clear();
   mergeDexPriceObservationMap(sourceState.priceObservations, staged.priceObservations);
   staged.priceObservations.clear();
   // Best-effort memory only: publication depends on the merge above, so a D1
@@ -1072,6 +1078,7 @@ async function buildDexLiquidityPoolState(
   });
   const curveStableswapNgCaptures = await enrichCurveStableswapRateInputExecutionModels({
     metrics,
+    stablecoinPriceById: sourceState.stablecoinPriceById,
     chainAddressToId: sourceState.lookups.chainAddressToId,
     chainRpcs: ctx.chainRpcs,
     signal: ctx.signal,

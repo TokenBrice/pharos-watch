@@ -240,7 +240,7 @@ export const SUPPLY_PERIMETER_CHANGES = [
     evidenceUrl: "https://raw.githubusercontent.com/midas-apps/midas-por-v2/main/tokens.json",
     marketWide: false,
   },
-  // === #2169 Wave 2 non-USD native checkpoints + #2393 CADC legacy/successor registers (Pricing v7.1) ===
+  // === #2169 Wave 2 non-USD native checkpoints + #2393 CADC legacy/successor registers (Pricing v7.2) ===
   // Undated DefiLlama caps move to clocked complete native rosters: CADD adds Solana, Tempo and Arc
   // (owner ruling D8), CADC counts its legacy and successor registers (D10), and KRWQ, XOFm, ZARm and
   // tGBP reconcile to DefiLlama's native totals. Provisional at the planned 12:38 UTC activation slot:

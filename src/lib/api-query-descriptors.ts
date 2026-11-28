@@ -447,7 +447,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     ),
     (stablecoinId: string) => ({
       queryKey: ["report-cards", "v9", "detail", 1, stablecoinId] as const,
-      path: `${API_PATHS.reportCardsV9Detail(stablecoinId)}&freshness=operands`,
+      path: `${API_PATHS.reportCardsV9Detail(stablecoinId)}&freshness=operands&payout=assets`,
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.reportCards,
     }),
   ),

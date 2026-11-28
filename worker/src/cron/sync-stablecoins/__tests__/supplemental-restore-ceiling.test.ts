@@ -633,11 +633,11 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     }
   });
 
-  it("restores a v7.1 state-clock enrollee only from a packet its pinned reader marked", async () => {
+  it("restores a v7.2 state-clock enrollee only from a packet its pinned reader marked", async () => {
     const packet = (id: string, rows: Record<string, string>, peg: string, supplyObservedAtKind?: "pinned-state") => asset({ id, symbol: id,
       supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 60, supplyObservedAtKind, circulating: { [peg]: 100 * Object.keys(rows).length },
       chainCirculating: Object.fromEntries(Object.entries(rows).map(([label, chainId]) => [label, { chainId, current: 100 }])) });
-    // BRLA was pinned before v7.1; EURI's complete pre-release packet names only a valid run second.
+    // BRLA was pinned before v7.2; EURI's complete pre-release packet names only a valid run second.
     const brla = packet("brla-brla-digital", { Polygon: "polygon", Gnosis: "gnosis", Celo: "celo" }, "peggedREAL");
     for (const kind of [undefined, "pinned-state"] as const) {
       const euri = packet("euri-banking-circle", { Ethereum: "ethereum", BSC: "bsc" }, "peggedEUR", kind);

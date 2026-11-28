@@ -245,6 +245,8 @@ export async function computeDexPrices({
   const priceEvidence = buildDexPriceObservationsFromRetainedPools(
     retainedPoolsByStablecoin,
     exactPriceEvidenceByStablecoin,
+    true,
+    admittedAtSec,
   );
   const poolEmbeddedRejectionsByStablecoin = new Map<string, CurveNavQuoteRejectionRecord[]>();
   const pushEmbeddedRejection = (stablecoinId: string, record: CurveNavQuoteRejectionRecord) => {
@@ -270,7 +272,7 @@ export async function computeDexPrices({
           typeof pool.price !== "number" ||
           !Number.isFinite(pool.price) ||
           pool.price <= 0 ||
-          projectRetainedPoolPrice(pool, stablecoinId) == null;
+          projectRetainedPoolPrice(pool, stablecoinId, admittedAtSec) == null;
         if (droppedBeforeProjection) {
           // Classify every dropped tagged Curve quote BEFORE the $10K price TVL floor
           // or unprojectable price omits it, so integrity failures never vanish.

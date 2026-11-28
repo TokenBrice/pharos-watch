@@ -1,11 +1,7 @@
 import { handleStablecoinHistoryRequest } from "../lib/api-history";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { normalizeDexLiquidityEvidence, type DexLiquidityRow, type NormalizedDexLiquidityEvidence } from "../lib/dex-liquidity";
-import { safeJsonParse } from "../lib/api-cache-read";
-import {
-  DexExitRouteObservationsSchema,
-  ExitRouteObservationCoverageSchema,
-} from "@shared/types/exit-route";
+import { parseDexHistoryRouteSummary } from "../lib/dex-history-routes";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 import { parseDexVolumeAvailabilityRecord, readStoredDexVolumeWindow } from "@shared/lib/dex-volume-availability";
 import { logWorkerEventArgs } from "../lib/structured-log";
@@ -24,18 +20,6 @@ type LiquidityHistoryRow = Pick<
   /** Migration 0249; NULL marks a legacy snapshot whose completeness was never recorded. */
   volume_availability_json?: string | null;
 };
-
-function parseRouteSummary(json: string | null) {
-  const raw = safeJsonParse<unknown>(json, null, "dex-liquidity-history:exit_route_summary_json");
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
-  const summary = raw as Record<string, unknown>;
-  const observations = DexExitRouteObservationsSchema.safeParse(summary.observations);
-  const coverage = ExitRouteObservationCoverageSchema.safeParse(summary.coverage);
-  return {
-    ...(observations.success ? { exitRouteObservations: observations.data } : {}),
-    ...(coverage.success ? { exitRouteObservationCoverage: coverage.data } : {}),
-  };
-}
 
 async function handleLiquidityHistory(db: D1Database, url: URL, includeRouteSummary: boolean): Promise<Response> {
     return handleStablecoinHistoryRequest(db, url, {
@@ -83,7 +67,7 @@ async function handleLiquidityHistory(db: D1Database, url: URL, includeRouteSumm
           hasMeasuredLiquidityEvidence: evidence?.hasMeasuredLiquidityEvidence ?? false,
           trendworthy: evidence?.trendworthy ?? false,
           methodologyVersion: row.methodology_version,
-          ...(evidence == null ? {} : parseRouteSummary(row.exit_route_summary_json ?? null)),
+          ...(evidence == null ? {} : parseDexHistoryRouteSummary(row.exit_route_summary_json ?? null)),
         };
       },
     });

@@ -1,10 +1,13 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { getCronQualityReasons as qualReasons } from "@shared/lib/cron-quality-reasons";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { DatabaseSync } from "node:sqlite";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { createLatestSchemaSqlite as mkSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
-import type { StablecoinData } from "@shared/types/supply";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { createKnownPoolIdentityIndex } from "../dex-liquidity/pool-identity";
+import { indexFluidDefiLlamaAliases, indexFluidSwapStatuses, type FluidSwapStatusIndex } from "../dex-liquidity/fluid-swap-status";
 import type { DexApiPool } from "../../lib/dex-api-common";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronProgressReporter, CronProgressUpdate, CronResult } from "../../lib/cron-logger";
@@ -35,7 +38,6 @@ const fx = vi.hoisted(() => {
     uniV3: { uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), uniV3PriceObs: new Map(), uniV3ExecutionCandidates: new Map(), failedChains: [], chainFailures: [] },
     uniswapV4: { uniswapV4ExecutionCandidates: new Map(), failedChains: [], chainFailures: [], exactAnsweredPoolIdsByChain: new Map() },
     primary: primary(), curve: { curvePoolMap: new Map(), curvePoolCandidatesByFingerprint: new Map(), curveBelowFloorTwinFingerprints: new Set<string>(), priceObservations: new Map() },
-    knownPools: { exactKeys: new Set<string>(), exactStablecoinIdsByKey: new Map<string, Set<string>>(), derivedKeyCounts: new Map<string, number>(), derivedToExactKeys: new Map<string, Set<string>>(), wildcardKeyCounts: new Map<string, number>(), wildcardToExactKeys: new Map<string, Set<string>>(), concreteFeeVariantKeys: new Map<string, Set<string>>() },
     poolMetrics: { metrics: new Map(), rejections: [] }, stagedPools: stagedPools(), scores: scored(),
     stablecoinsCache: { kind: "error" as const, reason: "missing-cache" as const, updatedAt: null }, challenger: { publishedStablecoins: 0, skippedStablecoins: 0 }, ...o,
   });
@@ -47,7 +49,7 @@ const directRes = () => fx.current.directApi;
 const deferred = <T,>() => { let resolve!: (v: T) => void; return { promise: new Promise<T>((r) => { resolve = r; }), resolve }; };
 
 vi.mock("../dex-liquidity/subgraph-source-families", () => ({ fetchUniV3Data: vi.fn(async () => fx.current.uniV3), fetchUniswapV4Data: vi.fn(async () => fx.current.uniswapV4) }));
-vi.mock("../dex-liquidity/fetch-primary", () => ({ fetchDataSources: vi.fn(async () => fx.current.primary), buildCurveLookups: vi.fn(async () => fx.current.curve), buildKnownPoolAddresses: vi.fn(() => fx.current.knownPools) }));
+vi.mock("../dex-liquidity/fetch-primary", () => ({ fetchDataSources: vi.fn(async () => fx.current.primary), buildCurveLookups: vi.fn(async () => fx.current.curve), buildKnownPoolAddresses: vi.fn(() => createKnownPoolIdentityIndex()) }));
 vi.mock("../dex-liquidity/process-pools", async (io) => ({ ...(await io<typeof import("../dex-liquidity/process-pools")>()), processPoolMetrics: vi.fn(() => fx.current.poolMetrics) }));
 vi.mock("../dex-liquidity/staging-merge", async () => {
   const { buildStagedPoolWriteback: wb } = await import("../dex-liquidity/staged-pool-writeback");
@@ -112,8 +114,14 @@ import { readDexSourcePaginationState as readPag } from "../dex-liquidity/source
 
 const vm = vi.mocked, js = JSON.stringify, jp = JSON.parse, nowS = () => Math.floor(Date.now() / 1e3);
 const USDT = "usdt-tether", USDC = "usdc-circle", GK = "graph-key", STG_JOB = "sync-dex-liquidity-stage";
-const firstRowFor = (sql: string) => async () => (sql.includes("FROM cache") ? null : { cnt: 0 });
-const emptyStmt = (sql: string) => ({ bind: () => ({ all: async () => ({ results: [], success: true }), first: firstRowFor(sql), run: async () => ({ success: true, meta: {} }) }), all: async () => ({ results: [], success: true }), first: firstRowFor(sql), run: async () => ({ success: true, meta: {} }) });
+function emptyStmt(sql: string) {
+  const result = {
+    all: async () => ({ results: [], success: true }),
+    first: async () => sql.includes("FROM cache") ? null : { cnt: 0 },
+    run: async () => ({ success: true, meta: {} }),
+  };
+  return { ...result, bind: () => result };
+}
 const db = makeNoopD1({ prepare: emptyStmt, batch: async () => [], exec: async () => ({ count: 0, duration: 0 }), dump: async () => new ArrayBuffer(0) });
 const guardDb = (tables: Array<MockTableConfig & { alsoMatch?: string }>, ov: Record<string, unknown> = {}) => makeNoopD1({
   prepare: (sql: string) => {
@@ -140,10 +148,14 @@ const apiPool = (o: Partial<DexApiPool> & Pick<DexApiPool, "balances">): DexApiP
 const llamaPool = (o: Pick<LlamaPool, "pool" | "chain" | "project" | "symbol" | "tvlUsd" | "underlyingTokens"> & Partial<LlamaPool>): LlamaPool => ({
   volumeUsd1d: null, volumeUsd7d: null, stablecoin: false, apyBase: null, apyReward: null, apy: 0, sigma: 0, exposure: "multi", count: 20, ...o,
 });
-const mkCoin = (id: string, symbol: string, price: number): StablecoinData => {
-  const n = nowS();
-  return { id, name: symbol, symbol, geckoId: null, pegType: "peggedUSD", pegMechanism: "fiat-backed", listingClass: null, price, priceSource: "pyth", priceConfidence: "single-source", priceUpdatedAt: n, priceObservedAt: n, priceObservedAtMode: "upstream", priceSyncedAt: n, consensusSources: ["pyth"], agreeSources: ["pyth"], supplySource: "defillama", circulating: { peggedUSD: 1e6 }, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {}, chainCirculating: {}, chains: [] };
-};
+function mkCoin(id: string, symbol: string, price: number) {
+  const now = nowS();
+  return makeStablecoin({
+    id, name: symbol, symbol, price, listingClass: null, priceSource: "pyth", priceConfidence: "single-source",
+    priceUpdatedAt: now, priceObservedAt: now, priceObservedAtMode: "upstream", priceSyncedAt: now,
+    consensusSources: ["pyth"], agreeSources: ["pyth"], supplySource: "defillama",
+  });
+}
 
 describe("dex liquidity scoring stage cycle", () => {
   beforeEach(() => {
@@ -426,6 +438,32 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(fetchSrcs).toHaveBeenCalledOnce(); expect(fetchV3).toHaveBeenCalledOnce();
   });
 
+  it.each([false, true])("checks the retained Fluid alias before capturing a live quote (paused %s)", async (paused) => {
+    const now = nowS();
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const address = "0x97f32e5091d0e6aee24beb398e6592ae111dee9c";
+    const tokens = ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "0xd0580192e98ea6ceb9c7b6191ed2e27560911697"];
+    const pool = llamaPool({ pool: "e3a3baab-c962-525b-a9a7-231325714c8b", chain: "Ethereum", project: "fluid-dex",
+      symbol: "USDC-TRUSD", tvlUsd: 2_593_517, underlyingTokens: tokens });
+    const index: FluidSwapStatusIndex = new Map();
+    indexFluidSwapStatuses(index, "ethereum", [{ address, token0Address: tokens[0], token1Address: tokens[1],
+      state: { isSwapAndArbitragePaused: paused } }], now);
+    indexFluidDefiLlamaAliases(index, { data: [{ ...pool, pool_old: `Ethereum-${address}`, poolTokenAddress: address }] });
+    vm(fetchFluid).mockResolvedValueOnce(apiRes([], { fluidSwapStatuses: index }));
+    vm(fetchSrcs).mockResolvedValueOnce(fx.primary({ pools: [pool], rawPoolCount: 1, dexProjects: new Set([pool.project]) }));
+    const real = await vi.importActual<typeof import("../dex-liquidity/process-pools")>("../dex-liquidity/process-pools");
+    vm(procMetrics).mockImplementationOnce((inputs) => {
+      const result = real.processPoolMetrics(inputs);
+      Object.assign(result.metrics.get(USDC)!.pools[0]!, { price: 1, priceObservedAt: now });
+      return result;
+    });
+    const refresh = vi.spyOn(priceRef, "refreshPoolPrices");
+    await stageSrc();
+    expect([...(refresh.mock.calls[0]![0].observedThisRun ?? [])]).toEqual(paused ? [] : [
+      js([USDC, `ethereum:defillama:${pool.pool}`, 1, now]),
+    ]);
+  });
+
   it("threads tracked stablecoin cache prices into direct API conversion and observations", async () => {
     let conv: Map<string, number> | undefined, obs: Map<string, number> | undefined;
     vm(loadCache).mockResolvedValueOnce({ kind: "ok", updatedAt: 123, payload: { peggedAssets: [mkCoin(USDC, "USDC", 0.97), mkCoin(USDT, "USDT", 1.01), mkCoin("ignored-zero", "ZERO", 0)] } });
@@ -517,12 +555,12 @@ describe("dex liquidity stage same-hour recovery", () => {
     expect((await consume(undefined, hSlot)).status).toBe("skipped_neutral"); expect(persistScores).toHaveBeenCalledOnce();
   });
 
-  it("skips an incompatible v9 stage before publication", async () => {
+  it("skips the preceding v11 stage before publication", async () => {
     await stageHr();
-    h.sqlite.exec("UPDATE dex_liquidity_scoring_stage_chunks SET payload_json = replace(payload_json, '\"schemaVersion\":11', '\"schemaVersion\":9'), payload_bytes = payload_bytes - 1 WHERE chunk_index = 0; UPDATE dex_liquidity_scoring_stages SET payload_bytes = payload_bytes - 1;");
+    h.sqlite.exec("UPDATE dex_liquidity_scoring_stage_chunks SET payload_json = replace(payload_json, '\"schemaVersion\":12', '\"schemaVersion\":11') WHERE chunk_index = 0;");
     const res = await consume();
     expect(res.status).toBe("skipped_neutral");
-    expect(readMeta(res)).toMatchObject({ reason: "scoring-stage-payload-version-mismatch", payloadVersion: 9, persistence: { generationId: null, skipped: true, publicationStarted: false } });
+    expect(readMeta(res)).toMatchObject({ reason: "scoring-stage-payload-version-mismatch", payloadVersion: 11, persistence: { generationId: null, skipped: true, publicationStarted: false } });
     expect(persistScores).not.toHaveBeenCalled(); expect(markConsumed).not.toHaveBeenCalled();
   });
 
@@ -672,7 +710,7 @@ describe("dex liquidity stage same-hour recovery", () => {
     const now = Math.floor(schedMs / 1e3), src = "defillama-curve-identities";
     for (const [status, n, id, age, prev, hold] of [["partial", 3, "", 0, "", false], ["unavailable", 0, "g1", 3600, "ok", true], ["unavailable", 0, "g2", 7200, "ok", false], ["unavailable", 0, "g3", 1800, "unavailable", false]] as const) {
       h.sqlite.exec("DELETE FROM dex_liquidity_publication_generations;DELETE FROM dex_liquidity_scoring_stage_chunks;DELETE FROM dex_liquidity_scoring_stages;");
-      if (id) { const t = now - age; h.sqlite.prepare("INSERT INTO dex_liquidity_publication_generations(generation_id,started_at,published_at,state,expected_row_count,created_at,metadata_json)VALUES(?,?,?,'published',2,?,?)").run(id, t, t, t, js({ methodologyVersion: "7.56", curveIdentityStatus: prev })); }
+      if (id) { const t = now - age; h.sqlite.prepare("INSERT INTO dex_liquidity_publication_generations(generation_id,started_at,published_at,state,expected_row_count,created_at,metadata_json)VALUES(?,?,?,'published',2,?,?)").run(id, t, t, t, js({ methodologyVersion: LIQUIDITY_METHODOLOGY_VERSION, curveIdentityStatus: prev })); }
       vm(persistScores).mockClear();
       fx.reset({ primary: fx.primary({ curveIdentityAttachment: { status, curvePoolCount: 4, attachedPoolCount: n, unmatchedPoolCount: 4 - n } }) });
       await stageHr();

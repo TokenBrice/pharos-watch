@@ -176,7 +176,9 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       custodyModel: resolveCustodyModel(meta),
 
       liquidityScore: dex?.liquidityScore ?? null,
-      effectiveTvlUsd: dex?.effectiveTvlUsd ?? null,
+      effectiveTvlUsd: dex?.effectiveDepth
+        ? dex.effectiveDepth.amountUsd
+        : dex?.effectiveTvlUsd ?? null,
       concentrationHhi: dex?.concentrationHhi ?? null,
       chainTvl: dex?.chainTvl ?? {},
 

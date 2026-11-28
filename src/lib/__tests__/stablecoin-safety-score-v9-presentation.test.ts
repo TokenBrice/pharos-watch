@@ -247,6 +247,9 @@ describe("stablecoin V9 safety presentation", () => {
         completionRatio: 0.00004,
         maxCostBps: 200,
         executionCostBps: 74,
+        payoutAssets: [{ key: "frxusd-frax", symbol: "frxUSD" }],
+        inputCapacityUsd: 1_010, testedNotionalUsd: 100_000,
+        costEvidence: "measured",
         settlementDelaySec: 600,
         capacityScoringHorizon: "immediate",
         chain: "tron",
@@ -307,6 +310,12 @@ describe("stablecoin V9 safety presentation", () => {
         redundancyCredit: null,
       }],
     });
+    const alternative = card.breakdowns.exit.alternatives[0]!;
+    Object.assign(alternative, { included: false, score: null, capacity: null, conversion: {
+      evidenceKind: "reserve-based-amm-simulation", inputCapacityUsd: 80_000, requestedNotionalUsd: 100_000, maxCostBps: 200,
+    } });
+    const conversion = buildStablecoinSafetyScoreV9Presentation(SafetyScoreV9CurrentCardSchema.parse(card)).pillars[1].breakdown!.alternatives[0]!;
+    expect(conversion.detail).toContain("$80,000 of $100,000 tested");
     // Exit keeps one unlabelled group in producer order.
     expect(presentation.pillars[1].breakdown?.groups).toHaveLength(1);
     expect(presentation.pillars[1].breakdown?.groups[0].label).toBeNull();
@@ -323,14 +332,15 @@ describe("stablecoin V9 safety presentation", () => {
       {
         key: "selected-route-capacity",
         label: "Selected route capacity",
-        value: "$1,000 of $25,000,000 executable on selected SunSwap route",
+        value: "Input $1,010 of $100,000 tested · $1,000 of $25,000,000 credited on selected SunSwap route",
       },
       {
         key: "selected-route-bound",
         label: "Horizon / execution cost",
-        value: "10m / 74 bps observed / 200 bps bound",
+        value: "10m / 74 bps execution cost / 200 bps ceiling",
       },
       { key: "selected-route-scope", label: "Chain / pool", value: "tron / pool-1" },
+      { key: "selected-route-payout", label: "Payout", value: "frxUSD" },
     ]));
     // The producer emits control components alphabetically: the limiting row
     // must lead regardless of producer order, then the diagnostics cheapest
@@ -388,7 +398,7 @@ describe("stablecoin V9 safety presentation", () => {
       {
         key: "selected-route-capacity",
         label: "Selected route capacity",
-        value: "$0 of $1,000,000 executable on selected eEARN route",
+        value: "$0 of $1,000,000 credited on selected eEARN route",
       },
       {
         key: "cap-0",
@@ -398,6 +408,7 @@ describe("stablecoin V9 safety presentation", () => {
     ]));
     expect(exit.breakdown?.exitHighlight).toMatchObject({
       venueLabel: "Queued USDC redemption",
+      capacityLine: expect.stringContaining("Payout unavailable"),
       primaryRouteScore: 0,
     });
     expect(exit.reasons).toEqual([

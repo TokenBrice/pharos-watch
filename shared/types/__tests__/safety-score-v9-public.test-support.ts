@@ -286,45 +286,35 @@ export function adjustedResponse() {
 
 export function boundedResponse() {
   const bounded = currentResponse();
-  bounded.cards[0]!.localCauseGaps = ["mechanism"];
-  bounded.cards[0]!.score = 45;
-  bounded.cards[0]!.grade = "D";
-  bounded.cards[0]!.qualityScore = 45;
-  bounded.cards[0]!.pegAdjustedScore = 45;
-  bounded.cards[0]!.pillars = {
+  const card = bounded.cards[0]!;
+  const trace = card.scoreTrace;
+  card.localCauseGaps = ["mechanism"];
+  card.score = 45;
+  card.grade = "D";
+  card.qualityScore = 45;
+  card.pegAdjustedScore = 45;
+  card.pillars = {
     backing: {
-      ...includedPillar(),
+      ...pillar(45),
       causeGapRefs: [0],
       limitedEvidenceCauses: ["U"],
-      score: 45,
       evidenceLevel: "limited",
-      freshness: "current",
-      components: [],
       reasons: [{
         code: "bounded-mechanism-review",
         path: "backing:mechanism",
         message: "A bounded backing review remains unresolved.",
       }],
     },
-    exit: { ...pillar(45), components: [], reasons: [] },
-    control: { ...pillar(45), components: [], reasons: [] },
+    exit: pillar(45),
+    control: pillar(45),
   };
-  bounded.cards[0]!.breakdowns = breakdowns(45, 45, 45);
-  bounded.cards[0]!.weakestPillar = { pillar: "backing", score: 45 };
-  bounded.cards[0]!.caps = bounded.cards[0]!.caps.map((cap) => ({ ...cap, binding: false }));
-  bounded.cards[0]!.bindingCap = null;
-  bounded.cards[0]!.reasonCodes = ["bounded-mechanism-review"];
-  bounded.cards[0]!.scoreTrace.aggregation = {
-    method: "smooth-bounded-headroom",
-    includedPillars: ["backing", "control", "exit"], excludedPillars: [],
-    effectiveScoringWeights: { backing: 0.4, exit: 0.35, control: 0.25 }, supportCeiling: 45,
-    score: 45,
-    weightedPillarMean: 45,
-    weakestPillar: "backing",
-    weakestScore: 45,
-    headroom: 45,
-  };
-  Object.assign(bounded.cards[0]!.scoreTrace.stages, {
+  card.breakdowns = breakdowns(45, 45, 45);
+  card.weakestPillar = { pillar: "backing", score: 45 };
+  card.caps = card.caps.map((cap) => ({ ...cap, binding: false }));
+  card.bindingCap = null;
+  card.reasonCodes = ["bounded-mechanism-review"];
+  Object.assign(trace.aggregation!, { score: 45, weightedPillarMean: 45, supportCeiling: 45, weakestScore: 45 });
+  Object.assign(trace.stages, {
     weightedPillarMean: 45,
     aggregatedQualityScore: 45,
     baseAssetScore: 45,
@@ -332,7 +322,7 @@ export function boundedResponse() {
     preCapScore: 45,
     publishedScore: 45,
   });
-  bounded.cards[0]!.scoreTrace.boundedUncertaintyAttribution.items = [{
+  trace.boundedUncertaintyAttribution.items = [{
     source: "reason",
     code: "bounded-mechanism-review",
     path: "backing:mechanism",
@@ -341,11 +331,11 @@ export function boundedResponse() {
     cause: "U",
     causeGapRefs: [0],
   }];
-  bounded.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount = 1;
-  bounded.cards[0]!.scoreTrace.evidenceResponsibility.facts = [[
+  trace.evidenceResponsibility.totalFactCount = 1;
+  trace.evidenceResponsibility.facts = [[
     "bounded-mechanism-review", "backing:mechanism", 0, "unresearched", false, "U", [0],
   ]];
-  bounded.cards[0]!.scoreTrace.evidenceResponsibility.summaries[7] = {
+  trace.evidenceResponsibility.summaries[7] = {
     responsibility: "unresearched",
     factCount: 1,
     criticalFactCount: 0,
@@ -597,7 +587,9 @@ function assertPreviousReaderSource() {
   // Bluechip retirement: report-card-grade.ts drops its comment on the retired vendor grade enum; comment-only, no schema changed (substituting origin/main restores 5a7816d1…).
   // PR-4 Canton onboarding: chain-identity.ts adds `canton` and `canton-network` alias (additive chain identity only; no public card/breakdown/trace schema changed; substituting origin/main restores 7f0a6279…).
   // X Layer CCIP archive route (#2325): chain-identity.ts adds the `xlayer` Alchemy RPC name only (no public card/breakdown/trace schema changed; substituting origin/main restores d7886218…).
-  if (hash.digest("hex") !== "a4ed387bacd2d3239d7549e694cd1424b60d6d6f928b6bf4a9aa5a4bd1b1707f") throw new Error("Pre-dust reader source/refinement inputs changed");
+  // v10.58 adds optional conversion and payout facts. The frozen reader rejects the new public fields.
+  // The DEX observation adds an optional reserve-model identity; existing observations parse identically.
+  if (hash.digest("hex") !== "8baaf5f8884b9813c3319248cc48e55b03759b647d8a228d13c80f2604f6f035") throw new Error("Pre-dust reader source/refinement inputs changed");
 }
 
 export async function previousReader() {
@@ -625,6 +617,12 @@ export async function previousReader() {
     const { SafetyScoreV9CurrentResponseSchema } = await import("../safety-score-v9-publication-response");
     // The frozen strict breakdown had no v10.48 admittedScoreCeiling field.
     const card = current.superRefine((value, ctx) => {
+      const exit = value.breakdowns?.exit;
+      const capacity = exit?.primaryRoute?.capacity;
+      if (capacity?.payoutAssets !== undefined || capacity?.inputCapacityUsd !== undefined || capacity?.testedNotionalUsd !== undefined || capacity?.costEvidence !== undefined ||
+        exit?.alternatives.some((route) => route.payoutAssets !== undefined || route.conversion !== undefined || route.testedInput !== undefined)) {
+        ctx.addIssue({ code: "custom", message: "Pre-dust Exit breakdowns have no payout or conversion fields" });
+      }
       if (value.breakdowns?.backing.components.some((component) => component.admittedScoreCeiling !== undefined)) {
         ctx.addIssue({ code: "custom", message: "Pre-dust breakdown components have no admittedScoreCeiling" });
       }

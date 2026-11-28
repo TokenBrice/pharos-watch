@@ -4,6 +4,7 @@ import {
   ExitRouteObservationCoverageSchema,
 } from "@shared/types/exit-route";
 import {
+  DexEffectiveDepthSchema,
   type DexLiquidityData,
   type LiquidityCoverageClass,
 } from "@shared/types/dex-liquidity";
@@ -53,7 +54,7 @@ type DexLiquiditySnapshot = Pick<DexLiquidityData, "liquidityScore" | "concentra
   Partial<
     Pick<
       DexLiquidityData,
-      | "effectiveTvlUsd"
+      | "effectiveDepth"
       | "coverageClass"
       | "coverageConfidence"
       | "liquidityEvidenceClass"
@@ -66,6 +67,7 @@ type DexLiquiditySnapshot = Pick<DexLiquidityData, "liquidityScore" | "concentra
       | "trendworthy"
     >
   > & {
+    effectiveTvlUsd?: number | null;
     /** The row's own publication clock; per-coin readers stamp it (R6). */
     updatedAt: number;
     deploymentCoverage?: {
@@ -230,9 +232,10 @@ export function normalizeDexLiquidityEvidence(row: DexLiquidityEvidenceRow): Nor
 function parseExitRouteDetails(
   json: string | null,
   stablecoinId: string,
-): Pick<DexLiquiditySnapshot, "exitRouteObservations" | "exitRouteObservationCoverage"> {
+): Pick<DexLiquiditySnapshot, "exitRouteObservations" | "exitRouteObservationCoverage" | "effectiveDepth" | "effectiveTvlUsd"> {
   const raw = parseJsonObject(json);
   if (raw == null) return {};
+  const effectiveDepth = DexEffectiveDepthSchema.safeParse(raw.effectiveDepth);
   const observations =
     raw.exitRouteObservations === undefined
       ? null
@@ -257,6 +260,7 @@ function parseExitRouteDetails(
     }
   }
   return {
+    ...(effectiveDepth.success ? { effectiveDepth: effectiveDepth.data, effectiveTvlUsd: effectiveDepth.data.amountUsd } : {}),
     ...(observations?.success ? { exitRouteObservations: observations.data } : {}),
     ...(coverage?.success ? { exitRouteObservationCoverage: coverage.data } : {}),
   };
@@ -372,10 +376,7 @@ export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiqui
   };
   for (const row of rows) {
     let evidence: NormalizedDexLiquidityEvidence;
-    let exitRouteDetails: Pick<
-      DexLiquiditySnapshot,
-      "exitRouteObservations" | "exitRouteObservationCoverage"
-    >;
+    let exitRouteDetails: ReturnType<typeof parseExitRouteDetails>;
     try {
       evidence = normalizeDexLiquidityEvidence(row);
     } catch (error) {

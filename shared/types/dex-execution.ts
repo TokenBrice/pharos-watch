@@ -7,6 +7,8 @@ export const DexAmmExecutionTokenSchema = z.object({
   decimals: z.number().int().min(0).max(255),
   balance: z.number().finite().positive(),
   referencePriceUsd: z.number().finite().positive(),
+  /** Independent USD per original token before Curve normalizes reserves by its stored rate. */
+  rawUnitPriceUsd: z.number().finite().positive().optional(),
   referencePriceSource: z.enum(["source-token-usd", "tracked-market", "peg-reference", "pool-implied"]),
   referencePriceSourceId: z.string().min(1).optional(),
   referencePriceObservedAt: z.number().int().positive().optional(),
@@ -132,6 +134,7 @@ export const DexExecutionCapabilityGateSchema = z.object({
     "paused-or-swap-disabled",
     "metapool-unsupported",
     "incomplete-exact-capture",
+    "reference-price-unavailable",
     // The verification transport failed before anything was observed (request
     // failure, pinned block unavailable, or exhausted wall-time budget). The
     // pool was NOT semantically refused: distinct from

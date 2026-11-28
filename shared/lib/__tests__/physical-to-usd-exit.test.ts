@@ -200,6 +200,8 @@ describe("physical-to-USD exit", () => {
     const physical = evaluatePhysicalToUsdExit(config, reference, 1_000_000, clock);
     const evaluated = score(physical).routes[0]!;
     expect(physical.netUsd).toBe(990_000);
+    expect(evaluated.testedInput).toBeUndefined();
+    expect(evaluated.capacityPoint!.executableUsd).toBe(physical.grossUsd);
     expect(evaluated).toMatchObject({ included: true, components: { outputAssetQuality: 65, cost: 50 }, confidenceFactor: 0.75 });
     expect(evaluated.score).toBeLessThanOrEqual(65);
     expect(score(cash).routes[0]?.confidenceFactor).toBe(0.35);

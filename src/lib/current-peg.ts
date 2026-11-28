@@ -124,8 +124,10 @@ export function readUnroundedPublishedDeviation(
     ? null : current?.currentDeviationBps ?? null;
   const price = current?.price;
   const reference = current?.pegReference?.valueUsd;
-  const raw = published != null && pegCurrency !== "USD" && price != null && reference != null
-    ? relativeBps(price, reference)?.rawBps ?? published : published;
+  // Legacy rows publish rounded bps; the unrounded comparison (FX or fixed USD) is read only
+  // when it pairs with that published value, so materiality never rounds across a band edge.
+  const relative = published != null && price != null && reference != null ? relativeBps(price, reference) : null;
+  const raw = relative != null && relative.bps === published ? relative.rawBps : published;
   const observedAtSec = resolvePriceObservedAtSec(current) ?? resolvePriceObservedAtSec(legacyClock);
   const held = isCurrentDeviationHeld(pegCurrency, observedAtSec, raw);
   return {

@@ -1,3 +1,4 @@
+import type { FluidSwapStatus } from "@shared/types/dex-liquidity";
 import type { DexExecutionCapabilityGate } from "@shared/types/dex-execution";
 
 export interface DexApiPoolToken {
@@ -82,6 +83,7 @@ export interface DexPaginationPersistenceSummary {
 
 export interface DexApiFetchResult {
   pools: DexApiPool[];
+  fluidSwapStatuses?: Map<string, { observation: FluidSwapStatus; fingerprint: string | null }>;
   ok: boolean;
   degraded: boolean;
   errors: string[];

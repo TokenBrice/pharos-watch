@@ -24,7 +24,7 @@ import type {
 } from "../lib/dews/contracts";
 import { malformedInputDegradesRun } from "../lib/dews/malformed-input";
 import { computeAndStoreDEWS } from "../lib/dews/service";
-import { getDexLiquidityTrendTolerances, getDexTvlObservedAt, selectLiquidityObservation, selectObservedTrendBaseline } from "../lib/dex-liquidity-response";
+import { getDexLiquidityTrendTolerances, getDexTvlObservedAt, selectLiquidityObservation, assessObservedTrendBaseline } from "../lib/dex-liquidity-response";
 import type { DexHistoryRow } from "../lib/dex-liquidity-response";
 import { parseOptionalDayWindow } from "../lib/backfill-day-window";
 import { EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL } from "../lib/depeg-event-projection";
@@ -541,7 +541,7 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
         parseDexVolumeAvailabilityRecord(liqNow.volume_availability_json), targetDay,
       ) : null;
       const liq7d = liqNow
-        ? selectObservedTrendBaseline(coinLiq, capture, 7 * DAY_SECONDS, liquidityTolerance, liqNow.methodology_version)
+        ? assessObservedTrendBaseline(coinLiq, capture, 7 * DAY_SECONDS, liquidityTolerance, liqNow.methodology_version)
         : null;
 
       const input: HistoricalDEWSInput = {
@@ -556,7 +556,8 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
         liquidityScore: liqNow?.liquidity_score ?? null,
         liquidityScore7dAgo: liq7dScore?.liquidity_score ?? null,
         tvlCurrent: capture == null ? null : liqNow?.observedTvl ?? null,
-        tvl7dAgo: liq7d?.total_tvl_usd ?? null,
+        tvl7dAgo: liq7d?.baseline?.total_tvl_usd ?? null,
+        tvlDelta7dUnavailableReason: liq7d?.reason,
       };
 
       const result = computeHistoricalDEWS(input);

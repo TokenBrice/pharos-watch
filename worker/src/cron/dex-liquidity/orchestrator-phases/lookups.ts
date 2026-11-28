@@ -1,12 +1,13 @@
 import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../../lib/stablecoins-cache";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { getPricingSourceRegistryEntry, isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { readDexPriceLineage } from "../price-lineage";
+import { configuredPrimaryUpstreamKeys, readDexPriceLineage } from "../price-lineage";
 import type { DexAmmExecutionToken } from "@shared/types/dex-execution";
 import type { StablecoinData } from "@shared/types/supply";
 import type { DexMarketMark, DexValuationPrices } from "../../../lib/dex-api-token-pricing";
@@ -22,15 +23,18 @@ export interface TrackedStablecoinMaps {
   stablecoinPriceProvenanceById: Map<string, Required<Pick<DexAmmExecutionToken, "referencePriceSourceId" | "referencePriceObservedAt">>>;
 }
 
-function isMarketMarkSource(asset: StablecoinData): boolean {
-  if (WORKER_TRACKED_META_BY_ID.get(asset.id)?.flags.navToken || asset.priceObservedAtMode === "unknown") return false;
+function marketMarkSourceScope(asset: StablecoinData): "market" | "curve-pools" | null {
+  if (WORKER_TRACKED_META_BY_ID.get(asset.id)?.flags.navToken || asset.priceObservedAtMode === "unknown") return null;
   const sources = normalizePricingSourceKeys([asset.priceSource, ...(asset.agreeSources ?? [])]);
-  return sources.length > 0 && sources.every((source) => {
+  const eligible = sources.length > 0 && sources.every((source) => {
+    if (source === "curve-onchain") return CURVE_POOL_CONFIGS.some((config) => config.stablecoinId === asset.id);
     const entry = getPricingSourceRegistryEntry(source);
     return entry != null && !entry.isRetired &&
       (entry.trustTier === "hard_market" || entry.trustTier === "soft_aggregator") &&
       !entry.depegSourceFamily.startsWith("dex:");
   });
+  if (!eligible) return null;
+  return sources.includes("curve-onchain") ? "curve-pools" : "market";
 }
 
 /** A navToken's guarded NAV reference for measured-execution input legs: the
@@ -64,7 +68,8 @@ export async function loadTrackedStablecoinMaps(
   syncStartSec: number,
 ): Promise<TrackedStablecoinMaps> {
   const marketMarks = new Map<string, DexMarketMark>();
-  const stablecoinPriceById = Object.assign(new Map<string, number>(), { marketMarks });
+  const curveExecutionMarks = new Map<string, DexMarketMark>();
+  const stablecoinPriceById = Object.assign(new Map<string, number>(), { marketMarks, curveExecutionMarks });
   const primaryPriceById = new Map<string, number>();
   const stablecoinMcapById = new Map<string, number>();
   const stablecoinPriceProvenanceById: TrackedStablecoinMaps["stablecoinPriceProvenanceById"] = new Map();
@@ -98,11 +103,20 @@ export async function loadTrackedStablecoinMaps(
             referencePriceSourceId: asset.priceSource,
             referencePriceObservedAt: observedAt!,
           });
-          if (observedAt === asset.priceObservedAt && isMarketMarkSource(asset)) {
-            marketMarks.set(asset.id, { priceUsd: asset.price, observedAtSec: observedAt!, source: asset.priceSource,
+          const scope = observedAt === asset.priceObservedAt ? marketMarkSourceScope(asset) : null;
+          if (scope) {
+            const lineage = readDexPriceLineage(asset);
+            const mark: DexMarketMark = { priceUsd: asset.price, observedAtSec: observedAt!, source: asset.priceSource,
               ...(asset.priceObservedAtMode === "upstream" ? { observedAtMode: asset.priceObservedAtMode } : {}),
               ...(hasFreshMultiSourcePrimaryAgreement(asset, syncStartSec) ? { corroboration: "multi-source" as const } : {}),
-              ...readDexPriceLineage(asset) });
+              ...lineage };
+            if (scope === "market") {
+              marketMarks.set(asset.id, mark);
+            } else if (lineage.upstreamKeys?.length !== 0 && (lineage.pricePoolKeys?.length !== 0 || lineage.upstreamKeys)) {
+              // A configured Curve quote is independent only outside its complete physical pool/hop set.
+              const upstreamKeys = [...new Set([...configuredPrimaryUpstreamKeys(asset.id), ...(lineage.upstreamKeys ?? []), ...(lineage.pricePoolKeys ?? [])])];
+              curveExecutionMarks.set(asset.id, { ...mark, upstreamKeys });
+            }
           }
         }
       } else {

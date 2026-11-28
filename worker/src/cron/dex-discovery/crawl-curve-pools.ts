@@ -1,17 +1,17 @@
-import { CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
+import { CURVE_LITE_DEPLOYMENTS, CURVE_NATIVE_DISCOVERY_CHAINS } from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/stablecoin-meta-primitives";
 import { USER_AGENT } from "../../lib/constants";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import {
-  CURVE_API_BASE,
-  CURVE_API_CHAIN_PATHS,
+  curvePoolsApiUrl,
   DEX_LIQUIDITY_POOL_MIN_TVL_USD,
 } from "../dex-liquidity/constants";
+import { curveApiCoinBalance, curveApiTotalBalance } from "../dex-liquidity/curve-api-balances";
 import type { CurveApiPayload } from "../dex-liquidity/types";
 import { DISCOVERY_STAGE_TIMEOUT_MS, buildStageSignal, type CrawlStageContext } from "./staged-pool";
-import type { DexDeploymentProviderCheck } from "./types";
+import { makeDexDeploymentProviderCheck, type DexDeploymentProviderCheck } from "./types";
 
 const CURVE_DISCOVERY_FETCH_CONCURRENCY = 1;
 // Ethereum's full census exceeds 4 MiB. Serialize the larger bounded reads so
@@ -44,11 +44,7 @@ export async function crawlCurvePoolsStage(input: {
     async ([chain, targets]): Promise<DexDeploymentProviderCheck[]> => {
       try {
         const result = await fetchJsonWithRetry<CurveApiPayload>(
-          // Curve addresses some chains under a different id than Pharos does;
-          // the liquidity stage has always honored this mapping and discovery
-          // has not, which is how every run spent its retry budget on a request
-          // the endpoint answers with an error.
-          `${CURVE_API_BASE}/${CURVE_API_CHAIN_PATHS[chain] ?? chain}`,
+          curvePoolsApiUrl(chain),
           {
             headers: { "User-Agent": USER_AGENT },
             signal: buildStageSignal(input.context.signal, input.context.deadlineMs, DISCOVERY_STAGE_TIMEOUT_MS.curve),
@@ -73,13 +69,22 @@ export async function crawlCurvePoolsStage(input: {
         }
         return targets.map(({ address }) => {
           const tokenAddress = canonicalExitRouteScopedId(chain, address);
-          const observedPoolCount = poolData.filter(
-            (pool) =>
-              pool.isBroken !== true &&
-              pool.usdTotal >= DEX_LIQUIDITY_POOL_MIN_TVL_USD &&
-              pool.coins?.some((coin) => canonicalExitRouteScopedId(chain, coin.address) === tokenAddress),
-          ).length;
-          return { chain, address, provider: "curve", status: "success", observedPoolCount };
+          let observedPoolCount = 0;
+          let incomplete = false;
+          for (const pool of poolData) {
+            if (pool.isBroken === true || !pool.coins?.some((coin) =>
+              canonicalExitRouteScopedId(chain, coin.address) === tokenAddress)) continue;
+            if (Number.isFinite(pool.usdTotal) && pool.usdTotal >= DEX_LIQUIDITY_POOL_MIN_TVL_USD) {
+              observedPoolCount++;
+            } else if (CURVE_LITE_DEPLOYMENTS.has(chain)) {
+              // A sub-floor partial valuation cannot rule out an eligible pool for this token.
+              const total = curveApiTotalBalance(pool.coins.map(curveApiCoinBalance));
+              if (!Number.isFinite(pool.usdTotal) || pool.usdTotal < 0 || !Number.isFinite(total)) incomplete = true;
+            }
+          }
+          return makeDexDeploymentProviderCheck({ chain, address }, "curve", incomplete ? "degraded" : "success", {
+            observedPoolCount: incomplete && observedPoolCount === 0 ? undefined : observedPoolCount,
+          });
         });
       } catch (err) {
         if (input.context.signal?.aborted) throw err;

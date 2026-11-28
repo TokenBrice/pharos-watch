@@ -11,6 +11,7 @@ import { getReferenceMarket, getReferenceMarketClosureStart, getLegacyReferenceC
 import { getPegTaxonomyByType, pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { evaluateReferenceAdmission, REFERENCE_INTRADAY_BUDGET_SEC } from "@shared/lib/reference-admission";
 import { asRawDeviationBps } from "@shared/types/reference-admission";
+import { FluidSwapStatusSchema } from "@shared/types/dex-liquidity";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { computeDEWS } from "../dews";
 import type { DEWSInput, DEWSResult, PoolEntry } from "../dews";
@@ -33,6 +34,7 @@ const RawPoolDataSchema = z.object({
   extra: z
     .object({
       balanceRatio: z.number().finite().nullish(),
+      fluidSwapStatus: FluidSwapStatusSchema.optional(),
     })
     .nullish(),
 });
@@ -108,7 +110,11 @@ function readTopPools(
       });
       return { pools: null, unavailableReason: "top-pools-entry-malformed" };
     }
-    pools.push({ tvlUsd: parsedPool.data.tvlUsd, balanceRatio: parsedPool.data.extra?.balanceRatio ?? null });
+    const { tvlUsd, extra } = parsedPool.data;
+    const swapStatus = extra?.fluidSwapStatus?.status;
+    if (swapStatus === "paused") continue;
+    // Unknown eligibility cannot establish an empty set or an observed imbalance.
+    pools.push({ tvlUsd, balanceRatio: swapStatus === "unknown" ? null : extra?.balanceRatio ?? null });
   }
   return { pools, unavailableReason: null };
 }
@@ -156,7 +162,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     const dexLiq = sourceState.dexLiquidity.dexLiqMap.get(meta.id);
     const dexPrice = sourceState.dexPrices.dexPriceMap.get(meta.id);
     const liqHist = sourceState.liquidityHistory.liqHist7dMap.get(meta.id);
-    if (liqHist) liqHistCoverageCount++;
+    if (liqHist?.date != null) liqHistCoverageCount++;
     const prevSnapshot = sourceState.previousSignals.prevSignals.get(meta.id);
     const prev = prevSnapshot?.signals;
     // An unreadable accepted-generation pointer leaves the previous reading
@@ -270,6 +276,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       liquidityScore7dAgo: liqHist?.score ?? null,
       tvlCurrent: dexLiq?.total_tvl_usd ?? null,
       tvl7dAgo: liqHist?.tvl ?? null,
+      tvlDelta7dUnavailableReason: liqHist?.tvlDelta7dUnavailableReason,
       priceConfidence: asset.priceConfidence ?? null,
       prevPriceConfidence: (prev?.price as { confidence?: string })?.confidence ?? null,
       observedPrice: isObservedPrice(asset) ? asset.price ?? null : null,

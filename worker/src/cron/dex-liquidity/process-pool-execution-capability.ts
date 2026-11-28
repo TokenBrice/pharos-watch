@@ -1,3 +1,4 @@
+import { CURVE_LITE_DEPLOYMENTS } from "@shared/lib/dex-deployment-coverage";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import {
   canonicalExitRouteAssetKey,
@@ -180,20 +181,21 @@ function buildCurveStableswapRateInputExecutionCandidate(
   curveData: CurvePoolEntry,
 ): CurveStableswapRateInputExecutionCandidate | null {
   const poolAddress = canonicalEvmAddress(curveData.poolAddress);
-  const coins = curveData.executionCoins;
+  const coins: { address: string; symbol: string; decimals: number; usdPrice?: number }[] | undefined =
+    curveData.executionCoins ?? curveData.liteNgCoins;
   if (!poolAddress || !coins || coins.length < 2 || coins.length > 8) {
     return null;
   }
   const candidateCoins = coins.map((coin) => {
     const address = canonicalEvmAddress(coin.address);
+    const price = coin.usdPrice;
     if (
       !address ||
-      !coin.symbol.trim() ||
+      !coin.symbol?.trim() ||
       !Number.isInteger(coin.decimals) ||
       coin.decimals < 0 ||
       coin.decimals > 36 ||
-      !Number.isFinite(coin.usdPrice) ||
-      coin.usdPrice <= 0
+      (curveData.executionCoins != null && (price == null || !Number.isFinite(price) || price <= 0))
     ) {
       return null;
     }
@@ -201,7 +203,7 @@ function buildCurveStableswapRateInputExecutionCandidate(
       address,
       symbol: coin.symbol,
       decimals: coin.decimals,
-      referencePriceUsd: coin.usdPrice,
+      ...(price !== undefined ? { referencePriceUsd: price } : {}),
     };
   });
   if (candidateCoins.some((coin) => coin == null)) return null;
@@ -241,6 +243,9 @@ export function buildCurveStableswapExecutionCapability(
       gate: { family: "curve-stableswap", reason: "incomplete-exact-capture" },
       ...(rateInputCandidate ? { rateInputCandidate } : {}),
     };
+  }
+  if (CURVE_LITE_DEPLOYMENTS.has(chainNorm)) {
+    return { executionModel: null, gate: { family: "curve-stableswap", reason: "unsupported-invariant" } };
   }
   if (!Number.isFinite(curveData.A) || curveData.A <= 0) {
     return {

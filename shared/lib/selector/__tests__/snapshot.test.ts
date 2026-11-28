@@ -989,7 +989,7 @@ describe("verified selected-rail snapshot projection", () => {
     expect(rec.chainHints).toEqual(output.recommended[0]!.chainHints);
     expect(rec.whyKeys).toEqual(output.recommended[0]!.whyKeys);
     expect(rec.score).toBe(output.recommended[0]!.score);
-    expect(roundTrip.snapshot.engineVersion).toBe("selector-v2.16");
+    expect(roundTrip.snapshot.engineVersion).toBe("selector-v2.17");
   });
 
   it.each(["selector-v2.7", "selector-v2.14"])("keeps %s snapshots on the current component replay path", (engineVersion) => {

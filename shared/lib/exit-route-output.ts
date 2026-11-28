@@ -21,3 +21,23 @@ export function resolvedExitRouteOutputAssetKeys(output: ExitRouteOutput): strin
   if (assetKeys.length === 0) return null;
   return [...new Set(assetKeys)].sort(compareText);
 }
+
+/** A payout in the input asset or its pass-through receipt keeps the holder's exposure. */
+export function isDexExitPayoutConversion(
+  inputAssetId: string,
+  outputAssetIds: readonly string[],
+  metaById: ReadonlyMap<string, { variantOf?: string; variantKind?: string }>,
+): boolean {
+  return outputAssetIds.some((outputId) => {
+    const seen = new Set<string>();
+    let id: string | undefined = outputId;
+    while (id && !seen.has(id)) {
+      if (id === inputAssetId) return true;
+      seen.add(id);
+      const meta = metaById.get(id);
+      if (meta?.variantKind !== "savings-passthrough" && meta?.variantKind !== "pure-wrapper") return false;
+      id = meta.variantOf;
+    }
+    return false;
+  });
+}

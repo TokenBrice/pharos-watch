@@ -420,7 +420,7 @@ describe("missing detail price enrichment", () => {
         expect(proj({ ...dBase, currentCirculatingUSD: cadd.circulating, currentSupplySource: supplySource,
           currentSupplyObservedAt: supplySource === "defillama" ? NOW - 60 : undefined }, cadd.id).circulating).toEqual({});
       }
-      // A valid run-second clock is not a state clock: only the pinned reader's marker admits a v7.1 enrollee (ZCHF);
+      // A valid run-second clock is not a state clock: only the pinned reader's marker admits a v7.2 enrollee (ZCHF);
       // BRLA's reader was pinned before the marker existed.
       const native = { supplySource: "onchain-total-supply", supplyObservedAt: NOW - 90 };
       const zchf = { id: "zchf-frankencoin", circulating: { peggedCHF: 9_000 }, ...native };

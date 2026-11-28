@@ -667,7 +667,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
         admissionPath = "mechanismExitFacts";
         const mechanismExitFacts = getSafetyScoreV9MechanismExitFacts(assetId, archetype, clockSec);
         admissionPath = "routeReviews";
-        const routeReviews = buildSafetyScoreV9RouteReviews(fixedInput, assetId);
+        const routeReviews = buildSafetyScoreV9RouteReviews(fixedInput, assetId, metaById);
         admissionPath = "retainedRoutes";
         const retainedRoutes = buildSafetyScoreV9RetainedRoutes(fixedInput, assetId);
         const extensionAsset = admitSafetyScoreV9ExtensionAsset({

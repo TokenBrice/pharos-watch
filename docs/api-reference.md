@@ -441,6 +441,14 @@ The standalone redemption contract is described in [Redemption Backstops](./rede
 
 [Modeled results](./dependency-map.md). Current response/artifact body `schemaVersion` is 2 and scenario cache generation is v2; the route remains `/api/dependency-scenarios/v1` with operation ID `dependencyScenariosV1`. Published and modeled technical pipeline-gap scores/grades stay null and distinct from NR; deltas involving unavailable numeric values remain null, never zero or a fabricated downgrade. Status and partial metadata survive parent propagation. These generation-bound offline artifacts remain noncanonical modeled scenarios, not forecasts or changes to accepted Safety Scores. Old artifacts require explicit historical version dispatch or refusal, never relabelling a v1 artifact under a v2 cache key.
 
+## DEX liquidity availability
+
+On `/api/dex-liquidity`, `totalTvlUsd` includes retained pools with paused swaps. For nonempty inventories published under v7.57, `effectiveDepth` reports the admitted `amountUsd`, `coverage`, `pausedPoolCount` and `unknownPoolCount`. Complete coverage can include a confirmed zero. Partial coverage gives a lower bound. Unavailable swap coverage has a null amount and the reason `swap-availability-unverified`. The existing nullable NR reason field keeps its legacy vocabulary. Concentration is null with no usable swaps, and durability is null when swap availability cannot be established. The legacy numeric `effectiveTvlUsd` remains the sum of admitted contributions. Older rows omit the coverage record.
+
+In current and historical DEWS signals, optional `signals.liq.liquidityScore`, `liquidityScore7dAgo` and `tvlDelta7dUnavailableReason` explain which weekly comparison contributed. The retained method and timestamps determine comparability.
+
+The site-only `/api/dex-liquidity-coin` detail projection adds `weeklyExitRouteBaselines` for comparable external sales. The historical and current capacities refer to the same pool, payout, request size, cost limit and model. The site-only `/api/report-cards/v9-detail?stablecoin=<id>&payout=assets` carries `payoutAssets` and `costEvidence` in the accepted primary Exit capacity. The score uses the credited `executableUsd` against the requested stress size. When a frozen route proves its sell input, `inputCapacityUsd` and `testedNotionalUsd` give that input and its tested order size. Diagnostic conversions identify their own payout and tested size. Older publications can lack those fields.
+
 ## Reserve Availability
 
 For `GET /api/stablecoin-reserves/{stablecoinId}`, optional `sync.collectionEligibility` is `{ scheduled, reason }` with successful-response reasons `active`, `quarantined`, `frozen`, or `delisted`; only active is scheduled. Suspended, unconfigured and pre-launch assets return `404`, not additional eligibility values. Readable inactive configurations may serve retained historical evidence without refreshing its clocks or admitting it to active collection. See the [reserve API contract](./live-reserves.md#api-contract).
@@ -487,7 +495,7 @@ Mint/Burn v6.42 adds reviewed conditional range supply proof and retained range 
 | `supplyGapFill` | object | Bounded CoinGecko raise for one missing metadata chain identity. Carries `method: "coingecko-single-missing-chain"`, `admission: "entered" \| "retained"`, `missingChainId`, `canonicalSource: "defillama"`, `canonicalCurrentUsd`, `supplementalSource: "coingecko"`, `supplementalCurrentUsd`, `ratio`, `maxRatio`, and `observedAt`. Optional `carryForwardRuns` counts bounded no-decision carries. |
 | `supplyGapFill.withheldHistoricalBuckets` | `("day" \| "week" \| "month")[]` | Non-empty when present; omitted when no historical bucket is withheld. Names the missing chain's historical buckets published as `null` because existing chain observations are incomplete or do not conserve the corresponding DefiLlama aggregate within `max($0.01, DL bucket × 1e-6)`, or because DefiLlama did not observe that aggregate bucket. Existing chain values are never scaled; an admitted aggregate bucket retains its CoinGecko series value, while an unobserved DefiLlama aggregate bucket stays unavailable. |
 | `supplyGapFill.withheldHistoricalBucketReasons` | `Partial<Record<"day" \| "week" \| "month", "history-unobserved" \| "nonconserving">>` | Present exactly when `withheldHistoricalBuckets` is present; its keys equal those withheld buckets. `"history-unobserved"` means the DefiLlama aggregate bucket or any existing chain's bucket value is unobserved. `"nonconserving"` means all values were observed but the existing chains' sum differs from the DefiLlama aggregate beyond the conservation tolerance above. |
-| `supplyObservedAtKind` | `"pinned-state"` | Present only with `supplyObservedAt`, on a reviewed `requireStateClock` plan's native packet whose every leg was dated at its own pinned chain state (EIP-1898 block hash with a closing header recheck, finalized Solana slot, or Stellar/XRPL/Aptos ledger close), never the run clock (Pricing v7.1). Restored packets keep it with their original clock. Detail and live summary admit a preferred state-clocked plan's supply only with it, except BUIDL, EURC, EURCV, BRLA and wM, whose pre-v7.1 reader was already pinned. Absent is not proof of a run clock on other assets. |
+| `supplyObservedAtKind` | `"pinned-state"` | Present only with `supplyObservedAt`, on a reviewed `requireStateClock` plan's native packet whose every leg was dated at its own pinned chain state (EIP-1898 block hash with a closing header recheck, finalized Solana slot, or Stellar/XRPL/Aptos ledger close), never the run clock (Pricing v7.2). Restored packets keep it with their original clock. Detail and live summary admit a preferred state-clocked plan's supply only with it, except BUIDL, EURC, EURCV, BRLA and wM, whose pre-v7.2 reader was already pinned. Absent is not proof of a run clock on other assets. |
 | `supplyChainGuard` | object | Chain-dropout evidence with `reason: "supply-chain-dropout"`, `status: "repaired" \| "quarantined" \| "unavailable" \| "chains-unavailable"`, optional `quarantinedSince` / `concurrentGainUsd`, optional `matchedComparisonWindows` (Pricing v6.90: the `day`/`week`/`month` windows whose prior buckets exclude the guard's unavailable chains, so those changes compare a matched perimeter), optional `partialCoverage: true` (a bounded minority-share quarantine, reviewed exclusion, or fill-default native remainder publishing without its unavailable chains; fill-default remainders use only native repairs and bound missing supply by both frozen baseline and current list share at 5%), and `chains[]`. Each chain includes `chainLabel`, optional `chainId`, nullable `listCurrentUsd`, `baselineUsd`, `baselineObservedAt`, `baselineSource: "state" \| "seed" \| "list-prev-day"` (`seed` is legacy-read-only, retained for pairs persisted before the 2026-11-09 seed lapse), and `resolution: "onchain-total-supply" \| "defillama-chain-history" \| "carried-baseline" \| "unavailable"`, with optional `repairedCurrentUsd` / `observedAt`. |
 | `supplyChainGuard.chains[].reviewedExclusion` | object | Optional dated omitted-chain release: `reason: "reviewed-excluded"`, Unix-second `reviewedAt`, `expiresAt` and original per-chain `quarantinedSince`, plus `evidenceUrl`. The chain retains `resolution: "unavailable"` and null current; its baseline contributes neither carry nor the partial-coverage missing share. The observed provider remainder publishes until review expiry or provider restoration. See [Chain Dropout Guard](./supply-snapshot.md#chain-dropout-guard). |
 | `supplyChainGuard.chains[].observedAtKind` | `"upstream" \| "local-read"` | Optional clock kind for chain repair evidence. Native issuer `onchain-total-supply` repairs use `"local-read"` with the sync-start run clock; DefiLlama chart repairs use `"upstream"` with the point date. Without quarantine, aggregate `supplyObservedAt` uses the oldest admitted repair clock — native local reads included — and, when the provider row names one, the incoming list clock; a repair without a usable clock leaves the aggregate clock missing, never borrowing another component's clock. Withheld repairs discard the repair clock/kind before any carried-baseline or unavailable outcome. An absent kind on older provenance is unknown, not proof of an upstream clock. |
@@ -743,7 +751,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.56"
+  "currentVersion": "6.58"
 }
 ```
 
@@ -781,7 +789,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.56"
+  "currentVersion": "6.58"
 }
 ```
 
@@ -1115,7 +1123,7 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 ```json
 {
   "currentVersion": "8.63",
-  "methodologyVersion": "10.58"
+  "methodologyVersion": "10.59"
 }
 ```
 
@@ -1192,8 +1200,8 @@ Freshness threshold: 3600 s.
 
 ```json
 {
-  "currentVersion": "6.56",
-  "methodologyVersion": "6.56"
+  "currentVersion": "6.58",
+  "methodologyVersion": "6.58"
 }
 ```
 

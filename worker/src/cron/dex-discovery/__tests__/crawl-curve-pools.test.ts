@@ -22,7 +22,7 @@ describe("Curve discovery pool fetching", () => {
   });
 
   it("serializes larger census responses while preserving chain order", async () => {
-    const chains = [...CURVE_NATIVE_DISCOVERY_CHAINS].slice(0, 5);
+    const chains = [...CURVE_NATIVE_DISCOVERY_CHAINS].slice(0, 4).concat("monad");
     let activeRequests = 0;
     let maxActiveRequests = 0;
     const requestOrder: string[] = [];
@@ -50,6 +50,7 @@ describe("Curve discovery pool fetching", () => {
       }),
     });
 
+    expect(vi.mocked(fetchJsonWithRetry).mock.calls.map(([url]) => String(url))).toContain("https://api-core.curve.finance/v1/getPools/all/monad");
     expect(maxActiveRequests).toBe(1);
     expect(requestOrder.slice(0, 2)).toEqual(chains.slice(0, 2));
     expect(result.providerChecks.map((check) => check.chain)).toEqual(chains);
@@ -59,9 +60,10 @@ describe("Curve discovery pool fetching", () => {
     });
   });
 
-  it("maps Gnosis to xdai and counts eligible pools independently for same-chain targets", async () => {
-    const first = target("gnosis", 10);
-    const second = target("gnosis", 11);
+  it.each(["gnosis", "monad"])("counts eligible pools and preserves incomplete Lite valuation on %s", async (chain) => {
+    const first = target(chain, 10);
+    const second = target(chain, 11);
+    const unpriced = target(chain, 13);
     const floor = DEX_LIQUIDITY_POOL_MIN_TVL_USD;
     vi.mocked(fetchJsonWithRetry).mockClear();
     vi.mocked(fetchJsonWithRetry).mockResolvedValue({
@@ -69,22 +71,25 @@ describe("Curve discovery pool fetching", () => {
       body: { data: { poolData: [
         { usdTotal: floor, coins: [{ address: first.address.toUpperCase().replace("0X", "0x") }] },
         { usdTotal: floor + 1, coins: [{ address: first.address }, { address: second.address }] },
-        { usdTotal: floor + 1, coins: [{ address: target("gnosis", 12).address }] },
+        { usdTotal: floor + 1, coins: [{ address: target(chain, 12).address }] },
         { usdTotal: floor + 1, isBroken: true, coins: [{ address: first.address }] },
         { usdTotal: floor - 1, coins: [{ address: second.address }] },
+        { usdTotal: 0, coins: [{ address: unpriced.address }] },
       ] } },
     } as never);
     const result = await crawlCurvePoolsStage({
-      coinTargets: [first, second],
+      coinTargets: [first, second, unpriced],
       context: createCrawlStageContext({
         stablecoinId: "test", knownPoolIds: new Set(), nowSec: 1_800_000_000, pools: [],
       }),
     });
     expect(fetchJsonWithRetry).toHaveBeenCalledTimes(1);
-    expect(String(vi.mocked(fetchJsonWithRetry).mock.calls[0]?.[0])).toMatch(/\/xdai$/);
+    expect(String(vi.mocked(fetchJsonWithRetry).mock.calls[0]?.[0])).toContain(chain === "gnosis" ? "/xdai" : "/monad");
+    const status = chain === "monad" ? "degraded" : "success";
     expect(result.providerChecks).toEqual([
-      { chain: "gnosis", address: first.address, provider: "curve", status: "success", observedPoolCount: 2 },
-      { chain: "gnosis", address: second.address, provider: "curve", status: "success", observedPoolCount: 1 },
+      { chain, address: first.address, provider: "curve", status: "success", observedPoolCount: 2 },
+      { chain, address: second.address, provider: "curve", status, observedPoolCount: 1 },
+      { chain, address: unpriced.address, provider: "curve", status, ...(chain === "gnosis" ? { observedPoolCount: 0 } : {}) },
     ]);
   });
 
