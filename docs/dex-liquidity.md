@@ -5,8 +5,6 @@
 
 ## Methodology Versioning
 
-With no usable swaps, concentration has no denominator and is unavailable. If the remaining swap state is unverified, the score and durability are also unavailable. The effective-depth record carries the reason `swap-availability-unverified`. A fully confirmed pause has zero usable depth.
-
 - **Current methodology version:** <!-- GENERATED-START: methodology-version-liquidity-score -->`v7.57`<!-- GENERATED-END: methodology-version-liquidity-score -->
 - **TVL-basis breaks:** a liquidity release that changes how retained TVL is measured (not just weighting or volume admission) must also append its version to `LIQUIDITY_TVL_BASIS_BREAK_VERSIONS` in `shared/lib/dex-liquidity-evidence.ts`, which is append-only. The 30-day stability series never mix epochs across a listed break (see Basis homogeneity under Durability Sub-Component Weights); the source owns the current break list.
 - **TVL trend comparability:** public 24-hour/7-day changes and DEWS/DDR TVL evidence compare the stored current and historical `methodology_version` through `liquidityTvlBasisEpoch`. Cross-epoch baselines are skipped, not interpreted as market moves; same-epoch minor releases remain comparable. Explicit legacy identities belong to epoch 0, but an omitted version projection cannot establish comparability. This is TVL-measurement identity, not exact liquidity-score formula identity, and does not suppress independently available scores or volume.
@@ -21,6 +19,8 @@ The [public changelog](https://pharos.watch/methodology/liquidity-score-changelo
 **PKT-5:** no new family is admitted; pending profiles remain score-ineligible and Meteora's writer remains stopped. The execution-evidence appendix above retains the full disclosure and outstanding proof obligations.
 
 ## DEX Liquidity Score
+
+With no usable swaps, concentration has no denominator and is unavailable. If the remaining swap state is unverified, the score and durability are also unavailable. The effective-depth record carries the reason `swap-availability-unverified`. A fully confirmed pause has zero usable depth.
 
 Use original observations for DEX price age and for comparable TVL trend endpoints. Pool and coin inventory remains gross. Aggregate TVL deducts reviewed Curve LP overlap consistently across protocol, chain and coverage breakdowns. Complete PancakeSwap hourly windows and verified Curve NG state gate their score-facing evidence. Stellar's peg estimate can describe its valuation state and provides no traded corroboration.
 
