@@ -136,9 +136,9 @@
     {
       "type": "info",
       "title": "Legacy contract migration closed",
-      "message": "CADC Reserve Trust closed the 1:1 migration from legacy CADC to its reissued Ethereum, Base, Polygon, and Solana contracts on November 26, 2026. Legacy CADC is now redeemable for CAD only through Paytrie. Pharos still tracks the legacy contracts.",
+      "message": "CADC Reserve Trust closed the 1:1 migration from legacy CADC to its reissued Ethereum, Base, Polygon, and Solana contracts on November 26, 2026. Legacy CADC is now redeemable for CAD only through Paytrie. Pharos counts the legacy and reissued contracts together.",
       "kind": "history",
-      "asOf": "2026-11-27",
+      "asOf": "2026-11-28",
       "sources": [
         {
           "label": "Loon: CADC migration closed",
