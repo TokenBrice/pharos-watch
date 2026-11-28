@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, w
 import { tmpdir } from "node:os";
 import { inspectPrCheckout, runPrChecks, type RunPrChecksOptions } from "../maintenance/run-pr-checks.ts";
 import { writePrCheckReceipt, type PrCheckReceipt } from "../lib/pr-check-receipt.mts";
-import { assertFaithfulResourceReport, assertRequiredResourceCases, decideV9Contagion, QUEUE_CASES, RESOURCE_TEST_FILE, runV9ResourceLane } from "../maintenance/run-v9-resource-lane.ts";
+import { assertFaithfulResourceReport, assertRequiredResourceCases, decideV9Contagion, PR_QUEUE_CASES, QUEUE_CASES, RESOURCE_TEST_FILE, runV9ResourceLane } from "../maintenance/run-v9-resource-lane.ts";
 import type * as ChangedFilesModule from "../lib/changed-files.mts";
 import type * as CriticalOwnershipModule from "../lib/critical-ownership.mts";
 import { RESOURCE_HARNESS_REVISION, RESOURCE_PHASES } from "../../worker/scripts/lib/v9-resource-policy";
@@ -138,6 +138,9 @@ describe("isolated V9 resource execution", () => {
     }
     expect(() => assertRequiredResourceCases(report([{ title: "unrelated", status: "passed" }]))).toThrow(contagion);
     expect(() => assertRequiredResourceCases({ testResults: [] })).toThrow(contagion);
+    const prPassed = [{ title: contagion, status: "passed" }, ...PR_QUEUE_CASES.map(title => ({ title, status: "passed" }))];
+    expect(() => assertRequiredResourceCases(report(prPassed), true, false)).not.toThrow();
+    expect(() => assertRequiredResourceCases(report(prPassed))).toThrow(QUEUE_CASES.at(-1));
     expect(() => assertRequiredResourceCases(report([...passed, passed[0]]))).toThrow(contagion);
   });
 

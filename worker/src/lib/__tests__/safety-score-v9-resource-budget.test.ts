@@ -278,18 +278,22 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
     expect(output.wallMs, `nine-scenario matrix wallMs=${output.wallMs}`).toBeLessThan(CONTAGION_WALL_BUDGET_MS);
   });
 
-  describe("Queue stage resource and canonical parity gates", { timeout: 360_000 }, () => {
-    // Cap concurrency to 2 after solo contagion so 4-vCPU hosted runners avoid 5-way contention.
-    // Run the two heaviest cohorts first to minimize total two-wave makespan.
-    it.concurrent.each([[560, "none"], [343, "commit-expiry"], [343, "eval"], [343, "none"]] as const)(
-      "bounds Queue stage resources and matches canonical publication at %i assets (escalation=%s)",
-      async (count, escalation) => runQueueSlot(async () => {
-        const name = `queue-${count}-${escalation}`;
+  describe("Queue stage resource and canonical parity gates", { timeout: 420_000 }, () => {
+    // Cap concurrency to 2 after solo contagion so 4-vCPU hosted runners avoid contention.
+    // Run the heaviest cohorts first to minimize total makespan.
+    // The 450/640 qualification cohort (#1827) runs only outside PR validation (8-minute PR job).
+    const queueCohorts = ([[343, "commit-expiry", "default"], [560, "none", "default"], [343, "eval", "default"], [450, "none", "640"], [343, "none", "default"]] as const)
+      .filter(([, , catalog]) => catalog === "default" || process.env.PHAROS_V9_RESOURCE_EXTENDED !== "0");
+    it.concurrent.each(queueCohorts)(
+      "bounds Queue stage resources and matches canonical publication at %i assets (escalation=%s, catalog=%s)",
+      async (count, escalation, catalog) => runQueueSlot(async () => {
+        const name = `queue-${count}-${escalation}-${catalog}`;
         const queueDb = join(temporaryDirectory, `${name}-queue.sqlite`);
         const monoDb = join(temporaryDirectory, `${name}-mono.sqlite`);
         const sharedProtocol = {
           PHAROS_QUEUE_TEMPLATE: queueTemplate,
           PHAROS_QUEUE_ASSETS: String(count),
+          ...(catalog === "default" ? {} : { PHAROS_QUEUE_CATALOG: catalog }),
           PHAROS_QUEUE_ESCALATION: escalation,
           PHAROS_QUEUE_DB: queueDb,
           PHAROS_QUEUE_MONO_DB: monoDb,

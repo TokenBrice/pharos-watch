@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { copyFileSync, rmSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS, TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
 import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "@shared/types/report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "@shared/types/safety-score-cache-keys";
 import type { V9ContinuationMessage } from "@shared/types/v9-continuation";
@@ -30,6 +30,7 @@ import {
 const QUEUE_COMBINED_REGRESSION_MAX_BYTES = 176 * 1024 * 1024;
 const mode = process.env.PHAROS_QUEUE_MODE ?? "queue";
 const count = Number(process.env.PHAROS_QUEUE_ASSETS);
+const catalogCount = process.env.PHAROS_QUEUE_CATALOG ? Number(process.env.PHAROS_QUEUE_CATALOG) : null;
 const escalation = process.env.PHAROS_QUEUE_ESCALATION;
 const monoDbPath = process.env.PHAROS_QUEUE_MONO_DB!;
 const queueDbPath = process.env.PHAROS_QUEUE_DB!;
@@ -38,6 +39,7 @@ const bootArrayBuffers = process.memoryUsage().arrayBuffers;
 
 const active = ACTIVE_STABLECOINS as Array<(typeof ACTIVE_STABLECOINS)[number]>;
 const metaById = ACTIVE_META_BY_ID as Map<string, (typeof active)[number]>;
+const tracked = TRACKED_SOURCE_COINS as Array<(typeof active)[number]>;
 const template = active.find(({ id }) => id === "usdc-circle")!;
 for (let i = active.length; i < count; i++) {
   const meta = { id: `resource-${i}`, name: `Resource ${i}`, symbol: `R${i}`, flags: template.flags,
@@ -45,6 +47,18 @@ for (let i = active.length; i < count; i++) {
   active.push(meta);
   metaById.set(meta.id, meta);
   (ACTIVE_IDS as Set<string>).add(meta.id);
+  if (catalogCount !== null) tracked.push(meta);
+}
+if (catalogCount !== null) {
+  assert.ok(catalogCount >= count);
+  for (let i = tracked.length - 1; tracked.length > catalogCount && i >= 0; i--) {
+    if (!ACTIVE_IDS.has(tracked[i]!.id)) tracked.splice(i, 1);
+  }
+  for (let i = tracked.length; i < catalogCount; i++) {
+    tracked.push({ id: `resource-catalog-${i}`, name: `Resource Catalog ${i}`, symbol: `RC${i}`,
+      status: "pre-launch", flags: template.flags, contracts: [], reserves: template.reserves });
+  }
+  assert.equal(TRACKED_SOURCE_COINS.length, catalogCount);
 }
 const ids = active.slice(0, count).map(({ id }) => id);
 const target = ids[ids.length - 1];
@@ -81,7 +95,7 @@ if (mode === "parity") {
     assert.equal(canonicalSha(monoSqlite), expectedSha);
     assert.equal(injected, escalation === "eval");
     console.info(`parity-telemetry: ${JSON.stringify({
-      count, escalation, parityMs: Math.round(performance.now() - startedAt),
+      count, catalog: TRACKED_SOURCE_COINS.length, escalation, parityMs: Math.round(performance.now() - startedAt),
     })}`);
   } finally {
     if (monoSqlite.isOpen) monoSqlite.close();
@@ -229,7 +243,7 @@ if (mode === "parity") {
     assert.equal(injected, escalation === "eval");
     assert.equal(queueSqlite.prepare("SELECT COUNT(*) AS count FROM v9_eval_chunks").get()?.count, 0);
     console.info(`queue-telemetry: ${JSON.stringify({
-      count, escalation, escalatedAt, chunkSizes, bootArrayBuffers, queueMs, sha, peaks,
+      count, catalog: TRACKED_SOURCE_COINS.length, escalation, escalatedAt, chunkSizes, bootArrayBuffers, queueMs, sha, peaks,
     })}`);
   } finally {
     clearInterval(sampler);

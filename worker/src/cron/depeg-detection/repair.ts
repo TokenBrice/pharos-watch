@@ -140,22 +140,35 @@ export function buildDuplicateOpenEventRepair<T extends DepegRow>(
       const initialCoverageComparable = normalizeCoverageForCompare(initialCoverage);
       let coverageChanged = false;
       if (cleanDupes.length > 0) {
-        const coverages = [keeper, ...cleanDupes].map(rowPriceCoverage).filter((coverage) => coverage != null);
+        const coverages = [initialCoverage, ...cleanDupes.map(rowPriceCoverage)].filter((coverage) => coverage != null);
         if (coverages.length > 0) {
           const latest = coverages.reduce((a, b) =>
             (b.lastTrustedObservationAt ?? -1) > (a.lastTrustedObservationAt ?? -1) ? b : a);
           const intervals = mergeDepegIntervals(coverages.flatMap((coverage) => coverage.intervals));
           const atParIntervals = mergeDepegIntervals(coverages.flatMap((coverage) => coverage.atParIntervals ?? []));
           const nextLastTrusted = latest.lastTrustedObservationAt;
-          // Preserve unresolved blind gaps, but do not discard known at-par intervals.
-          const nextGapStarted = coverages.reduce<number | null>((gap, coverage) =>
-            coverage.gapStartedAt == null ? gap : Math.min(gap ?? Infinity, coverage.gapStartedAt), null);
+          // Preserve unresolved gaps, but do not discard known intervals. The keeper's own gap always
+          // stands. A duplicate's gap is superseded only when the keeper's last trusted observation
+          // (off-peg or at-par) is strictly newer than every clock the duplicate records (gap onset and
+          // last trusted observation), so a retained duplicate's older gap never reopens newer keeper
+          // coverage, while its newer at-par/blind evidence is never dropped. Unreadable keeper
+          // coverage, a missing keeper clock or a tie leaves the order unknown and keeps the gap.
+          const keeperTrustedAt = initialCoverage?.lastTrustedObservationAt ?? null;
+          const openGaps = coverages.filter((coverage) => coverage.gapStartedAt != null && (coverage === initialCoverage ||
+            keeperTrustedAt == null || keeperTrustedAt <= Math.max(coverage.gapStartedAt, coverage.lastTrustedObservationAt ?? -Infinity)));
+          const nextGapStarted = openGaps.reduce<number | null>((gap, coverage) =>
+            Math.min(gap ?? Infinity, coverage.gapStartedAt!), null);
+          // A trusted off-peg observation always ends a gap, so an open gap reads at-par only when
+          // every row observed at the latest trusted clock (a tie cannot be ordered) and every open
+          // gap are at-par; anything else fails closed to blind.
           const coverage = {
             intervals,
             atParIntervals,
             lastTrustedObservationAt: nextLastTrusted,
             gapStartedAt: nextGapStarted,
-            lastObservationKind: coverages.some((value) => value.gapStartedAt != null && value.lastObservationKind !== "trusted-at-par")
+            lastObservationKind: nextGapStarted != null && [...coverages.filter((value) =>
+              (value.lastTrustedObservationAt ?? null) === nextLastTrusted), ...openGaps].some((value) =>
+              value.lastObservationKind !== "trusted-at-par")
               ? "blind" as const : latest.lastObservationKind,
           };
           const serializedCoverage = serializeDepegPriceCoverage(coverage);
@@ -250,8 +263,9 @@ export function buildDuplicateOpenEventRepair<T extends DepegRow>(
       }
       // Clear an armed candidate only when repair mutates persisted columns (coverage,
       // peak, anchor, or confirmed escalation). In-memory-only hydrated fields
-      // (`incident_started_at`, carry-forward) are enforced directly by `escalation.ts`
-      // so a retained DDR-referenced duplicate cannot wipe an armed candidate every tick.
+      // (`incident_started_at`, carry-forward) are enforced directly by `escalation.ts`, and a
+      // superseded duplicate gap is not re-imported, so a retained DDR-referenced duplicate
+      // cannot wipe an armed candidate every tick.
       const evidenceChanged =
         coverageChanged ||
         peakChanged ||
