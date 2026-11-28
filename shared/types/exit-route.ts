@@ -534,6 +534,8 @@ const ExitRouteObservationBaseSchema = z.object({
   scoreEligible: z.boolean(),
   observedAt: z.number().int().nonnegative(),
   freshnessSeconds: z.number().int().nonnegative(),
+  /** Oldest contributing market mark or reserve block used for freshnessSeconds. */
+  freshnessBasisAt: z.number().int().positive().optional(),
   commonModeKeys: z.array(z.string().min(1)).max(MAX_EXIT_ROUTE_COMMON_MODE_KEYS),
   /** One physical inventory reused across routes; never additive capacity. */
   sharedResourceKey: z.string().trim().min(1).optional(),

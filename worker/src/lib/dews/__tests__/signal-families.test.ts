@@ -168,7 +168,7 @@ describe("DEWS signal family curves", () => {
       liquidityScore7dAgo: 100,
       tvlCurrent: 75,
       tvl7dAgo: 100,
-    }))).toEqual({ value: 0, available: false, componentCoverage: 0, scoreDelta7d: null, tvlDelta7d: null });
+    }))).toEqual({ value: 0, available: false, componentCoverage: 0, scoreDelta7d: null, tvlDelta7d: null, liquidityScore: null });
 
     const result = computeLiquiditySignal(makeDewsInput({
       liquidityScore: 80,

@@ -10,7 +10,7 @@ import { formatV9PresentationUsd as compactUsd } from "@shared/lib/format";
 import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import { resolveV9EffectiveScoringWeight } from "@shared/types/safety-score-v9-public-causes";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
-import { describeExitPayout, describeExitRouteVenue, describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
+import { describeExitCapacity, describeExitConversion, describeExitPayout, describeExitRouteVenue, describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 import { resolveControlComponentRoles } from "@/lib/pillar-evidence-strips";
 import { V9_UNADMITTED_RESERVE_COMPONENT_KEY } from "@/lib/reserve-score-admission";
 import type { ControlComponentRole } from "@shared/lib/classification";
@@ -192,12 +192,9 @@ function costLabel(cost: number | null): string {
 
 function selectedExitCapacityLine(capacity: NonNullable<SafetyScoreV9ExitBreakdown["primaryRoute"]>["capacity"]): string {
   if (!capacity) return describeExitPayout(null);
-  const input = compactUsd(capacity.inputCapacityUsd ?? capacity.executableUsd);
-  const basis = capacity.inputCapacityUsd === undefined ? "credited"
-    : capacity.evidenceKind === "reserve-based-amm-simulation" ? "modeled input" : "input";
   const settlement = capacity.settlementDelaySec === 0 ? "" :
     ` within ${formatWholeUnitDurationSeconds(capacity.settlementDelaySec, { minUnit: "minute" })}`;
-  return `${describeExitPayout(capacity.payoutAssets)} · ${input} of ${compactUsd(capacity.requestedNotionalUsd)} ${basis} · ${costLabel(capacity.maxCostBps)} ceiling${settlement}`;
+  return `${describeExitPayout(capacity.payoutAssets)} · ${describeExitCapacity(capacity, compactUsd)} · ${costLabel(capacity.maxCostBps)} ceiling${settlement}`;
 }
 
 function parseBackingBreakdown(
@@ -300,10 +297,7 @@ function alternativeRouteDetail(
   alternative: SafetyScoreV9ExitBreakdown["alternatives"][number],
 ): string | null {
   if (alternative.conversion) {
-    const { inputCapacityUsd, maxCostBps, evidenceKind } = alternative.conversion;
-    const capacity = inputCapacityUsd === null || maxCostBps === null ? "Conversion size unavailable"
-      : `${fullUsd(inputCapacityUsd)} of input within ${costLabel(maxCostBps)}`;
-    return `${capacity} · ${humanizeSafetyScoreV9Value(evidenceKind)} · Payout retains exposure to the input asset`;
+    return `${describeExitConversion(alternative.conversion, fullUsd)} · ${humanizeSafetyScoreV9Value(alternative.conversion.evidenceKind)} · Payout retains exposure to the input asset`;
   }
   const isRedemption =
     alternative.routeFamily === "issuer-redemption" ||
@@ -318,9 +312,7 @@ function alternativeRouteDetail(
   const parts: string[] = alternative.payoutAssets ? [`Pays ${describeExitPayout(alternative.payoutAssets)}`] : [];
   if (alternative.rawSameNotionalCostBps !== null) parts.push(`${costLabel(alternative.rawSameNotionalCostBps)} raw same-notional cost`);
   if (alternative.capacity) {
-    parts.push(
-      `${fullUsd(alternative.capacity.executableUsd)} of ${fullUsd(alternative.capacity.requestedNotionalUsd)} executable`,
-    );
+    parts.push(describeExitCapacity({ ...alternative.capacity, ...alternative.testedInput }, fullUsd, alternative.included));
   }
   if (redemptionHorizon) parts.push(redemptionHorizon);
   parts.push(`capacity method: ${humanizeSafetyScoreV9Value(alternative.capacityEvidenceTier)}`);
@@ -437,15 +429,12 @@ function parseExitBreakdown(
     const capacity = primaryRoute.capacity;
     const selectedVenue = capacity.protocol ?? primaryRoute.label;
     const cost = capacity.costEvidence === "measured" ? `${costLabel(capacity.executionCostBps)} execution cost / ` : "";
-    const inputLabel = capacity.evidenceKind === "reserve-based-amm-simulation" ? "modeled input" : "input";
     context.push(
       { key: "selected-route-payout", label: "Payout", value: describeExitPayout(capacity.payoutAssets) },
       {
         key: "selected-route-capacity",
         label: "Selected route capacity",
-        value: capacity.inputCapacityUsd === undefined
-          ? `${fullUsd(capacity.executableUsd)} of ${fullUsd(capacity.requestedNotionalUsd)} credited on selected ${selectedVenue} route`
-          : `${fullUsd(capacity.inputCapacityUsd)} of ${fullUsd(capacity.requestedNotionalUsd)} ${inputLabel} on selected ${selectedVenue} route`,
+        value: `${describeExitCapacity(capacity, fullUsd)} on selected ${selectedVenue} route`,
       },
       {
         key: "selected-route-bound",

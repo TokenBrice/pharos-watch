@@ -732,6 +732,20 @@ describe("P4 DEX exit route observations", () => {
     });
     expect(validateExitRouteCapacityCurve(observation.capacityCurve!)).toEqual([]);
 
+    const lite = stableswapPool(200, [5_000_000, 5_000_000]);
+    lite.chain = "monad";
+    lite.poolId = lite.poolId.replace("ethereum:", "monad:");
+    const model = lite.extra!.ammExecutionModel!;
+    if (model.source !== "curve") throw new Error("Expected Curve fixture");
+    model.capture = { blockNumber: 1, blockHash: "0x" + "a".repeat(64), blockTimestamp: T0 - 20, sourceGenerationId: "dex" };
+    for (const token of model.tokens) Object.assign(token, {
+      rawUnitPriceUsd: 1, referencePriceSourceId: "coingecko", referencePriceObservedAt: T0 - 100,
+    });
+    model.tokens[1]!.referencePriceUsd = 1 / 1.05;
+    expect(observe([lite]).observations[0]).toMatchObject({ outputUnitValueUsd: 1, outputUnitValueObservedAt: T0 - 100, freshnessBasisAt: T0 - 100, freshnessSeconds: 100 });
+    model.tokens[0]!.referencePriceObservedAt = T0 - 6_000;
+    expect(observe([lite]).coverage.unsupportedReasons["invalidExecutionModel:invalid-curve-lite-reference"]).toBe(1);
+
     for (const source of ["peg-reference", "source-token-usd"] as const) {
       const derived = observe([stableswapPool(200, [5_000_000, 5_000_000], source)]).observations[0]!;
       expect(derived.outputUnitValueUsd).toBeUndefined();

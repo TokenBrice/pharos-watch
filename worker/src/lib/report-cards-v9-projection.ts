@@ -85,13 +85,13 @@ export function projectKeyedExitBreakdown(card: SafetyScoreV9CurrentCard): Safet
   const exit = card.breakdowns.exit;
   let primaryRoute = exit.primaryRoute;
   if (primaryRoute?.capacity) {
-    const { payoutAssets, inputCapacityUsd, costEvidence, ...capacity } = primaryRoute.capacity;
-    if (payoutAssets !== undefined || inputCapacityUsd !== undefined || costEvidence !== undefined) {
+    const { payoutAssets, inputCapacityUsd, testedNotionalUsd, costEvidence, ...capacity } = primaryRoute.capacity;
+    if (payoutAssets !== undefined || inputCapacityUsd !== undefined || testedNotionalUsd !== undefined || costEvidence !== undefined) {
       primaryRoute = { ...primaryRoute, capacity };
     }
   }
-  const alternatives = exit.alternatives.some((route) => route.payoutAssets !== undefined || route.conversion !== undefined)
-    ? exit.alternatives.map(({ payoutAssets: _payout, conversion: _conversion, ...route }) => route)
+  const alternatives = exit.alternatives.some((route) => route.payoutAssets !== undefined || route.conversion !== undefined || route.testedInput !== undefined)
+    ? exit.alternatives.map(({ payoutAssets: _payout, conversion: _conversion, testedInput: _input, ...route }) => route)
     : exit.alternatives;
   if (primaryRoute === exit.primaryRoute && alternatives === exit.alternatives) return card;
   return { ...card, breakdowns: { ...card.breakdowns, exit: { ...exit, primaryRoute, alternatives } } };

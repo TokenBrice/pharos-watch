@@ -31,7 +31,7 @@ import type { StabilityIndexCurrent } from "@shared/types/stability";
 import type { ChainEnvironmentEvidence, ChainHealthFactors } from "@shared/types/chains";
 import { SAFETY_SCORE_V9_RESPONSIBILITY_LABELS } from "@/lib/safety-score-v9-labels";
 import type { V9EvidenceCause } from "@shared/types/safety-score-v9-causes";
-import { describeExitPayout, describePartialEvidence, formatPartialEvidenceGap, formatPricedUnknown } from "@/lib/safety-score-reason-labels";
+import { describeExitCapacity, describeExitConversion, describeExitPayout, describePartialEvidence, formatPartialEvidenceGap, formatPricedUnknown } from "@/lib/safety-score-reason-labels";
 import { readV9PricedUnknown } from "@/lib/safety-score-v9-consumers";
 
 export interface ShowYourWorkRow {
@@ -192,7 +192,7 @@ export function formatReportCardV9(
       rows.push({ label: "Exit payout", value: describeExitPayout(primaryRoute.capacity?.payoutAssets) });
       if (primaryRoute.capacity) {
         const capacity = primaryRoute.capacity;
-        rows.push({ label: "Exit input capacity / target", value: `${fmtNum(capacity.inputCapacityUsd ?? null, 2)} / ${fmtNum(capacity.requestedNotionalUsd, 2)} USD · ${capacity.evidenceKind}` });
+        rows.push({ label: "Exit capacity", value: `${describeExitCapacity(capacity, fmtUsd)} · ${capacity.evidenceKind}` });
         rows.push({ label: "Exit cost ceiling", value: `${fmtNum(capacity.maxCostBps)} bps` });
       }
       for (const component of primaryRoute.components) {
@@ -236,6 +236,8 @@ export function formatReportCardV9(
           route.score === null ? "Not scored" : fmtNum(route.score, 1),
           route.routeFamily,
           route.included ? "included" : route.exclusionReason ?? "excluded",
+          ...(route.capacity ? [describeExitCapacity({ ...route.capacity, ...route.testedInput }, fmtUsd, route.included)] : []),
+          ...(route.conversion ? [describeExitConversion(route.conversion, fmtUsd)] : []),
         ].join(" · "),
       });
     }

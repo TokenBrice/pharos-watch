@@ -13,7 +13,7 @@ import {
   type V9EvaluatedAsset,
   type V9ProjectedEvaluatedSet,
 } from "@shared/lib/safety-score-v9/evaluate-set";
-import type { V9ExitHolderEligibility } from "@shared/lib/safety-score-v9/exit";
+import { testedExitInput, type V9ExitHolderEligibility } from "@shared/lib/safety-score-v9/exit";
 import { DEX_ROUTE_SOURCE_CAPABILITIES } from "@shared/lib/p4-exit-route-capacity";
 import {
   assertV9ValidatedPolicyEnvelope,
@@ -335,6 +335,7 @@ export function publicDisplayMetadata(
         ? route.capacityCurve.find((point) => point.requestedNotionalUsd === route.request!.requestedNotionalUsd &&
             point.maxCostBps === route.request!.maxCostBps)
         : undefined;
+      const conversionInput = conversionPoint ? testedExitInput(route, conversionPoint) : undefined;
       return [
         route.routeKey,
         {
@@ -344,7 +345,10 @@ export function publicDisplayMetadata(
           }),
           ...(route.retainsInputExposure ? { conversion: {
             evidenceKind: route.evidenceKind,
-            inputCapacityUsd: conversionPoint?.executableUsd ?? null,
+            inputCapacityUsd: conversionInput?.inputCapacityUsd ?? null,
+            requestedNotionalUsd: conversionPoint?.requestedNotionalUsd ?? null,
+            ...(conversionInput && conversionInput.testedNotionalUsd !== conversionPoint?.requestedNotionalUsd
+              ? { testedNotionalUsd: conversionInput.testedNotionalUsd } : {}),
             maxCostBps: conversionPoint?.maxCostBps ?? null,
           } } : {}),
           chain,

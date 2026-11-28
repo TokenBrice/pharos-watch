@@ -67,15 +67,15 @@ vi.mock("@/components/methodology-hint", () => {
   return { MethodologyLabel: childrenOnly, MethodologyHint: childrenOnly, MethodologyTriggerButton: childrenOnly };
 });
 
-function makePools(count: number): DexLiquidityPool[] {
-  return Array.from({ length: count }, (_, index) => ({
+function makePool(index = 0): DexLiquidityPool {
+  return {
     project: index === 0 ? "curve" : `venue-${index}`,
     chain: index % 2 === 0 ? "ethereum" : "arbitrum",
     tvlUsd: 1_000_000 - index * 10_000,
     symbol: `POOL${index}`,
     volumeUsd1d: 25_000,
     poolType: "amm",
-  }));
+  };
 }
 
 function makeHistoryPoint(overrides: Partial<DexLiquidityHistoryPoint> = {}): DexLiquidityHistoryPoint {
@@ -211,9 +211,13 @@ describe("DexLiquidityCard", () => {
     chartReadyMock.mockReturnValue({ ref: vi.fn(), ready: false, width: 0, height: 0 });
   });
 
-  it.each([NaN, Infinity, -Infinity, null, -0.01, 1.01])("renders invalid HHI %s as unscored", (concentrationHhi) => {
+  function renderConcentration(concentrationHhi: number | null) {
     mockCoin({ concentrationHhi, poolCount: 1, totalTvlUsd: 100_000 });
-    const container = renderBreakdown();
+    return renderBreakdown();
+  }
+
+  it.each([NaN, Infinity, -Infinity, null, -0.01, 1.01])("renders invalid HHI %s as unscored", (concentrationHhi) => {
+    const container = renderConcentration(concentrationHhi);
     expectText("Crowding not scored");
     expect(container.textContent).not.toMatch(/Concentration: (Low|Medium|High)/);
   });
@@ -221,8 +225,7 @@ describe("DexLiquidityCard", () => {
   it.each([[0, "Low", "0%"], [0.18, "Medium", "18%"], [0.35, "High", "35%"]] as const)(
     "preserves the rated concentration display for %s",
     (concentrationHhi, label, percent) => {
-      mockCoin({ concentrationHhi, poolCount: 1, totalTvlUsd: 100_000 });
-      renderBreakdown();
+      renderConcentration(concentrationHhi);
       expect(screen.getByText(label).parentElement?.textContent).toBe(`Concentration: ${label}(${percent})`);
     },
   );
@@ -271,11 +274,10 @@ describe("DexLiquidityCard", () => {
   });
 
   it("keeps paused pool inventory visible and labels incomplete effective depth", () => {
-    const [pool] = makePools(1);
     mockCoin({
       poolCount: 3, effectiveTvlUsd: 100_000, totalTvlUsd: 1_000_000,
       effectiveDepth: { coverage: "partial", amountUsd: 100_000, pausedPoolCount: 1, unknownPoolCount: 1 },
-      topPools: [{ ...pool!, project: "fluid", extra: { fluidSwapStatus: {
+      topPools: [{ ...makePool(), project: "fluid", extra: { fluidSwapStatus: {
         status: "paused", reason: "fluid-swaps-paused", checkedAtSec: 1_775_822_400, maxAgeSec: 3600,
         poolAddress: "0x97f32e5091d0e6aee24beb398e6592ae111dee9c",
       } } }],
@@ -329,14 +331,14 @@ describe("DexLiquidityCard", () => {
     const poolTables = () => screen.queryAllByTestId(tableId);
     const trendCharts = () => screen.queryAllByLabelText(chartName, { selector: '[role="figure"]' });
 
-    function renderCard({ poolCount = 6, pools = makePools(6) }: { poolCount?: number; pools?: DexLiquidityPool[] } = {}) {
+    function renderCard(poolCount = 6, pools = Array.from({ length: 6 }, (_, index) => makePool(index))) {
       mockCoin({ poolCount, totalTvlUsd: 1_000_000, topPools: pools });
       mockHistory([measuredPoint(1_000), measuredPoint(1_200, 1_775_779_200)]);
-      return renderCoin();
+      return renderCoin().container;
     }
 
     it("keeps the bounded pool table mounted inside the closed fold without mounting the chart", () => {
-      const { container } = renderCard();
+      const container = renderCard();
       const details = marketBreakdown(container);
 
       expect(details.open).toBe(false);
@@ -350,7 +352,7 @@ describe("DexLiquidityCard", () => {
     });
 
     it("mounts one table and one chart on first open and keeps both after closing", () => {
-      const { container } = renderCard();
+      const container = renderCard();
       toggleMarketBreakdown(container);
       expect(useDexLiquidityHistoryMock).toHaveBeenCalledTimes(1);
       expect(poolTables()).toHaveLength(1);
@@ -363,7 +365,7 @@ describe("DexLiquidityCard", () => {
     });
 
     it("orders the open fold as diagnostics, then the pool table, then the TVL chart", () => {
-      const { container } = renderCard();
+      const container = renderCard();
       toggleMarketBreakdown(container);
 
       const order = marketBreakdown(container).querySelectorAll(`[data-testid="${tableId}"], [role="figure"][aria-label="${chartName}"]`);
@@ -371,30 +373,28 @@ describe("DexLiquidityCard", () => {
     });
 
     it("renders sub-cent pool prices with the same magnitude-based precision as the header", () => {
-      const [pool] = makePools(1);
-      renderCard({ poolCount: 1, pools: [{ ...pool!, price: 0.000061 }] });
+      renderCard(1, [{ ...makePool(), price: 0.000061 }]);
       expect(poolTables()[0]!.textContent).toContain("$0.000061");
       expect(poolTables()[0]!.textContent).not.toContain("$0.0001");
     });
 
     it("states a reviewed LP lock as a pool fact and keeps its proof in the fold", () => {
-      const [pool] = makePools(1);
       const holder = "0xbddab785b306bcd9fb056da189615cc8ece1d823";
       const permanentLiquidity = { lpShare: 0.8901, chain: "ethereum", lpToken: "0x1", holder, proof: "no-call-bytecode", verifiedAtBlock: 1 };
-      const { container } = renderCard({ poolCount: 1, pools: [{ ...pool!, tvlUsd: 4e6, extra: { organicFraction: 1, permanentLiquidity } }] });
+      const container = renderCard(1, [{ ...makePool(), tvlUsd: 4e6, extra: { organicFraction: 1, permanentLiquidity } }]);
       expect(container.textContent).toContain("Permanent liquidity: 89% of the POOL0 pool on Curve, about $3.56M, can never be withdrawn.");
       expect(poolTables()[0]!.textContent).toContain("89% permanent");
       expect(marketBreakdown(container).querySelector(`a[href$="/address/${holder}"]`)?.textContent).toBe("0xbdda...d823");
     });
 
     it("labels five displayed rows from the authoritative pool count rather than the sliced list", () => {
-      const { container } = renderCard({ poolCount: 9 });
+      const container = renderCard(9);
       expect(poolTables()[0]!.querySelectorAll("tbody tr")).toHaveLength(5);
       expect(container.textContent).toContain("Top 5 of 9 pools");
     });
 
     it("renders no pool table or label when no pools were admitted", () => {
-      const { container } = renderCard({ poolCount: 1, pools: [] });
+      const container = renderCard(1, []);
       expect(poolTables()).toHaveLength(0);
       expect(container.textContent).not.toContain("Top pools");
       expect(container.textContent).not.toMatch(/\d+ of \d+ pools/);

@@ -1,3 +1,4 @@
+import { CURVE_LITE_DEPLOYMENTS } from "./dex-deployment-coverage";
 import { admitFluidSwapStatus } from "./fluid-swap-status";
 import { EXIT_ROUTE_SCORING_TABLES } from "./exit-route-scoring";
 import { validateExitRouteCapacityCurve } from "./exit-route-capacity-point";
@@ -322,6 +323,11 @@ export function buildP4DexExitRouteObservations(params: {
         continue;
       }
 
+      const blockTime = ammModel.solidlyState?.blockTimestamp ?? ammModel.capture?.blockTimestamp ?? params.observedAt;
+      // Every normalized reserve enters the Curve invariant, including balances outside the selected pair.
+      const oldestInputTime = ammModel.source === "solidly-v2" ||
+        (ammModel.source === "curve" && CURVE_LITE_DEPLOYMENTS.has(canonicalExitRouteChain(pool.chain)))
+        ? Math.min(blockTime, ...ammModel.tokens.map((token) => token.referencePriceObservedAt!)) : blockTime;
       let emittedForPool = 0;
       for (let outputTokenIndex = 0; outputTokenIndex < ammModel.tokens.length; outputTokenIndex++) {
         if (outputTokenIndex === ammModel.trackedTokenIndex) continue;
@@ -369,10 +375,9 @@ export function buildP4DexExitRouteObservations(params: {
           confidence: capability.confidence,
           scoreEligible: capability.scoreEligible,
           reserveModelId: capability.id,
-          observedAt: state ? state.blockTimestamp! : ammModel.capture?.blockTimestamp ?? params.observedAt,
-          freshnessSeconds: state ? Math.max(0, params.observedAt - Math.min(
-            state.blockTimestamp!, inputToken.referencePriceObservedAt!, outputToken.referencePriceObservedAt!,
-          )) : ammModel.capture ? Math.max(0, params.observedAt - ammModel.capture.blockTimestamp) : 0,
+          observedAt: blockTime,
+          freshnessSeconds: Math.max(0, params.observedAt - oldestInputTime),
+          ...(oldestInputTime < blockTime ? { freshnessBasisAt: oldestInputTime } : {}),
           ...(state ? {
             ammExecutionEvidence: {
               sourceGenerationId: state.sourceGenerationId!, blockNumber: state.blockNumber,

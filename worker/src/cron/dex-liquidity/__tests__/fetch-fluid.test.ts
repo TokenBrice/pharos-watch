@@ -34,7 +34,7 @@ describe("fetchFluidPools", () => {
       { match: "/v2/1/dexes", body: [official, live, duplicate, { ...duplicate, state: live.state }] },
       { match: "api.fluid.instadapp.io", body: [] },
       { match: "poolsPro?project=fluid-dex", body: { data: [alias, { ...alias, pool: "native-alias",
-        pool_old: `ethereum-${tokens[0]}`, poolTokenAddress: tokens[0], underlyingTokens: [tokens[0], `0x${"0".repeat(40)}`] }] } },
+        pool_old: `Ethereum-${tokens[0]}`, poolTokenAddress: tokens[0], underlyingTokens: [tokens[0], `0x${"0".repeat(40)}`] }] } },
     ], { requireMatch: true });
     const { fluidSwapStatuses, pools } = await fetchFluidPools(undefined, new Map());
     expect(pools).toEqual([]);
@@ -42,11 +42,11 @@ describe("fetchFluidPools", () => {
     expect(fluidSwapStatuses?.get("ethereum:defillama:native-alias")?.observation.status).toBe("active");
     const fingerprint = `fp:ethereum:fluid:${tokens.join(":")}`;
     const inventory = [build(`defillama:${uuid}`, fingerprint), build(`defillama:${uuid}`, "wrong"), build(address),
-      build(tokens[0]!), build(tokens[1]!), build("absent")];
+      build(tokens[0]!), build(tokens[1]!), build("absent"), build("defillama:native-alias", `fp:ethereum:fluid:${tokens[0]}:${live.token1Address}`)];
     attachFluidSwapStatuses(new Map([["trusd-tori", { stablecoinId: "trusd-tori", symbol: "trUSD", pools: inventory }]]), fluidSwapStatuses);
     expect(inventory.map((pool) => pool.extra?.fluidSwapStatus?.reason)).toEqual([
       "fluid-swaps-paused", "fluid-pool-identity-unverified", "fluid-swaps-paused", "fluid-swaps-active",
-      "fluid-swap-state-conflicting", "fluid-swap-state-missing",
+      "fluid-swap-state-conflicting", "fluid-swap-state-missing", "fluid-swaps-active",
     ]);
     const ambiguous = new Map(fluidSwapStatuses);
     indexFluidDefiLlamaAliases(ambiguous, { data: [alias, { ...alias, pool: "another-uuid", poolTokenAddress: tokens[1] }] });

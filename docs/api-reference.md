@@ -447,7 +447,7 @@ On `/api/dex-liquidity`, `totalTvlUsd` includes retained pools with paused swaps
 
 In current and historical DEWS signals, optional `signals.liq.liquidityScore`, `liquidityScore7dAgo` and `tvlDelta7dUnavailableReason` explain which weekly comparison contributed. The retained method and timestamps determine comparability.
 
-The site-only `/api/dex-liquidity-coin` detail projection adds `weeklyExitRouteBaselines` for comparable external sales. The historical and current capacities refer to the same pool, payout, request size, cost limit and model. The site-only `/api/report-cards/v9-detail?stablecoin=<id>&payout=assets` carries `payoutAssets`, `inputCapacityUsd` and `costEvidence` in the accepted primary Exit capacity. A diagnostic alternative can carry `conversion` and its own `payoutAssets`. Older publications can lack those fields.
+The site-only `/api/dex-liquidity-coin` detail projection adds `weeklyExitRouteBaselines` for comparable external sales. The historical and current capacities refer to the same pool, payout, request size, cost limit and model. The site-only `/api/report-cards/v9-detail?stablecoin=<id>&payout=assets` carries `payoutAssets` and `costEvidence` in the accepted primary Exit capacity. The score uses the credited `executableUsd` against the requested stress size. When a frozen route proves its sell input, `inputCapacityUsd` and `testedNotionalUsd` give that input and its tested order size. Diagnostic conversions identify their own payout and tested size. Older publications can lack those fields.
 
 ## Reserve Availability
 

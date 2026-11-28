@@ -67,7 +67,7 @@ export interface SignalResult {
   scoreDelta7d?: number | null;
   tvlDelta7d?: number | null;
   tvlDelta7dUnavailableReason?: TvlComparisonUnavailableReason;
-  liquidityScore?: number;
+  liquidityScore?: number | null;
   liquidityScore7dAgo?: number;
   confidence?: string | null;
   spreadBps?: number;

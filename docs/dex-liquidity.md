@@ -22,6 +22,8 @@ The [public changelog](https://pharos.watch/methodology/liquidity-score-changelo
 
 With no usable swaps, concentration has no denominator and is unavailable. If the remaining swap state is unverified, the score and durability are also unavailable. The effective-depth record carries the reason `swap-availability-unverified`. A fully confirmed pause has zero usable depth.
 
+Monad Curve Lite uses separately verified factory and plain implementation code, on-chain pool registration, type and decimals. A partial Curve REST valuation cannot replace the independently measured inventory total. Source and scoring recheck all independent USD marks. Execution math uses rate-normalized reserve units and the payout receipt reports USD per original token.
+
 Use original observations for DEX price age and for comparable TVL trend endpoints. Pool and coin inventory remains gross. Aggregate TVL deducts reviewed Curve LP overlap consistently across protocol, chain and coverage breakdowns. Complete PancakeSwap hourly windows and verified Curve NG state gate their score-facing evidence. Stellar's peg estimate can describe its valuation state and provides no traded corroboration.
 
 Fluid swap availability applies across source providers. A paused pool retains its gross reserves and observed historical volume. Its usable depth is zero. Missing or ambiguous status leaves depth unverified. Physical identity and a fresh status observation are required before a reopened pool contributes again. The detail page distinguishes incomplete effective depth from confirmed zero and states how much gross TVL has measured balances.

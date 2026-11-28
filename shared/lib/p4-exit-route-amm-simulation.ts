@@ -10,10 +10,12 @@ import type {
 } from "../types/exit-route";
 import {
   canonicalExitRouteAssetKey,
+  canonicalExitRouteChain,
   canonicalExitRouteScopedId,
 } from "../types/exit-route-identity";
 import { buildCapacityPoint } from "./p4-exit-route-capability-policy";
 import { quoteSolidlyV2Raw, solidlyUsdToRawAmount } from "./solidly-v2-math";
+import { CURVE_LITE_DEPLOYMENTS } from "./dex-deployment-coverage";
 import { SOLIDLY_V2_DEPLOYMENTS } from "./solidly-v2-deployments";
 import { DEX_MEASURED_FRESHNESS_MAX_SEC } from "../types/measured-execution";
 import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "./depeg-config";
@@ -70,16 +72,25 @@ export function validateAmmExecutionModel(
       issues.push("stale-exact-capture");
     }
   }
+  const lite = model.source === "curve" && CURVE_LITE_DEPLOYMENTS.has(canonicalExitRouteChain(context.chain));
+  if (lite || model.source === "solidly-v2") {
+    const blockTime = lite ? model.capture?.blockTimestamp : model.solidlyState?.blockTimestamp;
+    const now = context.nowSec;
+    const marksCurrent = blockTime != null && now != null && Number.isSafeInteger(now) && model.tokens.every((token) => {
+      const at = token.referencePriceObservedAt;
+      return token.referencePriceSourceId && at != null && Number.isSafeInteger(at) && at > 0 &&
+        at <= now && at <= blockTime + 60 && now - at <= DEPEG_PRIMARY_PRICE_MAX_AGE_SEC;
+    });
+    const rawMarksValid = !lite || model.tokens.every(({ referencePriceSource, rawUnitPriceUsd }) =>
+      referencePriceSource === "tracked-market" && rawUnitPriceUsd != null && rawUnitPriceUsd > 0 && Number.isFinite(rawUnitPriceUsd));
+    if (!marksCurrent || !rawMarksValid) issues.push(lite ? "invalid-curve-lite-reference" : "invalid-solidly-freshness");
+  }
   if (model.source === "solidly-v2") {
     const state = model.solidlyState;
     const deployment = SOLIDLY_V2_DEPLOYMENTS.find((row) => row.chain === context.chain && row.variant === state?.variant);
     if (!deployment || state?.factoryAddress.toLowerCase() !== deployment.factoryAddress) issues.push("invalid-solidly-deployment");
     if (!state?.blockTimestamp || !state.sourceGenerationId || !Number.isSafeInteger(context.nowSec) ||
-      state.blockTimestamp > context.nowSec! + 60 || context.nowSec! - state.blockTimestamp > DEX_MEASURED_FRESHNESS_MAX_SEC ||
-      model.tokens.some((token) => !token.referencePriceSourceId || !Number.isSafeInteger(token.referencePriceObservedAt) ||
-        token.referencePriceObservedAt! <= 0 || token.referencePriceObservedAt! > context.nowSec! ||
-        token.referencePriceObservedAt! > state.blockTimestamp! + 60 ||
-        context.nowSec! - token.referencePriceObservedAt! > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC)) {
+      state.blockTimestamp > context.nowSec! + 60 || context.nowSec! - state.blockTimestamp > DEX_MEASURED_FRESHNESS_MAX_SEC) {
       issues.push("invalid-solidly-freshness");
     }
     const chain = state?.variant === "aerodrome" ? "base" : "optimism";
@@ -441,7 +452,7 @@ export function outputFromAmmToken(
 }
 
 export function trackedExactAmmOutputValuationFields(
-  token: Pick<DexAmmExecutionToken, "trackedAssetId" | "referencePriceUsd" | "referencePriceSource">,
+  token: Pick<DexAmmExecutionToken, "trackedAssetId" | "referencePriceUsd" | "referencePriceSource" | "rawUnitPriceUsd">,
   sourceId: string,
   observedAt: number,
 ): Partial<
@@ -457,7 +468,7 @@ export function trackedExactAmmOutputValuationFields(
     return {};
   }
   return {
-    outputUnitValueUsd: token.referencePriceUsd,
+    outputUnitValueUsd: token.rawUnitPriceUsd ?? token.referencePriceUsd,
     outputUnitValueSourceId: sourceId,
     outputUnitValueObservedAt: observedAt,
   };

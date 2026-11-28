@@ -57,7 +57,7 @@ export function indexFluidDefiLlamaAliases(index: FluidSwapStatusIndex, payload:
     uuids.add(row.pool);
     const oldId = typeof row.pool_old === "string" ? row.pool_old.split("-") : [];
     const address = addressOf(oldId[1]);
-    if (oldId.length !== 2 || oldId[0] !== chain || !address) continue;
+    if (oldId.length !== 2 || canonicalExitRouteChain(oldId[0]!) !== chain || !address) continue;
     const physicalKey = canonicalExitRouteAssetKey(chain, address);
     if (physicalKeys.has(physicalKey)) ambiguous.add(physicalKey);
     physicalKeys.add(physicalKey);
@@ -82,8 +82,11 @@ export function attachFluidSwapStatuses(metrics: ReadonlyMap<string, SourcePoolG
       if (pool.project !== "fluid") continue;
       const alias = pool.poolId.includes(":defillama:");
       const entry = index?.get(pool.poolId);
-      const verified = entry && (!alias || (entry.fingerprint &&
-        entry.fingerprint === pool.candidateFingerprint?.replaceAll(FLUID_NATIVE_TOKEN, LLAMA_NATIVE_TOKEN)));
+      const chain = canonicalExitRouteChain(pool.chain);
+      const prefix = `fp:${chain}:fluid:`;
+      const fingerprint = pool.candidateFingerprint;
+      const verified = entry && (!alias || (entry.fingerprint && fingerprint?.startsWith(prefix) &&
+        entry.fingerprint === tokenFingerprint(chain, fingerprint.slice(prefix.length).split(":"))));
       pool.extra ??= {};
       pool.extra.fluidSwapStatus = verified ? entry.observation
         : unknownFluidSwapStatus(alias ? "fluid-pool-identity-unverified" : "fluid-swap-state-missing");

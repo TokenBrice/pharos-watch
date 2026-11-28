@@ -181,7 +181,7 @@ The server renders the preview into the first HTML flush, outside any Suspense b
 
 ## API
 
-The site detail requests `payout=assets` to include structured primary payout, input capacity, modeled cost and diagnostic conversion evidence. Older detail clients and the keyed full representation receive their original nested wire shape.
+The site detail requests `payout=assets` to include structured primary payout, input capacity, modeled cost and diagnostic conversion evidence. The detail shows scored credit against the stress target and, when proved, sell input against its tested size. Physical delivery can establish credited value without establishing sell input. Older detail clients and the keyed full representation receive their original nested wire shape.
 
 `GET /api/report-cards/v9` is the full live Safety Score API. `GET /api/dependency-graph/v1` exposes a free, no-key graph projection of the same accepted publication, not another scoring authority.
 

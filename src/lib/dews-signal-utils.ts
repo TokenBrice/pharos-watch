@@ -16,6 +16,7 @@ const TVL_COMPARISON_REASON: Record<TvlComparisonUnavailableReason, string> = {
 
 export function describeLiquidityErosionInputs(signal: StressSignalEntry["signals"][string]): string {
   const { componentCoverage, scoreDelta7d, tvlDelta7d, liquidityScore, liquidityScore7dAgo } = signal;
+  if (!signal.available && liquidityScore === null) return "current DEX liquidity score unavailable · 0 of 2 inputs";
   const delta = (value: unknown) => formatSignedPercent(typeof value === "number" ? value : null, 1, "unavailable");
   const scores = typeof liquidityScore === "number" && typeof liquidityScore7dAgo === "number"
     ? ` (${liquidityScore7dAgo} → ${liquidityScore})` : "";

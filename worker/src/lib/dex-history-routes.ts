@@ -4,8 +4,10 @@ import {
 } from "@shared/types/exit-route";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import { WEEK_SECONDS } from "@shared/lib/time-constants";
+import { DAY_SECONDS, WEEK_SECONDS } from "@shared/lib/time-constants";
 import { DEX_MEASURED_FRESHNESS_MAX_SEC } from "@shared/types/measured-execution";
+import { isDexExitPayoutConversion } from "@shared/lib/exit-route-output";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { normalizeDexLiquidityEvidence } from "./dex-liquidity";
 import { safeJsonParse } from "./api-cache-read";
 import type { DexHistoryRow, NormalizedDexScoreDetails } from "./dex-liquidity-response";
@@ -43,10 +45,25 @@ function historicalModelIdentity(route: DexExitRouteObservation, version: string
   return null;
 }
 
-function comparisonKey(route: DexExitRouteObservation, version: string, matrix: string, utcDay: number) {
+// The generation clock dates the run start. A quote can be captured during the
+// run or just before midnight and be evaluated in the following daily snapshot.
+function inPublicationWindow(route: DexExitRouteObservation, day: number, from: number, until: number) {
+  const evidence = route.ammExecutionEvidence;
+  const earliestCapture = evidence
+    ? Math.min(route.observedAt, evidence.inputReference.observedAt, evidence.outputReference.observedAt)
+    : route.observedAt;
+  const oldest = route.freshnessBasisAt ?? earliestCapture;
+  const newest = evidence
+    ? Math.max(route.observedAt, evidence.inputReference.observedAt, evidence.outputReference.observedAt)
+    : route.observedAt;
+  const evaluatedAt = oldest + route.freshnessSeconds;
+  return route.freshnessSeconds <= DEX_MEASURED_FRESHNESS_MAX_SEC && oldest >= from && oldest <= earliestCapture &&
+    evaluatedAt >= newest && evaluatedAt <= until && bucketUnixSecondsToUtcDay(evaluatedAt) === day;
+}
+
+function comparisonKey(route: DexExitRouteObservation, version: string, matrix: string) {
   if (!route.scoreEligible || route.scope.kind !== "chain-contract" || route.output.kind !== "tracked-stablecoin" ||
-      route.output.assetKeys?.length !== 1 || route.output.trackedAssetIds?.length !== 1 ||
-      route.freshnessSeconds > DEX_MEASURED_FRESHNESS_MAX_SEC || bucketUnixSecondsToUtcDay(route.observedAt) !== utcDay) {
+      route.output.assetKeys?.length !== 1 || route.output.trackedAssetIds?.length !== 1) {
     return null;
   }
   const modelId = historicalModelIdentity(route, version, matrix);
@@ -69,12 +86,13 @@ function consistentCoverage(routes: readonly DexExitRouteObservation[], coverage
 }
 
 export function comparableWeeklyExitBaselines(
-  current: NormalizedDexScoreDetails, currentVersion: string | null, currentUpdatedAt: number,
+  assetId: string, current: NormalizedDexScoreDetails, currentVersion: string | null, currentUpdatedAt: number,
   history: DexHistoryRow | undefined,
 ) {
+  const now = Math.floor(Date.now() / 1000);
   const currentRoutes = current.exitRouteObservations;
   const previousVersion = history?.methodology_version;
-  if (!currentVersion || !previousVersion || !history?.exit_route_summary_json ||
+  if (currentUpdatedAt > now || !currentVersion || !previousVersion || !history?.exit_route_summary_json ||
       !currentRoutes || !consistentCoverage(currentRoutes, current.exitRouteObservationCoverage) ||
       history.snapshot_date !== bucketUnixSecondsToUtcDay(currentUpdatedAt) - WEEK_SECONDS) return null;
   try {
@@ -89,12 +107,17 @@ export function comparableWeeklyExitBaselines(
 
   const baselineByKey = new Map<string, DexExitRouteObservation>();
   for (const prior of previous) {
-    const key = comparisonKey(prior, previousVersion, matrix, history.snapshot_date);
+    const day = history.snapshot_date;
+    if (!inPublicationWindow(prior, day, day - DEX_MEASURED_FRESHNESS_MAX_SEC, day + DAY_SECONDS - 1)) continue;
+    const key = comparisonKey(prior, previousVersion, matrix);
     if (key) baselineByKey.set(key, prior);
   }
   const currentDay = bucketUnixSecondsToUtcDay(currentUpdatedAt);
+  const until = Math.min(now, currentUpdatedAt + DEX_MEASURED_FRESHNESS_MAX_SEC);
   return currentRoutes.flatMap((route) => {
-    const key = comparisonKey(route, currentVersion, matrix, currentDay);
+    if (isDexExitPayoutConversion(assetId, route.output.trackedAssetIds ?? [], ACTIVE_META_BY_ID) ||
+        !inPublicationWindow(route, currentDay, currentUpdatedAt - DEX_MEASURED_FRESHNESS_MAX_SEC, until)) return [];
+    const key = comparisonKey(route, currentVersion, matrix);
     const prior = key && baselineByKey.get(key);
     return prior ? [{ routeId: route.routeId, observedAt: prior.observedAt, executableUsd: prior.executableUsd }] : [];
   });

@@ -675,12 +675,12 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     expect(exit.alternatives).toContainEqual(expect.objectContaining({
       routeId: observation.routeId, label: expect.stringContaining("Conversion to strUSD"), score: null, included: false, capacity: null,
       payoutAssets: [{ key: "strusd-tori", symbol: "strUSD" }],
-      conversion: { evidenceKind: observation.evidenceKind, inputCapacityUsd: 80_000, maxCostBps: 200 },
+      conversion: { evidenceKind: observation.evidenceKind, requestedNotionalUsd: 100_000, inputCapacityUsd: 80_000, maxCostBps: 200 },
     }));
     const reverse = new Map([["alpha", { variantKind: "savings-passthrough", variantOf: "strusd-tori" }]]);
     const selected = project(reverse).breakdowns!.exit.primaryRoute;
     expect(selected).toMatchObject({ routeId: observation.routeId, capacity: {
-      payoutAssets: [{ key: "strusd-tori", symbol: "strUSD" }], inputCapacityUsd: 400_000, maxCostBps: 200,
+      payoutAssets: [{ key: "strusd-tori", symbol: "strUSD" }], inputCapacityUsd: 400_000, testedNotionalUsd: 1_000_000, maxCostBps: 200,
     } });
     observation.output = { kind: "unknown" };
     const unresolved = project(registry);

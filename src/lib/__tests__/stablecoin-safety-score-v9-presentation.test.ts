@@ -248,7 +248,7 @@ describe("stablecoin V9 safety presentation", () => {
         maxCostBps: 200,
         executionCostBps: 74,
         payoutAssets: [{ key: "frxusd-frax", symbol: "frxUSD" }],
-        inputCapacityUsd: 1_010,
+        inputCapacityUsd: 1_010, testedNotionalUsd: 100_000,
         costEvidence: "measured",
         settlementDelaySec: 600,
         capacityScoringHorizon: "immediate",
@@ -310,6 +310,12 @@ describe("stablecoin V9 safety presentation", () => {
         redundancyCredit: null,
       }],
     });
+    const alternative = card.breakdowns.exit.alternatives[0]!;
+    Object.assign(alternative, { included: false, score: null, capacity: null, conversion: {
+      evidenceKind: "reserve-based-amm-simulation", inputCapacityUsd: 80_000, requestedNotionalUsd: 100_000, maxCostBps: 200,
+    } });
+    const conversion = buildStablecoinSafetyScoreV9Presentation(SafetyScoreV9CurrentCardSchema.parse(card)).pillars[1].breakdown!.alternatives[0]!;
+    expect(conversion.detail).toContain("$80,000 of $100,000 tested");
     // Exit keeps one unlabelled group in producer order.
     expect(presentation.pillars[1].breakdown?.groups).toHaveLength(1);
     expect(presentation.pillars[1].breakdown?.groups[0].label).toBeNull();
@@ -326,7 +332,7 @@ describe("stablecoin V9 safety presentation", () => {
       {
         key: "selected-route-capacity",
         label: "Selected route capacity",
-        value: "$1,010 of $25,000,000 input on selected SunSwap route",
+        value: "Input $1,010 of $100,000 tested · $1,000 of $25,000,000 credited on selected SunSwap route",
       },
       {
         key: "selected-route-bound",

@@ -61,6 +61,7 @@ import { requirePoolIdentity } from "./process-pool-admission-identity";
 import { ExpectedPoolInputError, POOL_REJECTION_POOL_ID_LIMIT, type PoolProcessingRejection } from "./process-pool-types";
 import { attachReviewedQuoterV2SourcePoolIdentities } from "./pool-identity";
 
+import { curveApiCoinBalance, curveApiTotalBalance } from "./curve-api-balances";
 import { parseStrictFiniteDecimal } from "./direct-api-json";
 import { DEX_CURVE_FETCH_CONCURRENCY } from "@shared/lib/cron-jobs";
 const PRIMARY_SOURCE_JSON_TIMEOUT_MS = 30_000;
@@ -580,20 +581,9 @@ export async function buildCurveLookups(
         const A = parseInt(pool.amplificationCoefficient, 10);
         if (isNaN(A)) continue;
 
-        const coinBalances = pool.coins.map((coin) => {
-          const raw = parseStrictFiniteDecimal(coin.poolBalance);
-          const decimals = parseStrictFiniteDecimal(coin.decimals);
-          const usdBalance =
-            raw != null && raw >= 0 &&
-            decimals != null && Number.isInteger(decimals) && decimals >= 0 && decimals <= 255 &&
-            Number.isFinite(coin.usdPrice) && coin.usdPrice > 0
-              ? (raw / 10 ** decimals) * coin.usdPrice
-              : null;
-          return { coin, raw, decimals, usdBalance };
-        });
-
-        // A failed leg is unavailable, not an observed empty reserve.
-        const totalUsd = coinBalances.reduce((sum, { usdBalance }) => sum + (usdBalance ?? Number.NaN), 0);
+        const lite = CURVE_LITE_DEPLOYMENTS.has(chain);
+        const coinBalances = pool.coins.map(curveApiCoinBalance);
+        const totalUsd = curveApiTotalBalance(coinBalances);
         const balanceComplete = Number.isFinite(totalUsd);
         let balanceRatio: number | null = null;
         if (balanceComplete) {
@@ -635,7 +625,7 @@ export async function buildCurveLookups(
           .join("-");
         const tokenPrices: Record<string, number> = {};
         for (const c of pool.coins) {
-          if (Number.isFinite(c.usdPrice) && c.usdPrice > 0) {
+          if (!lite && Number.isFinite(c.usdPrice) && c.usdPrice > 0) {
             tokenPrices[normalizeDexSymbol(c.symbol)] = c.usdPrice;
           }
         }
@@ -713,7 +703,7 @@ export async function buildCurveLookups(
           pool.coins.length <= 8 &&
           executionCoins.every((coin) => coin !== null);
 
-        const liteNgCoins = !executionComplete && CURVE_LITE_DEPLOYMENTS.has(chain) && !pool.isMetaPool &&
+        const liteNgCoins = !executionComplete && lite && !pool.isMetaPool &&
           pool.registryId === "factory-stable-ng" && coinBalances.every(({ coin, decimals }) =>
             !coin.isBasePoolLpToken && decimals != null && Number.isInteger(decimals) && decimals >= 0 && decimals <= 36)
           ? coinBalances.map(({ coin, decimals }) => ({ address: coin.address, symbol: coin.symbol, decimals: decimals! }))
@@ -823,7 +813,8 @@ export async function buildCurveLookups(
 
         // Extract per-token price observations for DEX cross-validation
         // Filter: pool TVL >= $50K, balance ratio >= 0.3, coin has valid usdPrice
-        if (pool.usdTotal >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && balanceRatio != null && balanceRatio >= 0.3) {
+        // API Core can infer its USD prices from this same pool, without an observation clock.
+        if (!lite && pool.usdTotal >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && balanceRatio != null && balanceRatio >= 0.3) {
           const identity = buildPoolIdentity({
             chain,
             protocol: "curve",

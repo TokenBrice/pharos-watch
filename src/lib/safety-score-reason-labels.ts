@@ -31,6 +31,27 @@ export function describeExitPayout(assets: SafetyScoreExitPayoutAssets | null | 
   return assets?.map((asset) => asset.symbol ?? asset.key.replace(/^fiat:/, "")).join(" + ") ?? "Payout unavailable";
 }
 
+export function describeExitCapacity(
+  capacity: { executableUsd: number; requestedNotionalUsd: number; inputCapacityUsd?: number; testedNotionalUsd?: number; evidenceKind?: string },
+  usd: (value: number) => string,
+  included = true,
+): string {
+  const credit = `${usd(capacity.executableUsd)} of ${usd(capacity.requestedNotionalUsd)} ${included ? "credited" : "valued capacity (excluded)"}`;
+  if (capacity.inputCapacityUsd === undefined || capacity.testedNotionalUsd === undefined) return credit;
+  const basis = capacity.evidenceKind === "reserve-based-amm-simulation" ? "Modeled input" : "Input";
+  return `${basis} ${usd(capacity.inputCapacityUsd)} of ${usd(capacity.testedNotionalUsd)} tested · ${credit}`;
+}
+
+export function describeExitConversion(
+  conversion: { inputCapacityUsd: number | null; requestedNotionalUsd?: number | null; testedNotionalUsd?: number; maxCostBps: number | null },
+  usd: (value: number) => string,
+): string {
+  const tested = conversion.testedNotionalUsd ?? conversion.requestedNotionalUsd;
+  if (conversion.inputCapacityUsd === null || tested == null) return "Conversion input test unavailable";
+  const ceiling = conversion.maxCostBps === null ? "" : ` · ${conversion.maxCostBps} bps ceiling`;
+  return `Conversion input ${usd(conversion.inputCapacityUsd)} of ${usd(tested)} tested${ceiling}`;
+}
+
 /**
  * Reader label for a scored exit route. DEX routes arrive labelled with
  * internal ordinals ("Ethereum AMM 10"); the capacity record names the venue,

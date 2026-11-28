@@ -13,7 +13,7 @@ import {
   WORKER_ACTIVE_META_BY_ID,
   WORKER_TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { encodeFunctionData, parseAbi } from "viem/utils";
+import { encodeFunctionData, keccak256, parseAbi } from "viem/utils";
 
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -27,6 +27,7 @@ import {
 import {
   fetchEvmBlockHeader,
   fetchEvmBlockNumber,
+  fetchEvmCodeStatusAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
@@ -36,6 +37,7 @@ import {
   curveAmplificationFromContract,
   curveConservativeFeeRate,
   decodeEvmCaptureAddress,
+  decodeEvmCaptureBool,
   decodeEvmCaptureUint256,
   decodeEvmCaptureUint256Array,
   mapEvmCaptureResults,
@@ -376,6 +378,7 @@ const CURVE_STABLESWAP_NG_ABI = parseAbi([
 const CURVE_LITE_FACTORY_ABI = parseAbi([
   "function get_implementation_address(address) view returns (address)",
   "function get_decimals(address) view returns (uint256[])",
+  "function is_meta(address) view returns (bool)",
 ]);
 const MAX_PROBES_PER_MULTICALL = 4;
 
@@ -383,12 +386,16 @@ interface CurveStableswapRateDependencies {
   fetchBlockNumber: typeof fetchEvmBlockNumber;
   fetchBlockHeader: typeof fetchEvmBlockHeader;
   fetchMulticall: typeof fetchEvmMulticall3Aggregate3AtBlock;
+  fetchCode: typeof fetchEvmCodeStatusAtBlock;
+  hashCode: typeof keccak256;
 }
 
 const DEFAULT_DEPENDENCIES: CurveStableswapRateDependencies = {
   fetchBlockNumber: fetchEvmBlockNumber,
   fetchBlockHeader: fetchEvmBlockHeader,
   fetchMulticall: fetchEvmMulticall3Aggregate3AtBlock,
+  fetchCode: fetchEvmCodeStatusAtBlock,
+  hashCode: keccak256,
 };
 
 interface CandidateReference {
@@ -457,6 +464,20 @@ function parsePoolState(input: {
   const fee = decodeEvmCaptureUint256(input.results.get(`${prefix}-fee`));
   const offpegFeeMultiplier = decodeEvmCaptureUint256(input.results.get(`${prefix}-offpeg-fee-multiplier`));
   const expectedCoins = input.probe.candidate.coins;
+  const deployment = CURVE_LITE_DEPLOYMENTS.get(input.chain);
+  if (deployment) {
+    const implementation = decodeEvmCaptureAddress(input.chain, input.results.get(`${prefix}-implementation`));
+    const decimals = decodeEvmCaptureUint256Array(input.results.get(`${prefix}-decimals`));
+    if (!implementation) return "incomplete-exact-capture";
+    if (implementation !== deployment.plainImplementation) return "deployment-code-mismatch";
+    const isMeta = decodeEvmCaptureBool(input.results.get(`${prefix}-meta`));
+    if (isMeta == null || !decimals) return "incomplete-exact-capture";
+    if (isMeta) return "metapool-unsupported";
+    if (decimals.length !== expectedCoins.length || decimals.some((value, i) => Number(value) !== expectedCoins[i]!.decimals)) {
+      return "ambiguous-token-identity";
+    }
+  }
+
   if (
     !balances ||
     !rates ||
@@ -470,17 +491,6 @@ function parsePoolState(input: {
     rates.some((rate) => rate <= 0n)
   ) {
     return "incomplete-exact-capture";
-  }
-
-  const deployment = CURVE_LITE_DEPLOYMENTS.get(input.chain);
-  if (deployment) {
-    const implementation = decodeEvmCaptureAddress(input.chain, input.results.get(`${prefix}-implementation`));
-    const decimals = decodeEvmCaptureUint256Array(input.results.get(`${prefix}-decimals`));
-    if (!implementation || !decimals) return "incomplete-exact-capture";
-    if (implementation !== deployment.plainImplementation) return "deployment-code-mismatch";
-    if (decimals.length !== expectedCoins.length || decimals.some((value, i) => Number(value) !== expectedCoins[i]!.decimals)) {
-      return "ambiguous-token-identity";
-    }
   }
 
   const coinAddresses: `0x${string}`[] = [];
@@ -559,6 +569,7 @@ function buildRateAwareExecutionModel(input: {
       balance: scaledBalance,
       referencePriceUsd: scaledReferencePrice,
       ...(mark ? {
+        rawUnitPriceUsd: mark.priceUsd,
         referencePriceSource: "tracked-market" as const,
         referencePriceSourceId: mark.source,
         referencePriceObservedAt: mark.observedAtSec,
@@ -624,6 +635,9 @@ function buildPoolCalls(chain: string, probes: readonly CurveRateProbe[], offset
       ...(deployment ? [
         { label: `${prefix}-implementation`, target: deployment.factory, callData: encodeFunctionData({
           abi: CURVE_LITE_FACTORY_ABI, functionName: "get_implementation_address", args: [probe.candidate.poolAddress],
+        }) },
+        { label: `${prefix}-meta`, target: deployment.factory, callData: encodeFunctionData({
+          abi: CURVE_LITE_FACTORY_ABI, functionName: "is_meta", args: [probe.candidate.poolAddress],
         }) },
         { label: `${prefix}-decimals`, target: deployment.factory, callData: encodeFunctionData({
           abi: CURVE_LITE_FACTORY_ABI, functionName: "get_decimals", args: [probe.candidate.poolAddress],
@@ -706,7 +720,22 @@ async function enrichChain(input: {
     nowSec: captureNowSec,
     maxAgeSec: CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC,
     freshnessFailureReason: "stale-observation",
-    verifyDeployment: async () => ({ ok: true }),
+    verifyDeployment: async ({ blockNumber, rpcOptions }) => {
+      const deployment = CURVE_LITE_DEPLOYMENTS.get(input.chain);
+      if (deployment) {
+        for (const [address, expectedHash] of [
+          [deployment.factory, deployment.factoryCodeHash],
+          [deployment.plainImplementation, deployment.implementationCodeHash],
+        ] as const) {
+          const code = await input.dependencies.fetchCode(input.chain, address, blockNumber, rpcOptions);
+          if (code.status === "unavailable") return { ok: false, reason: "transport-unavailable" };
+          if (code.status === "absent" || input.dependencies.hashCode(code.code) !== expectedHash) {
+            return { ok: false, reason: "deployment-code-mismatch" };
+          }
+        }
+      }
+      return { ok: true };
+    },
     buildCalls: async ({ blockNumber, header, rpcOptions: captureRpcOptions }) => {
       const states = new Map<CurveRateProbe, CurveRatePoolState | DexExecutionCapabilityGate["reason"]>();
       for (let start = 0; start < input.probes.length; start += MAX_PROBES_PER_MULTICALL) {

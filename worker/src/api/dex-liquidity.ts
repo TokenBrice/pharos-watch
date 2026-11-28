@@ -267,7 +267,7 @@ export const handleDexLiquidity = async (
     const volume7d = readStoredDexVolumeWindow(row.total_volume_7d_usd, volumeRecord, "7d", totalVolume7dMeasured);
 
     const weeklyExitRouteBaselines = stablecoinId && evidence && scoreDetails.exitRouteObservations?.length
-      ? comparableWeeklyExitBaselines(scoreDetails, row.methodology_version, row.updated_at,
+      ? comparableWeeklyExitBaselines(stablecoinId, scoreDetails, row.methodology_version, row.updated_at,
           history.find((point) => point.snapshot_date === bucketUnixSecondsToUtcDay(row.updated_at) - WEEK_SECONDS))
       : [];
     map[id] = {

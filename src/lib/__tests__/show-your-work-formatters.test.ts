@@ -12,6 +12,7 @@ import {
   formatRedemption,
   formatReportCardV9,
 } from "@/lib/show-your-work-formatters";
+import type { SafetyScoreV9ExitBreakdown } from "@shared/types/safety-score-v9-public-breakdowns";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 
 describe("show-your-work formatters", () => {
@@ -48,6 +49,16 @@ describe("show-your-work formatters", () => {
   });
 
   it("formats exact V9 component breakdowns with native weight and binding semantics", () => {
+    type Component = NonNullable<SafetyScoreV9ExitBreakdown["primaryRoute"]>["components"][number];
+    const component = (key: Component["key"], label: string, score: number, weight: number): Component => ({
+      key, label, score, weight, effectiveScoringWeight: weight, weightedContribution: score * weight,
+      cause: null, causeGapRefs: [], scoringDisposition: "included",
+    });
+    const components = [
+      component("access", "Access", 80, 0.2), component("settlement", "Settlement", 80, 0.15),
+      component("executionCertainty", "Execution certainty", 80, 0.15), component("capacity", "Capacity", 96, 0.25),
+      component("outputAssetQuality", "Output asset quality", 80, 0.15), component("cost", "Cost", 80, 0.1),
+    ];
     const card = makeV9Card({
       breakdowns: {
         backing: { evaluatedScore: 83, publishedScore: 88, aggregationWeight: 0.4, aggregationDisposition: 'included' as const, causeGapRefs: [], limitedEvidenceCauses: [], adjustments: [{
@@ -69,21 +80,10 @@ describe("show-your-work formatters", () => {
           maxCostBps: 100,
           comparisonWindowSec: 86_400,
         },
-        primaryRoute: { key: "route:dex", routeId: "dex", lane: "dex", label: "Primary DEX route", routeFamily: "dex-amm", score: 84, components: [
-          { key: "access", label: "Access", score: 80, weight: 0.2, effectiveScoringWeight: 0.2, weightedContribution: 16, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-          { key: "settlement", label: "Settlement", score: 80, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 12, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-          { key: "executionCertainty", label: "Execution certainty", score: 80, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 12, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-          { key: "capacity", label: "Capacity", score: 96, weight: 0.25, effectiveScoringWeight: 0.25, weightedContribution: 24, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-          { key: "outputAssetQuality", label: "Output asset quality", score: 80, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 12, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-          { key: "cost", label: "Cost", score: 80, weight: 0.1, effectiveScoringWeight: 0.1, weightedContribution: 8, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-        ], confidenceFactor: 1, confidenceDimensions: { observation: {factor: 1, cause: null, causeGapRefs: []}, model: {factor: 1, cause: null, causeGapRefs: []}, capacityMethod: {factor: 1, cause: null, causeGapRefs: []} }, capacityEvidenceTier: 'live-direct' as const, rawSameNotionalCostBps: null, supportedComponentCeiling: [
-          { key: "access", label: "Access", score: 80, weight: 0.2, effectiveScoringWeight: 0.2, weightedContribution: 16, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-          { key: "settlement", label: "Settlement", score: 80, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 12, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-          { key: "executionCertainty", label: "Execution certainty", score: 80, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 12, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-          { key: "capacity", label: "Capacity", score: 96, weight: 0.25, effectiveScoringWeight: 0.25, weightedContribution: 24, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-          { key: "outputAssetQuality", label: "Output asset quality", score: 80, weight: 0.15, effectiveScoringWeight: 0.15, weightedContribution: 12, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-          { key: "cost", label: "Cost", score: 80, weight: 0.1, effectiveScoringWeight: 0.1, weightedContribution: 8, cause: null, causeGapRefs: [], scoringDisposition: 'included' as const },
-        ].reduce((sum, component) => sum + component.weightedContribution, 0),
+        primaryRoute: { key: "route:dex", routeId: "dex", lane: "dex", label: "Primary DEX route", routeFamily: "dex-amm", score: 84, components, confidenceFactor: 1, confidenceDimensions: { observation: {factor: 1, cause: null, causeGapRefs: []}, model: {factor: 1, cause: null, causeGapRefs: []}, capacityMethod: {factor: 1, cause: null, causeGapRefs: []} }, capacityEvidenceTier: 'live-direct' as const, rawSameNotionalCostBps: null, supportedComponentCeiling: components.reduce((sum, component) => sum + component.weightedContribution, 0),
+        capacity: { executableUsd: 80_000, requestedNotionalUsd: 1_000_000, completionRatio: 0.08, maxCostBps: 200, executionCostBps: 100,
+          settlementDelaySec: 0, capacityScoringHorizon: "immediate", chain: "ethereum", protocol: "curve", poolId: null,
+          evidenceKind: "reserve-based-amm-simulation", observedAtSec: null },
         capsApplied: ["route-cap:measured-depth"], },
         diversification: {
           routeKey: "route:redemption",
@@ -102,6 +102,7 @@ describe("show-your-work formatters", () => {
 
     const table = formatReportCardV9(card, "9.0");
 
+    expect(table.rows.find((row) => row.label === "Exit capacity")?.value).toContain("$80,000 of $1,000,000 credited");
     expect(table.rows.find((row) => row.label === "Backing pillar")?.weight).toBe("40%");
     expect(table.rows.find((row) => row.label.includes("[reserve:cash]"))).toMatchObject({
       weight: "50%",

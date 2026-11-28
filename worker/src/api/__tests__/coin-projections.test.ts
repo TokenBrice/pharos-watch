@@ -7,6 +7,8 @@ import { DexLiquidityCoinResponseSchema, DexLiquidityMapSchema, DexLiquidityTabl
 import { RedemptionBackstopCoinResponseSchema, RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { YieldRankingsCoinResponseSchema, YieldRankingsResponseSchema } from "@shared/types/yield";
 import { makeDexLiquidityRow } from "../../test-helpers/__shared/fixtures";
+import { dexRouteObservation } from "../../lib/__tests__/safety-score-v9-extension-routes.test-support";
+import { makeDexRouteObservationCoverage } from "../../cron/__tests__/dex-liquidity-persistence.test-support";
 import { makeRedemptionRow, completedRun } from "./redemption-backstops.test-support";
 import { handleDexLiquidity, handleDexLiquidityCoin, handleDexLiquidityTable } from "../dex-liquidity";
 import { handleRedemptionBackstops, handleRedemptionBackstopCoin } from "../redemption-backstops";
@@ -104,30 +106,31 @@ describe("site-only coin projections", () => {
     const id = "trusd-tori";
     const pool = "ethereum:0xd1d954bc94c843815ec7b8119f2de00af27fa6ff";
     const output = "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29";
-    const route: DexExitRouteObservation = {
+    const route = dexRouteObservation(1_795_857_263, {
       routeId: `dex:${id}:dl:${encodeURIComponent(pool)}:${encodeURIComponent(output)}`,
-      routeFamily: "dex-amm", scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: pool, protocol: "curve" },
+      scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: pool, protocol: "curve" },
       output: { kind: "tracked-stablecoin", trackedAssetIds: ["frxusd-frax"], assetKeys: [output] },
-      requestedNotionalUsd: 1_000_000, maxCostBps: 200, settlementHorizonSec: 300, executableUsd: 3_231.89,
-      completionRatio: 0.003232, observedAt: 1_795_857_263, freshnessSeconds: 110,
-      evidenceKind: "reserve-based-amm-simulation", scoreEligible: true, confidence: "high", commonModeKeys: [],
-    };
-    const coverage = { status: "populated", capabilityMatrixVersion: "p4a.10", retainedPoolCount: 6,
-      observationCount: 1, scoreEligibleObservationCount: 1, unsupportedPoolCount: 5,
-      evidenceCounts: { "reserve-based-amm-simulation": 1 }, unsupportedReasons: {} };
+      executableUsd: 3_231.89, completionRatio: 0.003232, freshnessSeconds: 110,
+    });
+    const coverage = { ...makeDexRouteObservationCoverage(), capabilityMatrixVersion: "p4a.10" };
     const prior = { ...route, executableUsd: 186_813.88, completionRatio: 0.186814, observedAt: 1_795_266_731 };
     const { db, sqlite } = openDatabase();
-    insert(sqlite, "dex_liquidity", { symbol: "trUSD", ...makeDexLiquidityRow({ stablecoin_id: id,
-      updated_at: 1_795_857_035, methodology_version: "7.56", score_components_json: JSON.stringify({
-        exitRouteObservations: [route], exitRouteObservationCoverage: coverage,
-      }) }) });
-    insert(sqlite, "dex_liquidity_history", { stablecoin_id: id, total_tvl_usd: 5_922_372,
-      snapshot_date: 1_795_219_200, coverage_class: "mixed", coverage_confidence: 0.74, methodology_version: "7.53" });
-    const read = async (observation: DexExitRouteObservation, version = "7.53") => {
-      sqlite.prepare("UPDATE dex_liquidity_history SET exit_route_summary_json = ?, methodology_version = ?")
-        .run(JSON.stringify({ observations: [observation], coverage }), version);
-      const body = DexLiquidityCoinResponseSchema.parse(await (await dexCoin(db, id)).json());
-      return body.coins[id].weeklyExitRouteBaselines;
+    const day = 1_795_219_200;
+    let current = route;
+    let updatedAt = 1_795_857_035;
+    let clock = route.observedAt + route.freshnessSeconds;
+    vi.spyOn(Date, "now").mockImplementation(() => clock * 1000);
+    const read = async (observation: DexExitRouteObservation, version = "7.53", assetId = id) => {
+      sqlite.exec("DELETE FROM dex_liquidity; DELETE FROM dex_liquidity_history");
+      insert(sqlite, "dex_liquidity", { symbol: "trUSD", ...makeDexLiquidityRow({ stablecoin_id: assetId,
+        updated_at: updatedAt, methodology_version: "7.56", score_components_json: JSON.stringify({
+          exitRouteObservations: [current], exitRouteObservationCoverage: coverage,
+        }) }) });
+      insert(sqlite, "dex_liquidity_history", { stablecoin_id: assetId, total_tvl_usd: 5_922_372,
+        snapshot_date: day, coverage_class: "mixed", coverage_confidence: 0.74, methodology_version: version,
+        exit_route_summary_json: JSON.stringify({ observations: [observation], coverage }) });
+      const body = DexLiquidityCoinResponseSchema.parse(await (await dexCoin(db, assetId)).json());
+      return body.coins[assetId].weeklyExitRouteBaselines;
     };
     for (const observation of [prior, { ...prior, executableUsd: 0, completionRatio: 0 }]) {
       const { routeId, observedAt, executableUsd } = observation;
@@ -135,10 +138,34 @@ describe("site-only coin projections", () => {
     }
     for (const patch of [
       { requestedNotionalUsd: 100_000 }, { maxCostBps: 100 }, { settlementHorizonSec: 3600 },
-      { observedAt: prior.observedAt - 86_400 }, { reserveModelId: "different" },
+      { observedAt: prior.observedAt - 86_400 }, { freshnessSeconds: 10_801 }, { reserveModelId: "different" },
       { output: { ...prior.output, assetKeys: ["different"] } },
     ]) expect(await read({ ...prior, ...patch })).toBeUndefined();
     expect(await read(prior, "7.52")).toBeUndefined();
+
+    const currentDay = day + 7 * 86_400;
+    clock = currentDay + 120;
+    updatedAt = currentDay + 30;
+    current = { ...route, observedAt: currentDay - 30, freshnessSeconds: 90 };
+    const previous = { ...prior, observedAt: day - 30, freshnessSeconds: 90 };
+    expect(await read(previous)).toHaveLength(1);
+    expect(await read({ ...previous, freshnessSeconds: 10 })).toBeUndefined();
+    expect(await read({ ...previous, observedAt: day + 86_400 })).toBeUndefined();
+    clock = currentDay + 40;
+    expect(await read(previous)).toBeUndefined();
+    clock = currentDay + 120;
+    current = { ...current, freshnessBasisAt: currentDay - 120, freshnessSeconds: 180 };
+    expect(await read(previous)).toHaveLength(1);
+    expect(await read({ ...previous, freshnessBasisAt: day - 10 })).toBeUndefined();
+
+    for (const [input, outputId, expected] of [
+      [id, "strusd-tori", undefined], ["strusd-tori", id, 1],
+    ] as const) {
+      const identity = { routeId: `dex:${input}:${outputId}`, output: { ...route.output,
+        trackedAssetIds: [outputId], assetKeys: [`ethereum:${outputId}`] } };
+      current = { ...current, ...identity };
+      expect((await read({ ...previous, ...identity }, "7.53", input))?.length).toBe(expected);
+    }
   });
 
   it.each([false, true])("binds DEX row, census and producer clock across publication rollover (legacy=%s)", async (legacy) => {

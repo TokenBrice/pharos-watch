@@ -253,7 +253,7 @@ export function computeLiquiditySignal(input: Pick<DEWSInput,
     ? { tvlDelta7dUnavailableReason: input.tvlDelta7dUnavailableReason } : {};
 
   if (!currentScoreAvailable || componentCoverage === 0) {
-    return { value: 0, available: false, componentCoverage: 0, scoreDelta7d: null, tvlDelta7d: null, ...tvlDiagnostic };
+    return { value: 0, available: false, componentCoverage: 0, scoreDelta7d: null, tvlDelta7d: null, ...(!currentScoreAvailable ? { liquidityScore: null } : {}), ...tvlDiagnostic };
   }
 
   const scoreDelta = scoreDeltaComputable ? (liquidityScore - liquidityScore7dAgo) / Math.max(liquidityScore7dAgo, 1) : null;

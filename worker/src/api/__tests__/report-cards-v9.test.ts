@@ -212,7 +212,7 @@ describe("materialized V9 response", () => {
     const exit = card.breakdowns!.exit;
     const primary = exit.primaryRoute!;
     primary.capacity = {
-      payoutAssets: [{ key: "frxusd-frax", symbol: "frxUSD" }], inputCapacityUsd: 3_200, costEvidence: "upper-bound",
+      payoutAssets: [{ key: "frxusd-frax", symbol: "frxUSD" }], inputCapacityUsd: 3_200, testedNotionalUsd: 1_000_000, costEvidence: "upper-bound",
       executableUsd: 3_100, requestedNotionalUsd: 1_000_000, completionRatio: 0.0031, maxCostBps: 200, executionCostBps: 200,
       settlementDelaySec: 0, capacityScoringHorizon: "immediate", chain: "ethereum", protocol: "curve", poolId: "pool",
       evidenceKind: "reserve-based-amm-simulation", observedAtSec: publication.asOfSec,
@@ -222,7 +222,7 @@ describe("materialized V9 response", () => {
       routeFamily: "dex-amm", included: false, score: null, exclusionReason: "missing-same-notional-route",
       confidenceDimensions: null, capacityEvidenceTier: primary.capacityEvidenceTier, rawSameNotionalCostBps: null, capacity: null,
       payoutAssets: [{ key: "strusd-tori", symbol: "strUSD" }],
-      conversion: { evidenceKind: "reserve-based-amm-simulation", inputCapacityUsd: 1_000_000, maxCostBps: 200 },
+      conversion: { evidenceKind: "reserve-based-amm-simulation", inputCapacityUsd: 1_000_000, requestedNotionalUsd: 1_000_000, maxCostBps: 200 },
     }];
     card.reserveCompositionAdmission = { reasons: ["no-review"] };
     await persistAndMaterialize(db, currentInput(publication));
@@ -251,7 +251,7 @@ describe("materialized V9 response", () => {
         expect(detailed.headers.get("ETag")).not.toBe(optedIn.headers.get("ETag"));
         expect((await readCard(detailed)).breakdowns!.exit).toEqual(exit);
       }
-      for (const key of ["payoutAssets", "inputCapacityUsd", "costEvidence"]) expect(servedExit.primaryRoute!.capacity).not.toHaveProperty(key);
+      for (const key of ["payoutAssets", "inputCapacityUsd", "testedNotionalUsd", "costEvidence"]) expect(servedExit.primaryRoute!.capacity).not.toHaveProperty(key);
       for (const key of ["conversion", "payoutAssets"]) expect(servedExit.alternatives[0]).not.toHaveProperty(key);
       expect(servedExit.alternatives[0]!.label).toContain("Conversion to strUSD");
       expect(active.snapshot!.cards[0]!.breakdowns!.exit).toEqual(servedExit);
