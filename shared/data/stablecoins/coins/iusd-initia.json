@@ -96,9 +96,9 @@
     "semantics": "single-asset",
     "breakerScope": "iusd-initia",
     "suspended": {
-      "reason": "Initia L1 halted 2026-10-23; rest.initia.xyz returns HTTP 404 and only AUSD0 of the issuer's three iUSD collateral assets is read",
+      "reason": "After the 2026-11-20 Initia relaunch the iUSD vault holds USDC.inj, not AUSD0 (at height 23989077, 2026-11-27, vault USDC.inj equals iUSD supply 1,671,062.439681 and AUSD0 is 0), while this adapter reads only AUSD0; stays suspended until the usdc-circle wrapper identity and adapter migration (#2392) ship",
       "since": "2026-10-23",
-      "reviewBy": "2026-11-20"
+      "reviewBy": "2026-12-03"
     },
     "display": {
       "url": "https://rest.initia.xyz/cosmos/bank/v1beta1/supply/by_denom?denom=move%2F6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e",
@@ -120,11 +120,6 @@
         "coinId": "ausd-agora",
         "depType": "wrapper"
       }
-    },
-    "suspended": {
-      "reason": "Initia L1 halted 2026-10-23 after a MoveVM exploit; iUSD collateral (AUSD0/Noble USDC/WETH) short up to 1.4M AUSD0 / 1.08M USDC / 105 ETH pending foundation top-up; resume after the 2026-11-02 restart and an on-chain backing re-read",
-      "since": "2026-10-23",
-      "reviewBy": "2026-11-03"
     }
   },
   "notices": [

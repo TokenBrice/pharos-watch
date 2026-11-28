@@ -21248,6 +21248,48 @@
         "source:f6491de788f3cf756fc6e3e5",
         "source:05deeebbe8f8939364c037d3",
         "source:b95bee9da22141b1780975e9"
+      ],
+      "retired": {
+        "reviewedAt": "2026-11-27T23:40:00Z",
+        "reviewer": "Pharos 2026-11-27 issue-resolution lane L4a (#2362 BSC minter-Safe rotation)",
+        "reason": "The BSC lane's authored contributor set changed on 2026-11-27 (#2362): risk-review control idrx-bsc-inert-minter-assignment (counterfactual Safe 0xf80fdf24, MINTER_ROLE revoked at block 131940931) was removed, idrx-bsc-minter-safe became admin-only after its block 131940992 MINTER_ROLE revocation, and Safe 1.5.0 minters idrx-bsc-minter-safe-d (0x74fc44f2) and idrx-bsc-minter-safe-e (0x691e35e2) were added. This aggregate names the superseded set and no longer matches; retired, not deleted, to keep provenance. Successor review: pharos-2362-idrx-idrx-bsc-20261127."
+      }
+    },
+    {
+      "reviewId": "pharos-2362-idrx-idrx-bsc-20261127",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "kind": "control",
+        "routeId": "bsc:0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+        "controlIds": [
+          "idrx-bsc-default-admin",
+          "idrx-bsc-minter-safe",
+          "idrx-bsc-minter-safe-b",
+          "idrx-bsc-minter-safe-c",
+          "idrx-bsc-minter-safe-d",
+          "idrx-bsc-minter-safe-e",
+          "idrx-bsc-upgrader-timelock",
+          "idrx-evm-burnbridge-entrypoint",
+          "idrx-issuer-api-bridge-processor"
+        ]
+      },
+      "reviewedAt": "2026-11-27T23:40:00Z",
+      "reviewer": "Pharos 2026-11-27 issue-resolution lane L4a (#2362 BSC minter-Safe rotation)",
+      "windowStartSec": 1689317252,
+      "windowEndSec": 1795821958,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:ca5bc5eea72d21aca91da76b",
+        "surface:9464a92cefad86127e811ff5",
+        "surface:cc67a9d55d30c2b6b74d64c4",
+        "surface:8d654cd9e133853917dac31e"
+      ],
+      "sourcesRefs": [
+        "source:899591617bf10a344315415a",
+        "source:889b70089cc4d00576e11108",
+        "source:1b8e4fa8066e7184305ca408",
+        "source:6965e20b31d2cc8e4a4ef2ac",
+        "source:c076c3b22417167da5d7ee56"
       ]
     },
     {
@@ -75230,6 +75272,56 @@
         "location": "Full 1378-row DefiLlama /hacks JSON query",
         "excerpt": "0 matching entries for native StableChain PYUSDUUPS (0x28f1f38a9f7db1f769a71af0a13e8bace2ab0e9f); total pyusd/paxos hits across all chains: 0."
       }
+    },
+    {
+      "id": "source:899591617bf10a344315415a",
+      "value": {
+        "label": "Complete DefiLlama hacks search for IDRX (2026-11-27)",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-11-27T23:29:47Z",
+        "location": "Full JSON array (1,380 hack records through 2026-11-27)",
+        "excerpt": "Zero matches for IDRX, PT IDRX, BSC token 0x649a2da7b28e0d54c13d5eff95d3a660652742cc or any BSC controller address (0xfcdd2816, 0x942ca56d, 0x3274da26, 0x74fc44f2, 0x691e35e2, 0x5515be1d, 0x58aa9720) across all 1,380 records. The 19 records since 2026-09-10 whose chain list includes BSC or Binance name other protocols (for example the 2026-11-22 Endurance Bridge ACE unbacked mint), none this token or its controls."
+      }
+    },
+    {
+      "id": "source:889b70089cc4d00576e11108",
+      "value": {
+        "label": "Rekt leaderboard incident screen for IDRX (2026-11-27)",
+        "url": "https://rekt.news/leaderboard",
+        "observedAt": "2026-11-27T23:30:01Z",
+        "location": "Published leaderboard __NEXT_DATA__ index (334 entries)",
+        "excerpt": "Zero matches for IDRX or PT IDRX across 334 entries."
+      }
+    },
+    {
+      "id": "source:1b8e4fa8066e7184305ca408",
+      "value": {
+        "label": "IDRX official supported chains, bridge documentation and article index (2026-11-27)",
+        "url": "https://docs.idrx.co/introduction/supported-chain-and-contract-address",
+        "observedAt": "2026-11-27T23:29:47Z",
+        "location": "Supported-chain registry, https://docs.idrx.co/integration/processing-bridge-idrx-request and https://idrx.co/en/articles/ (18 articles through 2026-11-27), all HTTP 200",
+        "excerpt": "The registry lists the BNB Smart Chain deployment 0x649a2da7b28e0d54c13d5eff95d3a660652742cc under the issuer-operated burnBridge/API/mint flow. Pause/unpause appear only as contract ABI entries; neither the docs nor the article index disclose an exploit, compromised key, unauthorized or unbacked mint, or a current pause or bridge halt."
+      }
+    },
+    {
+      "id": "source:6965e20b31d2cc8e4a4ef2ac",
+      "value": {
+        "label": "Pinned BSC IDRX emergency state, role holders and role/upgrade event scan",
+        "url": "https://api-bsc-mainnet-full.n.dwellir.com",
+        "observedAt": "2026-11-27T23:30:25.697Z",
+        "location": "BSC block 136126254 (hash 0xcadffc7dea5776189be5832eaf2be8a8ac3dbd8a293df987c33d4a86bd32546b, 2026-11-27T23:25:58Z); paused/totalSupply via https://bnb-mainnet.g.alchemy.com/v2/ at the same pin; eth_getLogs [135641119,136126254] in 98 pinned 5,000-block ranges",
+        "excerpt": "At the pin paused()=false, totalSupply=1,222,493,044 IDRX (0 decimals), EIP-1967 implementation 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0 with zero admin slot. MINTER_ROLE: Safes 0x942ca56d (2-of-8), 0x3274da26 (2-of-5), 0x74fc44f2 (2-of-6, Safe 1.5.0) and 0x691e35e2 (2-of-7, Safe 1.5.0); DEFAULT_ADMIN_ROLE: Safe 0xfcdd2816 (2-of-3) and EOA 0x5515be1d (also PAUSER/BLACKLIST); UPGRADER_ROLE: TimelockController 0x58aa9720 (getMinDelay=1). Every Safe returned empty module pagination with terminal 0x1 and zero guard slots. The RoleGranted/RoleRevoked/RoleAdminChanged/Upgraded scan since the 2026-11-25 roster pin returned no events (empty results are not lifetime proof)."
+      }
+    },
+    {
+      "id": "source:c076c3b22417167da5d7ee56",
+      "value": {
+        "label": "Reviewed BSC role history behind the 2026-11-25 roster (mint-authority profile)",
+        "url": "https://bscscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+        "observedAt": "2026-11-25T10:45:26Z",
+        "location": "shared/data/stablecoins/domains/mint-authority/idrx-idrx.json BSC controls; complete RoleGranted/RoleRevoked history from deployment block 29948779 through BSC block 135641119 (hash 0x00aa4f88e8f13d8abc7ecade467ea244f499c8a5068d6884bf3259f534931520)",
+        "excerpt": "32 role events since deployment. The four after the 2026-07-30 review (28 events through block 113086546) are issuer-initiated DEFAULT_ADMIN rotations: MINTER_ROLE revoked from counterfactual Safe 0xf80fdf24 at block 131940931 and from Safe 0xfcdd2816 at block 131940992 (2026-11-06), and granted to Safe 1.5.0 proxies 0x74fc44f2 at block 134627818 and 0x691e35e2 at block 134627897 (2026-11-20). They are enumerated as operational role changes, not as compromise or unauthorized-mint incidents."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -93911,6 +94003,38 @@
         "kind": "incident-tracker",
         "url": "https://api.llama.fi/hacks",
         "finding": "Queried full DefiLlama /hacks dataset (1378 entries on 2026-11-27) for pyusd, paxos, and 0x28f1f38a9f7db1f769a71af0a13e8bace2ab0e9f; found 0 matching entries, zero involving StableChain PYUSDUUPS."
+      }
+    },
+    {
+      "id": "surface:ca5bc5eea72d21aca91da76b",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://idrx.co/en/articles/",
+        "finding": "IDRX article index (18 articles through 2026-11-27), supported-chain registry and bridge processing guide reviewed on 2026-11-27. No disclosed compromise, unauthorized or unbacked mint, theft, stuck supply, unauthorized upgrade, or current pause on the BSC deployment. Bounded public search, not an exhaustive private incident archive."
+      }
+    },
+    {
+      "id": "surface:9464a92cefad86127e811ff5",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "Complete DefiLlama hacks feed (1,380 records through 2026-11-27) searched for IDRX, PT IDRX, the BSC token and every BSC controller address. Zero matching entries; BSC-tagged 2026 records name other protocols."
+      }
+    },
+    {
+      "id": "surface:cc67a9d55d30c2b6b74d64c4",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://rekt.news/leaderboard",
+        "finding": "Published rekt.news leaderboard (334 entries) searched on 2026-11-27 for IDRX and PT IDRX. Zero matching entries."
+      }
+    },
+    {
+      "id": "surface:8d654cd9e133853917dac31e",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-bsc-mainnet-full.n.dwellir.com",
+        "finding": "Pinned BSC reads at BSC block 136126254 (hash 0xcadffc7dea5776189be5832eaf2be8a8ac3dbd8a293df987c33d4a86bd32546b, 2026-11-27T23:25:58Z): paused()=false; role holders match the reviewed controls (MINTER Safes 0x942ca56d, 0x3274da26, 0x74fc44f2, 0x691e35e2; DEFAULT_ADMIN Safe 0xfcdd2816 and EOA 0x5515be1d; UPGRADER timelock 0x58aa9720). Role/upgrade/admin-change scan [135641119,136126254] returned no events. The complete deployment-to-135641119 history holds 32 role events; the four after the 2026-07-30 review (28 events through block 113086546) are the 2026-11-06 MINTER_ROLE revocations and 2026-11-20 grants, issuer role rotations, not incidents (bounded window, not lifetime proof)."
       }
     }
   ]

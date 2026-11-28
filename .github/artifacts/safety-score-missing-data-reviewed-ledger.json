@@ -305614,6 +305614,71 @@
       ],
       "nextReviewTrigger": "Observe the first post-deploy usdd-data-platform live-reserves run and subsequent Safety Score publication/replay to confirm psm-usdc emits with no unknown-vault-type warning and all five sentinels clear.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:idrx-idrx",
+      "taskIds": [
+        "V9G-8d70f73889274e22",
+        "V9G-ba0c14cef14059e7",
+        "V9G-1f5081de18111b00",
+        "V9G-8de6d1cf5dffd836",
+        "V9G-c6efad6cf4e2d5c3"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "reviewedAt": "2026-11-27T23:40:00Z",
+      "reviewer": "Pharos 2026-11-27 issue-resolution lane L4a (#2362 BSC minter-Safe rotation)",
+      "evidence": [
+        "https://api-bsc-mainnet-full.n.dwellir.com | BSC block 136126254 (hash 0xcadffc7dea5776189be5832eaf2be8a8ac3dbd8a293df987c33d4a86bd32546b, 2026-11-27T23:25:58Z), observed 2026-11-27T23:26:18Z-23:26:25Z: IDRX 0x649a2da7b28e0d54c13d5eff95d3a660652742cc implementation 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0; MINTER_ROLE Safes 0x942ca56d (2-of-8), 0x3274da26 (2-of-5), 0x74fc44f2 (2-of-6, Safe 1.5.0) and 0x691e35e2 (2-of-7, Safe 1.5.0); DEFAULT_ADMIN_ROLE Safe 0xfcdd2816 (2-of-3, MINTER revoked) and EOA 0x5515be1d; counterfactual 0xf80fdf24 code-empty with no roles; every Safe has empty module pagination and zero guard (and zero module-guard on 1.5.0)",
+        "https://api-bsc-mainnet-full.n.dwellir.com | eth_getLogs RoleGranted/RoleRevoked/RoleAdminChanged/Upgraded over [135641119,136126254] in 98 pinned 5,000-block ranges: all empty, none failed (not lifetime proof)",
+        "https://bnb-mainnet.g.alchemy.com/v2/ | same BSC pin 136126254, observed 2026-11-27T23:30:25.697Z: paused()=false, totalSupply 1,222,493,044 IDRX (0 decimals)",
+        "https://api.llama.fi/hacks | 2026-11-27T23:29:47Z: 1,380 records, zero IDRX, token or BSC controller matches",
+        "https://rekt.news/leaderboard | 2026-11-27T23:30:01Z: 334 entries, zero IDRX matches",
+        "https://docs.idrx.co/introduction/supported-chain-and-contract-address | 2026-11-27T23:29:47Z with https://idrx.co/en/articles/ (18 articles through 2026-11-27): no disclosed compromise, unbacked mint or current pause on BSC"
+      ],
+      "rationale": "Aligned the risk-review BSC bridge controls with the on-chain roster that #2361 already applied to Mint Authority: idrx-bsc-minter-safe is admin-only, the inert counterfactual assignment is removed, and Safe 1.5.0 minters idrx-bsc-minter-safe-d/-e are added from the pin. The BSC aggregate incident review naming the superseded set (j04usdg-idrx-idrx-909755b8ac65ffca9f7d-20261011) is retired and successor pharos-2362-idrx-idrx-bsc-20261127 binds the complete nine-control set, so the rotated aggregate key 0186a7d5a57c852da354 opens no incidentState or deployment-control gap (verified absent on the 2026-11-28T01:18:01Z capture replay; present only on the 2026-11-27T22:17:54Z capture, whose clock precedes reviewedAt). Orphan gap row rs2008-idrx-bsc-minter-safe-execution-scope-20261030 is pruned: component key 9a5b02878a8a6ea3b440 resolves to no live control and its executionScope gap is absent; historical decisions that name it are kept. The five open group items are unchanged and carried as sentinels. No score or grade moves on either capture.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/idrx-idrx.json",
+        "shared/data/safety-score-v9/incident-reviews-v1.json",
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "idrx-idrx:gap:control:mint-meta:idrx-idrx:9a5b02878a8a6ea3b440:executionScope",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "idrx-idrx:gap:control:bridge-meta:idrx-idrx:0186a7d5a57c852da354:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "idrx-idrx:gap:deployment-control:bridge-meta:idrx-idrx:0186a7d5a57c852da354",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "idrx-idrx:gap:control:bridge-meta:idrx-idrx:a6b90cfaec6944e86b93:materialSupplyShare",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "idrx-idrx:gap:control:bridge-meta:idrx-idrx:b060794554d843460f3d:incidentState",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "idrx-idrx:gap:control:mint-meta:idrx-idrx:88708328731e3f7c1f67:executionScope",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "idrx-idrx:gap:deployment-control:bridge-meta:idrx-idrx:b060794554d843460f3d",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "idrx-idrx:gap:deployment-controls",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Verify on the first accepted production publication after this change activates that the 0186a7d5a57c852da354 aggregate opens no gap; re-review on any BSC role, implementation or Safe configuration change, or when issuer BSC execution-scope or bridge liability evidence is published.",
+      "factsClosed": 0
     }
   ]
 }

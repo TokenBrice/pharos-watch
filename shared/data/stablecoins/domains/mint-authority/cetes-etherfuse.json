@@ -5,6 +5,40 @@
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
     "summary": "CETES has native issuer-controlled issuance on Solana and Stellar. Solana Token-2022 minting is held by a 1-of-2 Etherfuse multisig, while the Stellar CETES asset is issued by its 3-of-5 classic Stellar issuer account with clawback enabled. Etherfuse's issuer backend supports the native subscription/redemption process; Base, Polygon, Monad, and Avalanche are LayerZero V2 OFT representations whose owner, rate-limit, peer, and proxy-upgrade powers are reviewed separately under Bridge Risk.",
+    "upgradeability": {
+      "model": "custom",
+      "deploymentRefs": [
+        "solana:CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f"
+      ],
+      "proxyAddresses": [
+        "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+      ],
+      "implementationAddresses": [
+        "DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY"
+      ],
+      "adminAddresses": [
+        "AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Solana Token-2022 shared-program upgrade authority",
+      "observedAt": "2026-11-27",
+      "observedBlock": 474738717,
+      "sources": [
+        {
+          "label": "Alchemy Solana account archive (exact-slot getAccountInfo)",
+          "url": "https://solana-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "Solana program deployment model",
+          "url": "https://solana.com/docs/programs/deploying"
+        },
+        {
+          "label": "Stellar asset issuance and clawback model",
+          "url": "https://developers.stellar.org/docs/tokens/control-asset-access"
+        }
+      ]
+    },
     "controls": [
       {
         "label": "Etherfuse issuance backend",
@@ -87,13 +121,49 @@
             "url": "https://horizon.stellar.org/assets?asset_code=CETES&asset_issuer=GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC"
           }
         ]
+      },
+      {
+        "chain": "solana",
+        "address": "AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz",
+        "label": "Solana Token-2022 shared-program upgrade authority",
+        "deploymentRefs": [
+          "solana:CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f"
+        ],
+        "role": "other",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 4,
+        "signerCount": 6,
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-11-27",
+        "observedBlock": 474738717,
+        "failureDomainKeys": [
+          "platform:solana-token-2022-program"
+        ],
+        "sources": [
+          {
+            "label": "Alchemy Solana account archive (exact-slot getAccountInfo)",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Squads V3 source",
+            "url": "https://github.com/Squads-Protocol/squads-mpl"
+          },
+          {
+            "label": "Solana program deployment model",
+            "url": "https://solana.com/docs/programs/deploying"
+          }
+        ],
+        "evidence": "At finalized Solana slot 474738717 (blockhash 9UAxM5WZ9NmgPbkNYViuK9UmHrLto6aXeTP684pnuVGM, 2026-11-27T23:43:24Z), Token-2022 program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb (owner BPFLoaderUpgradeab1e11111111111111111111111, executable) pointed to ProgramData DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY, whose upgrade authority is AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz (last deployment slot 460497271). AeLm... re-derives as the authority-index-1 vault PDA of Squads V3 multisig BnD53519LK7QM4ERBGvLedZDe1VoTPgtiBkGPWAACiMZ (owner SMPLecH534NA9acpos4G6x7uf3LWbCAwZQE9e8ZekMu), which decoded at the same slot to threshold 4 of 6 keys. Squads V3 has no time-lock, so a 4-of-6 approval can replace the program logic that executes every CETES mint, burn and authority change. This authority cannot issue CETES itself; issuance stays with the 1-of-2 mint-authority multisig."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Solana: re-pinned at finalized slots 474454153 and 474454559 on 2026-11-27 (2026-11-27T06:44:29Z), CETES mintAuthority remains A6nFyQb2ywFZe23yEC4JQtLLe9aLXtt7EUAD8MFftHYP (supply 10,073,822.904581 CETES, freezeAuthority None); the 1-of-2 Token-2022 multisig signer-list control pin remains unchanged since 2026-08-16 slot 439725250. Stellar: Horizon ledger 65695159 on 2026-11-27T06:44:27Z confirms the 3-of-5 issuer with auth_revocable and auth_clawback_enabled set; summing all disjoint Horizon custody buckets (authorized 34,978,290.3674642 + contracts_amount 18,725,577.0818831 + liquidity_pools_amount 13,813.2786225 + claimable_balances_amount 592.5445388 = 53,718,273.2725086) reconciles within 0.016% of Etherfuse's 53,726,454.9271707 Stellar total. The Base, Polygon, Monad, and Avalanche (0xa51e029a76c58e102360836193481d41363a8352, CETES_OFT) owner/ProxyAdmin paths are LayerZero V2 OFT representation controls reviewed solely under Bridge Risk. Economic posture remains issuer-controlled and unbounded with monthly BHR México reasonable-assurance examinations (latest 2026-11-25) and attestation-only supervision, without a named prudential supervisor.",
+      "evidence": "Solana: re-pinned at finalized slots 474454153 and 474454559 on 2026-11-27 (2026-11-27T06:44:29Z), CETES mintAuthority remains A6nFyQb2ywFZe23yEC4JQtLLe9aLXtt7EUAD8MFftHYP (supply 10,073,822.904581 CETES, freezeAuthority None); the 1-of-2 Token-2022 multisig signer-list control pin remains unchanged since 2026-08-16 slot 439725250. Stellar: Horizon ledger 65695159 on 2026-11-27T06:44:27Z confirms the 3-of-5 issuer with auth_revocable and auth_clawback_enabled set; summing all disjoint Horizon custody buckets (authorized 34,978,290.3674642 + contracts_amount 18,725,577.0818831 + liquidity_pools_amount 13,813.2786225 + claimable_balances_amount 592.5445388 = 53,718,273.2725086) reconciles within 0.016% of Etherfuse's 53,726,454.9271707 Stellar total. The Base, Polygon, Monad, and Avalanche (0xa51e029a76c58e102360836193481d41363a8352, CETES_OFT) owner/ProxyAdmin paths are LayerZero V2 OFT representation controls reviewed solely under Bridge Risk. Economic posture remains issuer-controlled and unbounded with monthly BHR México reasonable-assurance examinations (latest 2026-11-25) and attestation-only supervision, without a named prudential supervisor. Upgrade authority (2026-11-27, finalized Solana slot 474738717): the only native-issuance logic an upgrade can replace is the shared Token-2022 program, upgradeable by the 4-of-6 Squads V3 vault AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz with no time-lock; it is upgrade-only and distinct from the 1-of-2 mint authority (re-read at the same slot: m=1, n=2, signers unchanged; supply 10,059,669.378735 CETES, freezeAuthority None). Stellar CETES is a classic Stellar asset with no issuer-deployed contract code, so it has no issuer-replaceable mint logic and is outside the upgradeability block; the issuer account's issue, revoke and clawback powers stay in its own control, and protocol changes come only from Stellar network upgrades. On Base, Polygon, Monad (0x834df4c1d8f51be24322e39e4766697be015512f) and Avalanche (0xa51e029a76c58e102360836193481d41363a8352) the OFT proxies' EIP-1967 admins (ProxyAdmins 0x322922f0e1675a8e7be2a38b0636a7c184082ca8 and 0x90a495ebc2ce2620da2e5bec7ed4060389219cee) and the OFT owner() all resolved to Safe 0x14b928243340033db1abad1adab4727c11d027d7 (VERSION 1.4.1, getThreshold 3, five owners) at Base 63163017, Polygon 98078299, Monad 125995106 and Avalanche 101584328 (2026-11-27T23:42Z); those proxy upgrades govern bridge representations, not native issuance, and stay under Bridge Risk.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Stellar flag re-read 2026-10-30; 2026-11-27 6-chain pin",
       "reviewedAt": "2026-11-27",
       "sources": [

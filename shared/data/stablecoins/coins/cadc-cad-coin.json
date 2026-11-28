@@ -114,20 +114,19 @@
   "launchDate": "2021-01-14",
   "notices": [
     {
-      "type": "warning",
-      "title": "Legacy contract migration window",
-      "message": "CADC Reserve Trust reissued CADC on new Ethereum, Base, Polygon, and Solana contracts, closing 1:1 migration on November 26, 2026 with risk of loss for unmigrated tokens. Arbitrum is deprecated with no successor, Linea is unaddressed, and Pharos still tracks legacy contracts.",
-      "kind": "deadline",
-      "deadline": "2026-11-26",
-      "asOf": "2026-11-26",
+      "type": "info",
+      "title": "Legacy contract migration closed",
+      "message": "CADC Reserve Trust closed the 1:1 migration from legacy CADC to its reissued Ethereum, Base, Polygon, and Solana contracts on November 26, 2026. Legacy CADC is now redeemable for CAD only through Paytrie. Pharos still tracks the legacy contracts.",
+      "kind": "history",
+      "asOf": "2026-11-27",
       "sources": [
+        {
+          "label": "Loon: CADC migration closed",
+          "url": "https://loon.finance/cadc"
+        },
         {
           "label": "Paytrie: CADC migration",
           "url": "https://paytrie.com/blog/cadc-is-being-reissued-what-paytrie-users-need-to-do-before-november-26"
-        },
-        {
-          "label": "Loon: CADC overview",
-          "url": "https://loon.finance/cadc"
         }
       ]
     }
