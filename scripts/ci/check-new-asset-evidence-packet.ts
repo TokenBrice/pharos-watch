@@ -14,6 +14,8 @@
  * Gate contract:
  *  - active registry cardinality ≤ `SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS` (397;
  *    no override);
+ *  - tracked catalog cardinality ≤ `SAFETY_SCORE_V9_CATALOG_MAX_ASSETS` (560;
+ *    no override; applies to any added coin file including pre-launch stubs);
  *  - ≤ `NEW_ASSET_OPEN_QUESTION_LIMIT` own open questions rooted at the asset;
  *  - zero own non-documentation `missing-mint-authority` datums (U2; no
  *    override);
@@ -40,7 +42,10 @@ import { resolve } from "node:path";
 import { z } from "zod";
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
 import { compareCodeUnits } from "@shared/lib/compare";
-import { SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS } from "@shared/lib/safety-score-v9-capacity-limits";
+import {
+  SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS,
+  SAFETY_SCORE_V9_CATALOG_MAX_ASSETS,
+} from "@shared/lib/safety-score-v9-capacity-limits";
 import { isActiveStablecoinMeta, isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
@@ -368,12 +373,13 @@ export type NewAssetGateFailureKind =
   | "prospective-asset-quarantined"
   | "prospective-parent-pipeline-gap"
   | "active-capacity-exceeded"
+  | "catalog-capacity-exceeded"
   | "open-question-limit"
   | "missing-mint-authority";
 
 export interface NewAssetGateFailure {
   assetId: string;
-  origin: NewAssetGateOrigin;
+  origin: NewAssetGateOrigin | "catalog";
   kind: NewAssetGateFailureKind;
   message: string;
 }
@@ -402,6 +408,8 @@ export interface EvaluateNewAssetEvidencePacketInput {
   evaluationBuildDigest?: string;
   /** Active stablecoin count on this branch checkout; checked against `SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS`. */
   activeAssetCount?: number;
+  /** Tracked catalog count on this branch checkout; checked against `SAFETY_SCORE_V9_CATALOG_MAX_ASSETS`. */
+  catalogAssetCount?: number;
   /** Reference Unix seconds for admission clock freshness/future checks. */
   nowSec?: number;
   override: boolean;
@@ -513,6 +521,7 @@ export function evaluateNewAssetEvidencePacket({
   registryFingerprint,
   evaluationBuildDigest = SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
   activeAssetCount,
+  catalogAssetCount,
   nowSec = Math.floor(Date.now() / 1_000),
   override,
   readReceipt,
@@ -523,7 +532,24 @@ export function evaluateNewAssetEvidencePacket({
     report.failures.push({ assetId: candidate.assetId, origin: candidate.origin, kind, message });
   };
   const activeCapacityExceeded =
-    activeAssetCount !== undefined && activeAssetCount > SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS;
+    activeAssetCount !== undefined &&
+    (!Number.isSafeInteger(activeAssetCount) || activeAssetCount < 0 || activeAssetCount > SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS);
+  const catalogCapacityExceeded =
+    catalogAssetCount !== undefined &&
+    (!Number.isSafeInteger(catalogAssetCount) || catalogAssetCount < 0 || catalogAssetCount > SAFETY_SCORE_V9_CATALOG_MAX_ASSETS);
+  const catalogCapacityMessage =
+    `catalog stablecoin count ${catalogAssetCount} exceeds SAFETY_SCORE_V9_CATALOG_MAX_ASSETS ` +
+    `(${SAFETY_SCORE_V9_CATALOG_MAX_ASSETS}); cannot admit catalog addition without raising V9 capacity ` +
+    "(this condition has no override)";
+
+  if (catalogCapacityExceeded && candidates.length === 0) {
+    report.failures.push({
+      assetId: "catalog",
+      origin: "catalog",
+      kind: "catalog-capacity-exceeded",
+      message: catalogCapacityMessage,
+    });
+  }
 
   for (const candidate of candidates) {
     let failed = false;
@@ -536,6 +562,10 @@ export function evaluateNewAssetEvidencePacket({
           `(${SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS}); cannot admit active listing or promotion without raising V9 capacity ` +
           "(this condition has no override)",
       );
+    }
+    if (catalogCapacityExceeded) {
+      failed = true;
+      fail(candidate, "catalog-capacity-exceeded", catalogCapacityMessage);
     }
     if (!ASSET_ID_PATTERN.test(candidate.assetId)) {
       fail(candidate, "invalid-asset-id", `asset id "${candidate.assetId}" cannot name a receipt file; fix the per-coin id`);
@@ -704,8 +734,12 @@ export function evaluateNewAssetEvidencePacket({
   return report;
 }
 
-async function loadNewAssetRegistryState(): Promise<{ registryFingerprint: string; activeAssetCount: number }> {
-  const [{ ACTIVE_STABLECOINS, FROZEN_STABLECOINS }, { DEAD_STABLECOINS }] = await Promise.all([
+async function loadNewAssetRegistryState(): Promise<{
+  registryFingerprint: string;
+  activeAssetCount: number;
+  catalogAssetCount: number;
+}> {
+  const [{ ACTIVE_STABLECOINS, FROZEN_STABLECOINS, TRACKED_SOURCE_COINS }, { DEAD_STABLECOINS }] = await Promise.all([
     import("@shared/lib/stablecoins/registry"),
     import("@shared/lib/dead-stablecoins"),
   ]);
@@ -716,6 +750,7 @@ async function loadNewAssetRegistryState(): Promise<{ registryFingerprint: strin
       deadStablecoins: DEAD_STABLECOINS,
     }),
     activeAssetCount: ACTIVE_STABLECOINS.length,
+    catalogAssetCount: TRACKED_SOURCE_COINS.length,
   };
 }
 
@@ -825,6 +860,8 @@ export interface NewAssetEvidencePacketCheckResult {
   evaluationBuildDigest: string;
   activeAssetCount: number | null;
   activeCapacityLimit: number;
+  catalogAssetCount: number | null;
+  catalogCapacityLimit: number;
   override: boolean;
   receiptDir: string;
   report: NewAssetGateReport;
@@ -844,21 +881,27 @@ export async function inspectNewAssetEvidencePacket(
   const mergeBase = resolveMergeBase(base, head, cwd);
   const changed = (diffFilter: string): string[] =>
     collectGitPaths({ kind: "range", base: mergeBase, head, diffFilter }, { cwd }).filter(isPerCoinAssetPath);
+  const addedPaths = changed("A");
+  const modifiedPaths = changed("M");
   const { candidates, skipped } = classifyNewAssetGateCandidates({
-    addedPaths: changed("A"),
-    modifiedPaths: changed("M"),
+    addedPaths,
+    modifiedPaths,
     readHeadCoin: (path) => readWorktreeCoin(path, cwd),
     readBaseCoin: (path) => readGitCoin(mergeBase, path, cwd),
   });
-  const registryState = candidates.length === 0 ? null : await loadNewAssetRegistryState();
+  const registryState = candidates.length === 0 && addedPaths.length === 0
+    ? null
+    : await loadNewAssetRegistryState();
   const registryFingerprint = registryState?.registryFingerprint ?? "";
   const activeAssetCount = registryState?.activeAssetCount ?? null;
+  const catalogAssetCount = registryState?.catalogAssetCount ?? null;
   const evaluationBuildDigest = SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST;
   const report = evaluateNewAssetEvidencePacket({
     candidates,
     registryFingerprint,
     evaluationBuildDigest,
     ...(activeAssetCount === null ? {} : { activeAssetCount }),
+    ...(catalogAssetCount === null ? {} : { catalogAssetCount }),
     nowSec,
     override,
     readReceipt: (candidate) => readCommittedReceipt(candidate.assetId, receiptDir, cwd),
@@ -873,6 +916,8 @@ export async function inspectNewAssetEvidencePacket(
     evaluationBuildDigest,
     activeAssetCount,
     activeCapacityLimit: SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS,
+    catalogAssetCount,
+    catalogCapacityLimit: SAFETY_SCORE_V9_CATALOG_MAX_ASSETS,
     override,
     receiptDir,
     report,
@@ -909,7 +954,12 @@ export async function runNewAssetEvidencePacketCheck(
     cwd,
   });
   const { report } = result;
-  const admitted = report.candidates.length - new Set(report.failures.map((failure) => `${failure.assetId}\u0000${failure.origin}`)).size;
+  const failedCandidates = new Set(
+    report.failures
+      .filter((failure) => failure.origin !== "catalog")
+      .map((failure) => `${failure.assetId}\u0000${failure.origin}`),
+  );
+  const admitted = report.candidates.length - failedCandidates.size;
 
   if (values.json === true) {
     writeJsonReport(result);
@@ -918,7 +968,7 @@ export async function runNewAssetEvidencePacketCheck(
   for (const entry of result.skipped) {
     process.stdout.write(`skip ${entry.path}: ${entry.reason}\n`);
   }
-  if (report.candidates.length === 0) {
+  if (report.candidates.length === 0 && report.failures.length === 0) {
     process.stdout.write(`New-asset evidence packet: no added or promoted stablecoins in ${result.mergeBase}...${head}.\n`);
     return 0;
   }

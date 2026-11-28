@@ -15,8 +15,10 @@ const CONTAGION_CASE = "evaluates a bounded nine-scenario matrix within 256 MiB 
 const vitestReportSchema = z.object({ testResults: z.array(z.object({
   name: z.string(), assertionResults: z.array(z.object({ title: z.string(), status: z.string(), duration: z.number().optional() })),
 })) });
-export const QUEUE_CASES = [[343, "none"], [560, "none"], [343, "eval"], [343, "commit-expiry"]].map(([assets, escalation]) =>
-  `bounds Queue stage resources and matches canonical publication at ${assets} assets (escalation=${escalation})`);
+export const QUEUE_CASES = [
+  [343, "none", "default"], [560, "none", "default"], [450, "none", "640"], [343, "eval", "default"], [343, "commit-expiry", "default"],
+].map(([assets, escalation, catalog]) =>
+  `bounds Queue stage resources and matches canonical publication at ${assets} assets (escalation=${escalation}, catalog=${catalog})`);
 export function assertRequiredResourceCases(report: unknown, contagionRequired = true): number {
   const cases = vitestReportSchema.parse(report).testResults
     .filter((file) => file.name.replaceAll("\\", "/").endsWith(RESOURCE_TEST_FILE))

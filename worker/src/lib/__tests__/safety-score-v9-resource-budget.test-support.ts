@@ -182,13 +182,15 @@ export async function buildResourceProbe(root: string, directory: string, mode: 
       ...buildSettings.plugins,
       ...(mode === "live" ? [instrumentation(root)] : []),
       ...(mode === "queue" ? [instrumentation(root, QUEUE_SITES), {
-        name: "queue-probe-active-cap",
+        name: "queue-probe-capacity-caps",
         setup(build) {
           build.onLoad({ filter: /safety-score-v9-capacity-limits\.ts$/ }, ({ path }) => {
             const source = readFileSync(path, "utf8");
-            const cap = /SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS = \d+;/u;
-            if (!cap.test(source)) throw new Error("Queue resource probe could not find the active cap");
-            return { contents: source.replace(cap, "SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS = SAFETY_SCORE_V9_CATALOG_MAX_ASSETS;"), loader: "ts" };
+            const catalogCap = /SAFETY_SCORE_V9_CATALOG_MAX_ASSETS = \d+;/u;
+            const activeCap = /SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS = \d+;/u;
+            if (!catalogCap.test(source) || !activeCap.test(source)) throw new Error("Queue probe missing capacity caps");
+            return { contents: source.replace(catalogCap, "SAFETY_SCORE_V9_CATALOG_MAX_ASSETS = 640;")
+              .replace(activeCap, "SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS = SAFETY_SCORE_V9_CATALOG_MAX_ASSETS;"), loader: "ts" };
           });
         },
       } satisfies Plugin] : []),

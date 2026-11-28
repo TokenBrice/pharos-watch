@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX } from "@shared/lib/report-cards-base-input-identity";
-import { SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS } from "@shared/lib/safety-score-v9-capacity-limits";
+import { SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS, SAFETY_SCORE_V9_CATALOG_MAX_ASSETS } from "@shared/lib/safety-score-v9-capacity-limits";
 import {
   NEW_ASSET_ADMISSION_CLOCK_MAX_AGE_SEC,
   NEW_ASSET_GATE_OVERRIDE_LABEL,
@@ -157,6 +157,7 @@ function evaluate(
     assetId = "newcoin-test",
     evaluationBuildDigest = EVALUATION_BUILD_DIGEST,
     activeAssetCount = SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS,
+    catalogAssetCount = SAFETY_SCORE_V9_CATALOG_MAX_ASSETS,
     nowSec = NOW_SEC,
     verifyProspectiveReceipt,
   }: {
@@ -164,6 +165,7 @@ function evaluate(
     assetId?: string;
     evaluationBuildDigest?: string;
     activeAssetCount?: number;
+    catalogAssetCount?: number;
     nowSec?: number;
     verifyProspectiveReceipt?: EvaluateNewAssetEvidencePacketInput["verifyProspectiveReceipt"];
   } = {},
@@ -173,6 +175,7 @@ function evaluate(
     registryFingerprint: REGISTRY_FINGERPRINT,
     evaluationBuildDigest,
     activeAssetCount,
+    catalogAssetCount,
     nowSec,
     override,
     readReceipt: () => receipt,
@@ -299,17 +302,30 @@ describe("new-asset evidence packet gate", () => {
     }
   });
 
-  it("enforces SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS without override", () => {
+  it("enforces active and catalog V9 capacity caps without override", () => {
     const valid = receiptJson({ questions: openQuestions(1) });
-    expect(failKinds(evaluate(valid, { activeAssetCount: SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS }))).toEqual([]);
+    expect(failKinds(evaluate(valid))).toEqual([]);
+    const catalogOnly = (catalogAssetCount: number, override = false) => evaluateNewAssetEvidencePacket({
+      candidates: [], registryFingerprint: REGISTRY_FINGERPRINT, catalogAssetCount, override, readReceipt: () => null,
+    });
+    expect(failKinds(catalogOnly(SAFETY_SCORE_V9_CATALOG_MAX_ASSETS))).toEqual([]);
     for (const override of [false, true]) {
-      const exceeded = evaluate(valid, {
-        activeAssetCount: SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS + 1,
-        override,
-      });
-      expect(failKinds(exceeded)).toEqual(["active-capacity-exceeded"]);
-      expect(exceeded.passed).toEqual([]);
+      for (const [opts, kind] of [
+        [{ activeAssetCount: SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS + 1 }, "active-capacity-exceeded"],
+        [{ catalogAssetCount: SAFETY_SCORE_V9_CATALOG_MAX_ASSETS + 1 }, "catalog-capacity-exceeded"],
+      ] as const) {
+        const report = evaluate(valid, { ...opts, override });
+        expect(failKinds(report)).toEqual([kind]);
+        expect(report.passed).toEqual([]);
+      }
+      const over = catalogOnly(SAFETY_SCORE_V9_CATALOG_MAX_ASSETS + 1, override);
+      expect(failKinds(over)).toEqual(["catalog-capacity-exceeded"]);
+      expect(over.failures[0]).toMatchObject({ assetId: "catalog", origin: "catalog" });
     }
+    expect(failKinds(evaluate(valid, {
+      activeAssetCount: SAFETY_SCORE_V9_ACTIVE_MAX_ASSETS + 1,
+      catalogAssetCount: SAFETY_SCORE_V9_CATALOG_MAX_ASSETS + 1,
+    }))).toEqual(["active-capacity-exceeded", "catalog-capacity-exceeded"]);
   });
 
   it("verifies prospective-offline receipts fail-closed and enforces the dedicated 7d admission clock bound", () => {
