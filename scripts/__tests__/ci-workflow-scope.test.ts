@@ -32,6 +32,7 @@ describe("CI workflow scope", () => {
   it.each([
     ["weekly-validation", "ci-report"], ["agent-maintenance-candidates", null],
     ["curation-expiry-sweep", null], ["ddr-curation-watch", null], ["ops-followups", null],
+    ["post-deploy-first-execution", null],
   ])("serializes %s issue publication without cancellation", (name, job) => {
     const workflow = readWorkflow(`${name}.yml`);
     expect((job ? workflow.jobs[job] : workflow).concurrency).toEqual({ group: `${name}-publication`, "cancel-in-progress": false });
@@ -723,7 +724,7 @@ describe("CI workflow scope", () => {
     const issues = steps.find((step) => step.id === "issues");
     expect(issues?.["continue-on-error"]).toBe(true);
     expect(issues?.env?.GH_TOKEN).toBe("${{ github.token }}");
-    for (const frag of ["gh api --paginate", "select(.pull_request == null)", "unique_by(.number)", ".tmp/ci-weekly/issues.json"]) expect(issues?.run).toContain(frag);
+    for (const frag of ["gh api --paginate", "select(.pull_request == null)", "unique_by(.number)", ".tmp/ci-weekly/issues.json", 'capture("(?m)^Due:']) expect(issues?.run).toContain(frag);
     const install = steps.find((step) => step.name === "Install route Markdown parser dependencies");
     expect(install?.run).toContain("timeout --kill-after=5s 90s npm ci --omit=dev --ignore-scripts");
     expect(install?.["continue-on-error"]).toBe(true);
@@ -1056,6 +1057,7 @@ describe("Cloudflare deployment credential scope", () => {
   it.each([
     ["deploy-worker", ".github/workflows/deploy-cloudflare.yml", ["Run read-only Worker preflights before D1 mutation", "Apply production D1 migrations", "Deploy heavy Worker", "Verify active heavy Worker deployment", "Deploy public Worker", "Verify active public Worker deployment", "Record verified Worker activation markers"]],
     ["pages-release", ".github/workflows/pages-release.yml", ["Publish immutable preview objects before Pages activation", "Deploy Pages", "Resolve active Pages deployment"]],
+    ["monitor", ".github/workflows/post-deploy-first-execution.yml", ["Read Cloudflare deployments and cron evidence"]],
   ])("%s exposes credentials only to named consumer steps", (jobName, path, consumers) => {
     const { job, holders, effective } = consumerSteps(path, jobName);
     for (const key of credentialKeys) expect(job.env?.[key]).toBeUndefined();
@@ -1064,6 +1066,19 @@ describe("Cloudflare deployment credential scope", () => {
       if (!consumers.includes(step.name ?? "")) continue;
       expect([env.CLOUDFLARE_API_TOKEN, env.CLOUDFLARE_ACCOUNT_ID]).toEqual(["${{ secrets.CLOUDFLARE_API_TOKEN }}", "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"]);
     }
+  });
+
+  it("gates post-deploy first-execution monitor on main and confines its tokens", () => {
+    const workflow = readWorkflow("post-deploy-first-execution.yml") as Workflow;
+    const job = workflow.jobs.monitor;
+    const steps = job.steps ?? [];
+    expect([workflow.permissions, job.if, job.permissions]).toEqual([
+      { contents: "read" }, "${{ github.ref == 'refs/heads/main' }}", { contents: "read", issues: "write" },
+    ]);
+    expect(steps.filter((s) => s.env?.GH_TOKEN !== undefined).map((s) => s.id)).toEqual(["open-issue", "issue"]);
+    expect(steps.filter((s) => s.env?.PHAROS_API_KEY !== undefined).map((s) => s.id)).toEqual(["stablecoins"]);
+    expect(steps.find((s) => s.id === "evaluate")?.env).toBeUndefined();
+    expect(steps.some((s) => s.run === "npm ci --ignore-scripts")).toBe(true);
   });
 
   it("separates Pages build secrets and confines preview S3 credentials to the execution publisher", () => {
