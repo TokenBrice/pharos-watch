@@ -143,15 +143,18 @@ describe("weekly curation coverage", () => {
 
   it("reads exported dated registries without re-declaring dates and surfaces expiring entries in the CLI digest", async () => {
     const { buildDatedReviewRegistries, collectDatedReviewExpiries, EXPIRY_LOOKAHEAD_DAYS } = await loadDigestModule();
-    const sampleChain = CHAIN_MATURITY_REVIEWS_V1[0]!;
+    const sampleChain = CHAIN_MATURITY_REVIEWS_V1.find(({ chainSlug }) => chainSlug === "base")!;
     const chainExpiryMs = Date.parse(`${sampleChain.nextReviewAt}T00:00:00Z`);
-    const atBoundary = collectDatedReviewExpiries(chainExpiryMs - EXPIRY_LOOKAHEAD_DAYS * DAY_MS);
-    const chainGroup = atBoundary.groups.find((group) => group.registry.includes("CHAIN_MATURITY_REVIEWS_V1"));
-    expect(chainGroup?.items.some((item) => item.id === sampleChain.chainSlug && item.expiryDate === sampleChain.nextReviewAt)).toBe(true);
-
-    const beforeBoundary = collectDatedReviewExpiries(chainExpiryMs - (EXPIRY_LOOKAHEAD_DAYS + 1) * DAY_MS);
-    const beforeChainGroup = beforeBoundary.groups.find((group) => group.registry.includes("CHAIN_MATURITY_REVIEWS_V1"));
-    expect(beforeChainGroup?.items.some((item) => item.id === sampleChain.chainSlug)).not.toBe(true);
+    const chainItems = (now: number) => collectDatedReviewExpiries(now).groups
+      .find(({ registry }) => registry.includes("CHAIN_MATURITY_REVIEWS_V1"))?.items ?? [];
+    const boundary = chainExpiryMs - EXPIRY_LOOKAHEAD_DAYS * DAY_MS;
+    expect(chainItems(boundary)).toContainEqual(expect.objectContaining({
+      id: "base", expiryDate: sampleChain.nextReviewAt, expired: false,
+    }));
+    expect(chainItems(boundary - DAY_MS).some(({ id }) => id === "base")).toBe(false);
+    const expired = chainItems(chainExpiryMs);
+    expect(expired.find(({ id }) => id === "base")?.expired).toBe(true);
+    expect(expired.some(({ id }) => id === "arbitrum" || id === "celo")).toBe(false);
 
     const [sampleVenueId, sampleVenue] = Object.entries(YIELD_RISK_CONFIG)[0]!;
     const venueExpiryMs = Date.parse(`${sampleVenue.reviewedAt}T00:00:00Z`) + (VENUE_RISK_SCORE_MAX_AGE_DAYS + 1) * DAY_MS;
@@ -176,11 +179,11 @@ describe("weekly curation coverage", () => {
       "YIELD_OPPORTUNITY_EXCLUSIONS",
     ]) {
       const reg = wiredRegistries.find((r) => r.registry.includes(marker));
-      expect(reg, `missing registry ${marker}`).toBeDefined();
-      if (reg!.entries.length > 0) expect(coveredRegistries.has(reg!.registry), `uncovered ${marker}`).toBe(true);
+      expect(reg, marker).toBeDefined();
+      if (reg?.entries.length) expect(coveredRegistries.has(reg.registry), marker).toBe(true);
     }
 
-    const cliReport = renderDigest({ nowIso: new Date(chainExpiryMs - EXPIRY_LOOKAHEAD_DAYS * DAY_MS).toISOString() });
+    const cliReport = renderDigest({ nowIso: new Date(boundary).toISOString() });
     const expirySection = cliReport.split("## Dated-review expiry lookahead (14d)")[1];
     expect(expirySection).toContain("CHAIN_MATURITY_REVIEWS_V1");
     expect(expirySection).toContain(`- ${sampleChain.chainSlug} — ${sampleChain.nextReviewAt} (in 14d)`);
