@@ -123,12 +123,14 @@ function makeContradictoryRecoveryRows() {
   ];
 }
 
+const auditTrusted = (db: D1Database, req: Request) => handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+
 describe("handleAuditDepegHistory method safety", () => {
   it("rejects GET mutations when dry-run is not set", async () => {
     const db = mockD1([{ match: "depeg_events", rows: [] }]);
     const req = makeApiRequest("/api/audit-depeg-history", { adminKey: "secret" });
 
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    const res = await auditTrusted(db, req);
     const body = (await readJsonResponse(res, 405)) as { error: string };
     expect(body.error).toContain("dry-run=true");
   });
@@ -137,7 +139,7 @@ describe("handleAuditDepegHistory method safety", () => {
     const db = mockD1([]);
     const req = makeApiRequest("/api/audit-depeg-history?dry-run=true&limit=26", { adminKey: "secret" });
 
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    const res = await auditTrusted(db, req);
     const body = (await readJsonResponse(res, 400)) as { error: string };
     expect(body.error).toContain("limit");
   });
@@ -150,7 +152,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    const res = await auditTrusted(db, req);
     const body = (await readJsonResponse(res, 400)) as { error: string };
     expect(body.error).toContain(String(D1_BATCH_SIZE));
     expect(body.error).toContain(String(D1_BATCH_SIZE + 1));
@@ -187,7 +189,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    const res = await auditTrusted(db, req);
     const body = (await readJsonResponse(res, 400)) as { error: string };
     expect(body.error).toContain(String(D1_BATCH_SIZE));
     expect(body.error).toContain("stability recompute");
@@ -201,7 +203,7 @@ describe("handleAuditDepegHistory method safety", () => {
         adminKey: "secret",
       });
 
-      const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+      const res = await auditTrusted(db, req);
       const body = (await readJsonResponse(res, 400)) as { error: string };
       expect(body.error).toContain("Invalid delete parameter");
     }
@@ -314,7 +316,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    const res = await auditTrusted(db, req);
     const body = (await readJsonResponse(res, 409)) as { error: string; operation: string; conflicts: unknown[] };
     expect(body.error).toBe("DDR incident member delete refused");
     expect(body.operation).toBe(operation);
@@ -340,7 +342,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    const res = await auditTrusted(db, req);
     const body = (await readJsonResponse(res, 200)) as { repairedEventCount: number };
     expect(body.repairedEventCount).toBe(1);
   });
@@ -371,7 +373,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    const res = await auditTrusted(db, req);
     const body = (await readJsonResponse(res, 500)) as { error: string };
     expect(body.error).toContain("no changes were committed");
     const affectedDay = Math.floor(rows[0].started_at / DAY_SECONDS) * DAY_SECONDS;
@@ -414,7 +416,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    const res = await auditTrusted(db, req);
     const body = (await readJsonResponse(res, 200)) as {
       dryRun: boolean;
       repairedEventCount: number;
@@ -462,7 +464,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    const res = await auditTrusted(db, req);
     const body = (await readJsonResponse(res, 200)) as {
       repairedEventCount: number;
       daysRecomputed: number;
@@ -510,7 +512,7 @@ describe("handleAuditDepegHistory method safety", () => {
       method: "POST",
     });
 
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    const res = await auditTrusted(db, req);
     const body = (await readJsonResponse(res, 200)) as {
       repairedEventCount: number;
       repairedEvents: Array<{ id: number; symbol: string }>;
@@ -824,7 +826,7 @@ describe("handleAuditDepegHistory method safety", () => {
     ]) as MockD1Database;
     const req = makeApiRequest("/api/audit-depeg-history?dry-run=true", { adminKey: "secret" });
 
-    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    const res = await auditTrusted(db, req);
     const body = (await readJsonResponse(res, 200)) as {
       upstreamErrorReason?: string;
       upstreamReachable: boolean;

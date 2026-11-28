@@ -96,6 +96,8 @@ function runtime(mode: string | undefined): ScheduledRuntimeContext {
   return value;
 }
 
+const leasedMetadata = () => JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}");
+
 describe("reserve recovery mode", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -148,7 +150,7 @@ describe("reserve recovery mode", () => {
     await runFiveMinuteReserveRecoverySlot(outer);
     expect(outer.reserveTailSettled).toBe(true);
     expect(mocks.runReserveSlot).toHaveBeenCalledTimes(1);
-    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+    expect(leasedMetadata()).toMatchObject({
       disposition: "recovery-executed",
       currentSlot: { reason: "current-slot-never-delivered", slotStartedAt: 900, graceSec: 600 },
     });
@@ -161,7 +163,7 @@ describe("reserve recovery mode", () => {
     expect(mocks.claim).toHaveBeenCalledTimes(1);
     expect(mocks.configRecovery).not.toHaveBeenCalled();
     expect(mocks.runReserveSlot).not.toHaveBeenCalled();
-    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+    expect(leasedMetadata()).toMatchObject({
       disposition: "no-recovery-due", configRecovery: { disposition: "not-due" },
     });
   });
@@ -204,8 +206,8 @@ describe("reserve recovery mode", () => {
       }
       await runFiveMinuteReserveRecoverySlot(runtime("recover"));
       expect(latestLeasedResult).toMatchObject({ status });
-      expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({ reason, producerPriority: priority });
-      expect(confirmedCronOutputAt(latestLeasedResult, JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}"), 1000)).toBeNull();
+      expect(leasedMetadata()).toMatchObject({ reason, producerPriority: priority });
+      expect(confirmedCronOutputAt(latestLeasedResult, leasedMetadata(), 1000)).toBeNull();
       expect(mocks.runReserveSlot).toHaveBeenCalledTimes(phase === "child-summary" ? 1 : 0);
       if (phase === "preflight") expect(mocks.configRecovery).not.toHaveBeenCalled();
       if (phase === "preflight") expect(mocks.claim).not.toHaveBeenCalled();
@@ -220,7 +222,7 @@ describe("reserve recovery mode", () => {
     });
     await runFiveMinuteReserveRecoverySlot(runtime("recover"));
     expect(latestLeasedResult).toMatchObject({ status: "skipped_neutral", itemCount: 0 });
-    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+    expect(leasedMetadata()).toMatchObject({
       reason: "producer-slot-priority", attemptedCount: 0, checkpointsClaimed: 0,
     });
     expect(mocks.configRecovery).not.toHaveBeenCalled();
@@ -251,7 +253,7 @@ describe("reserve recovery mode", () => {
     });
     await runFiveMinuteReserveRecoverySlot(runtime("recover"));
     expect(latestLeasedResult).toMatchObject({ status: "skipped_neutral" });
-    const metadata = JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}");
+    const metadata = leasedMetadata();
     expect(metadata.reason).toBe("producer-slot-priority");
     expect(confirmedCronOutputAt(latestLeasedResult, metadata, 1100)).toBeNull();
   });
@@ -336,7 +338,7 @@ describe("reserve recovery mode", () => {
       "preparing-reserve-checkpoint",
       "replaying-reserve-checkpoint",
     ]);
-    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+    expect(leasedMetadata()).toMatchObject({
       disposition: "recovery-executed",
       mode: "recover",
       retiredCheckpoints: 0,
@@ -391,7 +393,7 @@ describe("reserve recovery mode", () => {
         await pending;
       }
       expect(latestLeasedResult).toMatchObject({ status: "ok" });
-      expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+      expect(leasedMetadata()).toMatchObject({
         checkpointsClaimed: 1, producerPriority: priority, recoveryClaimRelease: { disposition },
       });
       expect(mocks.runReserveSlot).not.toHaveBeenCalled();
@@ -410,7 +412,7 @@ describe("reserve recovery mode", () => {
     await runFiveMinuteReserveRecoverySlot(runtime("recover"));
     expect(latestLeasedResult).toMatchObject({ status: condition === "current-slot-unfinished" ? "skipped_neutral" : "ok" });
     expect(mocks.configRecovery).not.toHaveBeenCalled();
-    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+    expect(leasedMetadata()).toMatchObject({
       reason: condition === "producer-slot-live" ? "producer-slot-live" : "producer-slot-priority",
       recoveryClaimRelease: { disposition: "released" },
     });
@@ -438,7 +440,7 @@ describe("reserve recovery mode", () => {
     const result = await runFiveMinuteReserveRecoverySlot(runtime("recover"));
     expect(result.jobsDegraded).toBe(0);
     expect(latestLeasedResult).toMatchObject({ status: "ok" });
-    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+    expect(leasedMetadata()).toMatchObject({
       statusCause: "reserve-recovery-zero-eligible-incompatible", checkpointsClaimed: 0,
     });
   });
@@ -462,7 +464,7 @@ describe("reserve recovery mode", () => {
       });
     await runFiveMinuteReserveRecoverySlot(runtime("recover"));
     expect(latestLeasedResult).toMatchObject({ status });
-    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+    expect(leasedMetadata()).toMatchObject({
       reason: errors ? "reserve-replay-child-error" : degraded ? "reserve-replay-child-degraded" : "producer-slot-priority",
     });
   });
@@ -476,7 +478,7 @@ describe("reserve recovery mode", () => {
     const result = await runFiveMinuteReserveRecoverySlot(runtime("recover"));
     expect(result.jobsDegraded).toBe(0);
     expect(mocks.runReserveSlot).toHaveBeenCalledTimes(1);
-    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+    expect(leasedMetadata()).toMatchObject({
       disposition: "recovery-executed", checkpointsClaimed: 1,
       configRecovery: { disposition: "deferred-for-cohort" },
     });
@@ -491,7 +493,7 @@ describe("reserve recovery mode", () => {
       attempted: [], healed: [], failed: [],
     });
     expect((await runFiveMinuteReserveRecoverySlot(runtime("recover"))).jobsDegraded).toBe(0);
-    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+    expect(leasedMetadata()).toMatchObject({
       configRecovery: { disposition: "config-recovery-skipped", reason: "sync-live-reserves-lease-held" },
     });
   });
@@ -509,7 +511,7 @@ describe("reserve recovery mode", () => {
       } });
     }
     expect((await runFiveMinuteReserveRecoverySlot(runtime("recover"))).jobsDegraded).toBe(hasCheckpoint ? 0 : 1);
-    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+    expect(leasedMetadata()).toMatchObject({
       checkpointsClaimed: hasCheckpoint ? 1 : 0,
       configRecovery: hasCheckpoint ? { disposition: "deferred-for-cohort" }
         : { disposition: "config-recovery-partial", healed: ["covered"], warnings },
@@ -531,7 +533,7 @@ describe("reserve recovery mode", () => {
     mocks.runReserveSlot.mockResolvedValue({ jobsErrored: errors, jobsDegraded: degraded, jobsSkipped: skipped, jobs: [] });
     await runFiveMinuteReserveRecoverySlot(runtime("recover"));
     expect(latestLeasedResult).toMatchObject({ status });
-    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+    expect(leasedMetadata()).toMatchObject({
       reason, reasons: expect.arrayContaining([reason]),
       configRecovery: { disposition: "deferred-for-cohort" },
     });
@@ -545,7 +547,7 @@ describe("reserve recovery mode", () => {
     });
     await runFiveMinuteReserveRecoverySlot(runtime("recover"));
     expect(latestLeasedResult).toMatchObject({ status: "degraded" });
-    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+    expect(leasedMetadata()).toMatchObject({
       reason: "reserve-config-recovery-failed",
       reasons: ["reserve-config-recovery-failed", condition === "producer-slot-live" ? "producer-slot-live" : "producer-slot-priority"],
     });
@@ -565,7 +567,7 @@ describe("reserve recovery mode", () => {
     });
     await runFiveMinuteReserveRecoverySlot(runtime("recover"));
     expect(latestLeasedResult).toMatchObject({ status: "ok", itemCount: 1 });
-    expect(JSON.parse((latestLeasedResult as CronResult).metadata ?? "{}")).toMatchObject({
+    expect(leasedMetadata()).toMatchObject({
       disposition: "cohort-continuation", continuationPending: true, reasons: [],
     });
     expect(mocks.configRecovery).not.toHaveBeenCalled();

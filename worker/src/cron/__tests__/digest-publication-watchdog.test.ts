@@ -158,6 +158,8 @@ function mockCurrentMap(date = DATE): void {
   })));
 }
 
+const OPS_CREDS = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+
 describe("digest publication watchdog", () => {
   beforeEach(() => {
     sendToChatMock.mockClear();
@@ -169,7 +171,7 @@ describe("digest publication watchdog", () => {
     const result = await runDigestPublicationWatchdog(
       healthyDigestDb(),
       at("2026-08-31T08:10:00Z"),
-      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+      OPS_CREDS,
     );
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(0);
@@ -186,7 +188,7 @@ describe("digest publication watchdog", () => {
     const result = await runDigestPublicationWatchdog(
       fakeDb({ dailyRow: false, twitterState: JSON.stringify({ state: "sent" }) }),
       at("2026-08-31T08:31:00Z"),
-      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+      OPS_CREDS,
     );
     expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata ?? "{}").conditions["daily-row"].state).toBe("stale");
@@ -202,7 +204,7 @@ describe("digest publication watchdog", () => {
         twitterState: JSON.stringify({ state: "sent" }),
       }),
       at("2026-08-31T08:31:00Z"),
-      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+      OPS_CREDS,
     );
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(metadata.conditions["daily-inputs"]).toMatchObject({
@@ -220,7 +222,7 @@ describe("digest publication watchdog", () => {
     const result = await runDigestPublicationWatchdog(
       fakeDb({ dailyCriticalSources: ["yield-anomalies-query"], twitterState: JSON.stringify({ state: "sent" }) }),
       at("2026-08-31T08:31:00Z"),
-      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+      OPS_CREDS,
     );
     expect(JSON.parse(result.metadata ?? "{}").conditions["daily-inputs"]).toMatchObject({
       state: "ok",
@@ -236,7 +238,7 @@ describe("digest publication watchdog", () => {
         twitterState: JSON.stringify({ state: "sent" }),
       }),
       at("2026-08-31T08:36:00Z"),
-      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+      OPS_CREDS,
     );
     const conditions = JSON.parse(result.metadata ?? "{}").conditions;
     expect(conditions["weekly-inputs"]).toMatchObject({
@@ -318,7 +320,7 @@ describe("digest publication watchdog", () => {
     const result = await runDigestPublicationWatchdog(
       fakeDb({ dailyTelegram: "pending", twitterState: JSON.stringify({ state: "sent" }) }),
       at("2026-08-31T08:31:00Z"),
-      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+      OPS_CREDS,
     );
     expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata ?? "{}").conditions["daily-telegram"].state).toBe("stale");
@@ -329,7 +331,7 @@ describe("digest publication watchdog", () => {
     const result = await runDigestPublicationWatchdog(
       fakeDb({ twitterState: JSON.stringify({ state: "execution_unknown" }) }),
       at("2026-08-31T08:31:00Z"),
-      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+      OPS_CREDS,
     );
     expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata ?? "{}").conditions["daily-twitter"].state).toBe("stale");
@@ -343,7 +345,7 @@ describe("digest publication watchdog", () => {
     const result = await runDigestPublicationWatchdog(
       healthyDigestDb(),
       at("2026-08-31T08:00:00Z"),
-      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+      OPS_CREDS,
     );
     expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata ?? "{}").conditions["map-producer-lag"].advisory).toBe(true);
@@ -366,7 +368,7 @@ describe("digest publication watchdog", () => {
     const result = await runDigestPublicationWatchdog(
       healthyDigestDb(),
       nowSec,
-      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+      OPS_CREDS,
     );
     const condition = JSON.parse(result.metadata ?? "{}").conditions["map-producer-lag"];
     expect(condition.state).toBe("stale");
@@ -383,7 +385,7 @@ describe("digest publication watchdog", () => {
     const result = await runDigestPublicationWatchdog(
       healthyDigestDb(),
       at(`${DATE}T08:10:00Z`),
-      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+      OPS_CREDS,
     );
     const condition = JSON.parse(result.metadata ?? "{}").conditions["map-producer-lag"];
     expect(condition.state).toBe("stale");
@@ -411,7 +413,7 @@ describe("digest publication watchdog", () => {
     const monday = await runDigestPublicationWatchdog(
       fakeDb({ weeklyRow: false, weeklyTelegram: "pending", twitterState: JSON.stringify({ state: "sent" }) }),
       at("2026-08-31T08:36:00Z"),
-      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+      OPS_CREDS,
     );
     expect(monday.status).toBe("ok");
     const metadata = JSON.parse(monday.metadata ?? "{}");
@@ -423,7 +425,7 @@ describe("digest publication watchdog", () => {
     const tuesday = await runDigestPublicationWatchdog(
       fakeDb({ dailyRow: true, weeklyRow: false, weeklyTelegram: "pending", twitterState: JSON.stringify({ state: "sent" }) }),
       at("2026-09-01T08:36:00Z"),
-      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+      OPS_CREDS,
     );
     expect(tuesday.status).toBe("ok");
     expect(JSON.parse(tuesday.metadata ?? "{}").conditions["weekly-row"].state).toBe("stale");
@@ -440,7 +442,7 @@ describe("digest publication watchdog", () => {
         weeklyTwitterState: JSON.stringify({ state: "execution_unknown" }),
       }),
       at("2026-08-31T08:36:00Z"),
-      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+      OPS_CREDS,
     );
     expect(result.status).toBe("ok");
     const conditions = JSON.parse(result.metadata ?? "{}").conditions;

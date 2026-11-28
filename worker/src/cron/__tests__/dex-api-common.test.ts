@@ -97,9 +97,11 @@ function extractPriceObservations(
   );
 }
 
+const usdcAddressMap = () => new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
+
 describe("convertToGtNewPools", () => {
   it("matches pool token address to stablecoin ID", () => {
-    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
+    const addressToId = usdcAddressMap();
     const symbolToIds = new Map<string, string[]>();
     const result = convertToGtNewPools([MOCK_POOL], addressToId, symbolToIds);
     expect(result.get("usdc")).toHaveLength(1);
@@ -131,7 +133,7 @@ describe("convertToGtNewPools", () => {
 
   it("skips pools below TVL threshold", () => {
     const pool = { ...MOCK_POOL, tvlUsd: 5_000 };
-    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
+    const addressToId = usdcAddressMap();
     const result = convertToGtNewPools([pool], addressToId, new Map());
     expect(result.size).toBe(0);
   });
@@ -152,7 +154,7 @@ describe("convertToGtNewPools", () => {
   });
 
   it("sets correct GtNewPool fields", () => {
-    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
+    const addressToId = usdcAddressMap();
     const result = convertToGtNewPools([MOCK_POOL], addressToId, new Map());
     const gtPool = result.get("usdc")![0];
     expect(gtPool.address).toBe("0xpool1");
@@ -200,7 +202,7 @@ describe("convertToGtNewPools", () => {
 
   it("sets price to 0 when pool.price is null and no priceUsd", () => {
     const pool = { ...MOCK_POOL, price: null };
-    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
+    const addressToId = usdcAddressMap();
     const result = convertToGtNewPools([pool], addressToId, new Map());
     expect(result.get("usdc")![0].price).toBe(0);
   });
@@ -262,7 +264,7 @@ describe("convertToGtNewPools", () => {
   });
 
   it("applies correct quality multiplier for pool type", () => {
-    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
+    const addressToId = usdcAddressMap();
     const result = convertToGtNewPools([MOCK_POOL], addressToId, new Map());
     // fluid-dex quality multiplier is 0.85
     expect(result.get("usdc")![0].qualityMultiplier).toBe(0.85);
@@ -502,14 +504,14 @@ describe("convertToGtNewPools", () => {
 
   it("falls back to generic quality multiplier for unknown pool types", () => {
     const pool = { ...MOCK_POOL, poolType: "unknown-pool-type" };
-    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
+    const addressToId = usdcAddressMap();
     const result = convertToGtNewPools([pool], addressToId, new Map());
     expect(result.get("usdc")![0].qualityMultiplier).toBe(0.3);
   });
 
   it("includes pool at exactly the TVL threshold", () => {
     const pool = { ...MOCK_POOL, tvlUsd: DIRECT_API_POOL_MIN_TVL_USD };
-    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
+    const addressToId = usdcAddressMap();
     const result = convertToGtNewPools([pool], addressToId, new Map());
     expect(result.get("usdc")).toHaveLength(1);
   });
@@ -556,14 +558,14 @@ describe("extractPriceObservations", () => {
 
   it("skips pools with null price and no per-token priceUsd", () => {
     const pool = { ...MOCK_POOL, price: null };
-    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
+    const addressToId = usdcAddressMap();
     const result = extractPriceObservations([pool], addressToId, new Map());
     expect(result.size).toBe(0);
   });
 
   it("skips pools below $50K TVL", () => {
     const pool = { ...MOCK_POOL, tvlUsd: 40_000 };
-    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
+    const addressToId = usdcAddressMap();
     const result = extractPriceObservations([pool], addressToId, new Map());
     expect(result.size).toBe(0);
   });
@@ -587,7 +589,7 @@ describe("extractPriceObservations", () => {
       ],
     };
     // USDC is tracked but WETH is not a USD reference and not in addressToId
-    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
+    const addressToId = usdcAddressMap();
     const result = extractPriceObservations([pool], addressToId, new Map());
     // No price can be derived (WETH is not a USD reference)
     expect(result.size).toBe(0);
@@ -654,7 +656,7 @@ describe("extractPriceObservations", () => {
       ...MOCK_POOL,
       price: 0,
     };
-    const addressToId = new Map([["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"]]);
+    const addressToId = usdcAddressMap();
     const result = extractPriceObservations([pool], addressToId, new Map());
     expect(result.size).toBe(0);
   });

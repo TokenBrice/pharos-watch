@@ -132,6 +132,8 @@ function producerRunningResult(): CronResult {
   };
 }
 
+const expectNoV9InputPrepared = () => expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+
 describe("half-hourly charts scheduling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -187,7 +189,7 @@ describe("half-hourly charts scheduling", () => {
 
     const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
 
-    expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+    expectNoV9InputPrepared();
     expect(mocks.syncStablecoinCharts).toHaveBeenCalledWith(
       scheduledRuntime.db,
       expect.any(AbortSignal),
@@ -221,7 +223,7 @@ describe("half-hourly charts scheduling", () => {
 
     const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
 
-    expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+    expectNoV9InputPrepared();
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
     expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
       ["sync-dex-liquidity", "degraded", "defillama-yields-unavailable"],
@@ -254,7 +256,7 @@ describe("half-hourly charts scheduling", () => {
 
       const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
 
-      expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+      expectNoV9InputPrepared();
       expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
       expect(summary.jobs[2]).toMatchObject({
         job: "prepare-safety-score-v9-input",
@@ -277,7 +279,7 @@ describe("half-hourly charts scheduling", () => {
     const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
 
     expect(mocks.consumeDexLiquidityScoringStage).not.toHaveBeenCalled();
-    expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+    expectNoV9InputPrepared();
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
     expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
       ["sync-dex-liquidity", "skipped", "lease-locked"],
@@ -304,7 +306,7 @@ describe("half-hourly charts scheduling", () => {
 
     const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
 
-    expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+    expectNoV9InputPrepared();
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
     expect(summary.jobs[2]).toMatchObject({
       job: "prepare-safety-score-v9-input",
@@ -325,7 +327,7 @@ describe("half-hourly charts scheduling", () => {
 
       const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
 
-      expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+      expectNoV9InputPrepared();
       expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
       expect(summary.jobs[0]).toMatchObject({
         job: "sync-dex-liquidity",
@@ -426,7 +428,7 @@ describe("half-hourly charts scheduling", () => {
         },
       },
     );
-    expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+    expectNoV9InputPrepared();
     // The skipped preparation still keeps the 30-minute peg-analytics cache fresh.
     expect(mocks.derivePegAnalyticsSnapshot).toHaveBeenCalledWith(scheduledRuntime.db, {
       peggedAssets: [], fxFallbackRates: {}, methodologyAsOf: 900, includeNavTokens: true,
@@ -520,7 +522,7 @@ describe("half-hourly charts scheduling", () => {
 
     const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
 
-    expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+    expectNoV9InputPrepared();
     expect(summary.jobs[2]).toMatchObject({
       job: "prepare-safety-score-v9-input",
       outcome: "skipped",
@@ -554,7 +556,7 @@ describe("half-hourly charts scheduling", () => {
 
     const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
 
-    expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+    expectNoV9InputPrepared();
     expect(summary.jobs[2]).toMatchObject({
       job: "prepare-safety-score-v9-input",
       outcome: "skipped",
@@ -664,7 +666,7 @@ describe("half-hourly charts scheduling", () => {
     const scheduledRuntime = runtime(db);
     const results = captureJobResults(scheduledRuntime);
     await runHalfHourlyChartsSlot(scheduledRuntime);
-    expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+    expectNoV9InputPrepared();
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
     expect(jobMetadata(results, "prepare-safety-score-v9-input")).toMatchObject({
       reason: "upstream-dex-publication-unavailable", upstreamStatus: "skipped_neutral",
@@ -685,7 +687,7 @@ describe("half-hourly charts scheduling", () => {
     const scheduledRuntime = runtime(makeNoopD1({ prepare: () => ({ all: readAccepted }) }));
     await runHalfHourlyChartsSlot(scheduledRuntime);
     expect(readAccepted).not.toHaveBeenCalled();
-    expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+    expectNoV9InputPrepared();
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
   });
 

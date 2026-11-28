@@ -21,6 +21,16 @@ function statusLoadersD1(overrides: NonNullable<Parameters<typeof buildStatusD1S
   });
 }
 
+/** Trusted admin `GET /api/status` with a request carrying the admin key. */
+function adminStatus(db: Parameters<typeof handleStatus>[0]["db"], extra: Omit<Parameters<typeof handleStatus>[0], "db"> = {}) {
+  return handleStatus({ db, trustedAdmin: true, request: fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" }), ...extra });
+}
+
+/** A minute-old `stablecoins` cache row. */
+function stablecoinsCacheRow(value: string, now: number) {
+  return { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value, updated_at: now - 60 } };
+}
+
 describe("handleStatus", () => {
   afterEach(cleanupStatusTest);
   it.each([false, true])("compares strict 5-percent boundaries in severity order (malformed=%s)", async (malformed) => {
@@ -116,11 +126,10 @@ describe("handleStatus", () => {
     ]);
 
     const db = statusLoadersD1([
-      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      stablecoinsCacheRow(stablecoinsCache, now),
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request, coingeckoApiKey: "cg-test-key" });
+    const res = await adminStatus(db, { coingeckoApiKey: "cg-test-key" });
     const body = (await res.json()) as {
       coingeckoPriceDiff: {
         checkedAt: number;
@@ -229,11 +238,10 @@ describe("handleStatus", () => {
     ]);
 
     const db = statusLoadersD1([
-      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      stablecoinsCacheRow(stablecoinsCache, now),
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request, coingeckoApiKey: "cg-test-key" });
+    const res = await adminStatus(db, { coingeckoApiKey: "cg-test-key" });
     const body = (await res.json()) as {
       coingeckoPriceDiff: {
         trackedWithGeckoId: number;
@@ -282,11 +290,10 @@ describe("handleStatus", () => {
     ]);
 
     const db = statusLoadersD1([
-      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      stablecoinsCacheRow(stablecoinsCache, now),
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request, coingeckoApiKey: "cg-test-key" });
+    const res = await adminStatus(db, { coingeckoApiKey: "cg-test-key" });
     const body = (await readJsonResponse(res, 200)) as {
       coingeckoPriceDiff: unknown;
       sectionErrors: Record<string, { code: string; message: string } | undefined>;
@@ -391,11 +398,10 @@ describe("handleStatus", () => {
     ]);
 
     const db = statusLoadersD1([
-      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      stablecoinsCacheRow(stablecoinsCache, now),
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request, coingeckoApiKey: "cg-test-key" });
+    const res = await adminStatus(db, { coingeckoApiKey: "cg-test-key" });
     const body = (await res.json()) as {
       coingeckoPriceDiff: {
         trackedWithGeckoId: number;
@@ -460,8 +466,7 @@ describe("handleStatus", () => {
       { match: "blacklist_events", rows: [], first: { total: 10, missing: 0, missing_recent: 0 } },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       causes: { availability: Array<{ code: string }> };
@@ -488,7 +493,7 @@ describe("handleStatus", () => {
       },
       { match: "cron_runs", rows: [makeCronRow("sync-stablecoins")] },
       { match: "cron_run_progress", rows: [] },
-      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      stablecoinsCacheRow(stablecoinsCache, now),
       { match: "blacklist_events", rows: [], first: { total: 10, missing: 0, missing_recent: 0 } },
       {
         match: "FROM status_state",
@@ -512,8 +517,7 @@ describe("handleStatus", () => {
       },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       state: unknown;
@@ -576,8 +580,7 @@ describe("handleStatus", () => {
       ],
     });
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
     const body = (await readJsonResponse(res, 200)) as {
       producerHeads?: unknown[];
       sectionErrors: { producerHistory?: { code: string } };
@@ -639,12 +642,11 @@ describe("handleStatus", () => {
           },
         ],
       },
-      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      stablecoinsCacheRow(stablecoinsCache, now),
       { match: "blacklist_events", rows: [], first: { total: 10_000, missing: 0, missing_recent: 0 } },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
     const body = (await res.json()) as {
       datasetFreshness: {
         blacklist: number | null;
@@ -674,8 +676,7 @@ describe("handleStatus", () => {
       },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request, coingeckoApiKey: "coingecko-key" });
+    const res = await adminStatus(db, { coingeckoApiKey: "coingecko-key" });
     const body = (await readJsonResponse(res, 200)) as {
       sectionErrors: { coingeckoPriceDiff?: { code: string; message: string } };
       coingeckoPriceDiff: unknown;
@@ -693,8 +694,7 @@ describe("handleStatus", () => {
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
     const body = (await res.json()) as {
       dataQualityStatus: string;
       dataQuality: {
@@ -716,12 +716,11 @@ describe("handleStatus", () => {
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
     const db = statusLoadersD1([
-      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      stablecoinsCacheRow(stablecoinsCache, now),
       { match: "blacklist_events", rows: [], throwError: "blacklist query failed" },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
     const body = (await res.json()) as {
       dataQualityStatus: string;
       dataQuality: {
@@ -754,13 +753,12 @@ describe("handleStatus", () => {
       { match: "dex_liquidity", rows: [], first: { age: 60 } },
       { match: "yield_data", rows: [], first: { age: 60 } },
       { match: "cron_runs", rows: cronRows },
-      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      stablecoinsCacheRow(stablecoinsCache, now),
       { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 60, tracked: 12 } },
       { match: "FROM reserve_sync_state", rows: [], throwError: "reserve sync unavailable" },
     ]);
 
-    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
-    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const res = await adminStatus(db);
     const body = (await res.json()) as {
       dataQualityStatus: string;
       reserveComposition: { status: string; reason: string; configuredCoins: number | null; freshCoverageRatio: number | null; authoritativeFreshCoverageRatio: number | null };

@@ -68,6 +68,8 @@ function blockResult(number: number, timestamp: string) {
   return { number: `0x${number.toString(16)}`, timestamp, hash: `0x${"a".repeat(64)}` };
 }
 
+const dwellirChainRpcs = () => buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+
 describe("evm-rpc helpers", () => {
   function registryEndpoint(url: string, operator: "alchemy" | "public" = "public"): RpcEndpoint {
     return {
@@ -184,7 +186,7 @@ describe("evm-rpc helpers", () => {
   });
 
   it.each(["ink", "berachain", "mantle", "ethereum", "base", "optimism", "arbitrum"])("routes CCIP hash-pinned state and historical logs through authenticated, metered Dwellir first on %s", async (chain) => {
-    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const chainRpcs = dwellirChainRpcs();
     const dwellir = chainRpcs.get(chain)!.endpoints.find(endpoint => endpoint.operator === "dwellir")!;
     const block = { blockHash: `0x${"a".repeat(64)}`, requireCanonical: true };
     const state = [
@@ -206,7 +208,7 @@ describe("evm-rpc helpers", () => {
   });
 
   it.each([["latest", "alchemy"], [100, "dwellir"]] as const)("routes HyperEVM %s state via %s", async (block, operator) => {
-    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const chainRpcs = dwellirChainRpcs();
     fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0x2a" }));
     await fetchEvmCallHexAtBlock("hyperevm", "0xToken", "0x1234", block, { chainRpcs });
     expect(attemptedUrls()[0]).toBe(chainRpcs.get("hyperevm")!.endpoints.find(e => e.operator === operator)!.url);
@@ -273,7 +275,7 @@ describe("evm-rpc helpers", () => {
   });
 
   it.each(["bsc", "monad", "zksync"])("admits exact recent finalized state on %s but intersects mixed batch requirements", async chain => {
-    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const chainRpcs = dwellirChainRpcs();
     const header = { number: 100, hash: `0x${"a".repeat(64)}` as `0x${string}`, timestamp: Math.floor(Date.now() / 1000) - 10 };
     const recentStatePin = { chainId: chain, header, finalized: header, observedAtSec: header.timestamp + 1, maxAgeSec: 1800 };
     const selector = { blockHash: header.hash, requireCanonical: true };
@@ -294,7 +296,7 @@ describe("evm-rpc helpers", () => {
   });
 
   it("rejects expired, nonfinalized and below-floor recent pins without physical requests", async () => {
-    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const chainRpcs = dwellirChainRpcs();
     const header = { number: 100, hash: `0x${"a".repeat(64)}` as `0x${string}`, timestamp: Math.floor(Date.now() / 1000) - 10 };
     const base = { chainId: "bsc", header, finalized: header, observedAtSec: header.timestamp + 1, maxAgeSec: 1800 };
     for (const pin of [
@@ -308,7 +310,7 @@ describe("evm-rpc helpers", () => {
   });
 
   it("separates BSC historical logs from recent state and bounds Monad retained log pages", async () => {
-    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const chainRpcs = dwellirChainRpcs();
     expect(usableCcipRpcEndpoints("bsc", chainRpcs, { kind: "logs", fromBlock: 1, toBlock: 10 })[0]?.operator).toBe("dwellir");
     expect(usableCcipRpcEndpoints("monad", chainRpcs, { kind: "logs", fromBlock: 1, toBlock: 10, observedHeadBlock: 2_000_000 })[0]?.operator).toBe("alchemy");
     expect(usableCcipRpcEndpoints("monad", chainRpcs, { kind: "logs", fromBlock: 1_990_001, toBlock: 2_000_000, observedHeadBlock: 2_000_000 })[0]?.operator).toBe("dwellir");
@@ -317,7 +319,7 @@ describe("evm-rpc helpers", () => {
   });
 
   it("keeps historical headers independent of state and rejects unsupported finalized tags", async () => {
-    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const chainRpcs = dwellirChainRpcs();
     const header = { number: "0x1", timestamp: "0x64", hash: `0x${"a".repeat(64)}` };
     fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: header }));
     expect(await fetchEvmBlockHeader("bsc", 1, { chainRpcs })).toMatchObject({ number: 1 });
@@ -333,7 +335,7 @@ describe("evm-rpc helpers", () => {
   });
 
   it("meters one latest-header read through Dwellir without granting historical state capability", async () => {
-    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const chainRpcs = dwellirChainRpcs();
     const dwellir = chainRpcs.get("bsc")!.endpoints.find(endpoint => endpoint.operator === "dwellir")!;
     const onRpcRequest = vi.fn();
     chainRpcs.get("bsc")!.onRpcRequest = onRpcRequest;

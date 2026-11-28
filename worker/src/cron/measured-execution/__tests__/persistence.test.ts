@@ -83,6 +83,8 @@ function lkgProfile(target: DexMeasuredExecutionTarget) {
 
 
 
+const loadEvidenceAt2010 = (db: D1Database) => loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
+
 describe("measured execution publication", () => {
   it("classifies StableSwap transport outages as operational but not semantic drift", () => {
     expect(isOperationalDexMeasuredFailure("rpc-failure")).toBe(true);
@@ -276,7 +278,7 @@ describe("measured execution durable publication", () => {
       { target_id: failedTarget.targetId, quote_profile_json: null, raw_quote_payload_json: JSON.stringify({ reason: "execution reverted" }) },
       { target_id: measuredTarget.targetId, quote_profile_json: JSON.stringify(profile), raw_quote_payload_json: null },
     ]);
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
+    const evidence = await loadEvidenceAt2010(db);
     expect(evidence?.byTargetId.get(measuredTarget.targetId)?.profile).toEqual(profile);
     expect(evidence?.byTargetId.get(failedTarget.targetId)).not.toHaveProperty("rawPayload");
   });
@@ -322,14 +324,14 @@ describe("measured execution durable publication", () => {
           : { target, status: "failed" as const, failureReason: "budget-deferred" }) });
       expect(sqlite.prepare("SELECT target_id FROM dex_measured_execution_quotes WHERE generation_id = ?").all(generationId))
         .toEqual(allDeferred ? [] : [{ target_id: targets[0]!.targetId }]);
-      const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
+      const evidence = await loadEvidenceAt2010(db);
       expect(evidence?.quoteGenerationId).toBe(generationId);
       expect(evidence?.byTargetId.get(targets[1]!.targetId)).toMatchObject({ status: "failed", failureReason: "budget-deferred", profile: null });
       expect([...evidence!.byTargetId.keys()].sort()).toEqual(targets.map((target) => target.targetId).sort());
     }
     sqlite.prepare("UPDATE surface_publication_generations SET dependency_snapshot_json = json_set(dependency_snapshot_json, '$.targetIdsSha256', ?) WHERE generation_id = 'all-deferred'")
       .run("0".repeat(64));
-    await expect(loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010)).rejects.toThrow("incomplete");
+    await expect(loadEvidenceAt2010(db)).rejects.toThrow("incomplete");
   });
 
   it("rejects the same torn terminal row in full and selected evidence scans", async () => {
@@ -385,7 +387,7 @@ describe("measured execution durable publication", () => {
     for (const outcomes of [[failed(targets[0]!), failed(targets[0]!)], [failed(targets[0]!)], [failed(targets[0]!), failed(fixtureTarget("polygon"))]]) {
       await expect(publishDexMeasuredQuoteGeneration({ db, targetGeneration: { generationId: "candidate-targets", targets, publishedAt: 2_100 }, outcomes, quotedAt: 2_200 }))
         .rejects.toThrow("exactly cover");
-      expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))?.quoteGenerationId).toBe("quote-generation-latest");
+      expect((await loadEvidenceAt2010(db))?.quoteGenerationId).toBe("quote-generation-latest");
     }
   });
 
@@ -401,7 +403,7 @@ describe("measured execution durable publication", () => {
     ]) {
       await expect(publishDexMeasuredQuoteGeneration({ db, generationId: "quote-generation", targetGeneration: { generationId: "target-generation", targets: [target], publishedAt: 2_100 }, outcomes: [outcome], quotedAt: 2_200 }))
         .rejects.toThrow("invalid terminal state");
-      expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))?.quoteGenerationId).toBe("quote-generation-latest");
+      expect((await loadEvidenceAt2010(db))?.quoteGenerationId).toBe("quote-generation-latest");
     }
   });
 
@@ -415,7 +417,7 @@ describe("measured execution durable publication", () => {
     ]) {
       await expect(publishDexMeasuredQuoteGeneration({ db, generationId: "quote-generation", targetGeneration: { generationId: "target-generation", targets: [target], publishedAt: 2_100 }, outcomes: [{ target, status: "measured", profile }], quotedAt: 2_200 }))
         .rejects.toThrow("mismatched generation identity");
-      expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))?.quoteGenerationId).toBe("quote-generation-latest");
+      expect((await loadEvidenceAt2010(db))?.quoteGenerationId).toBe("quote-generation-latest");
     }
   });
 
@@ -434,7 +436,7 @@ describe("measured execution durable publication", () => {
     await expect(publishDexMeasuredQuoteGeneration({ db, generationId: "broken-quotes", targetGeneration,
       outcomes: [{ target, status: "failed", failureReason: "pool-revert" }], quotedAt: 2_060 })).rejects.toThrow("row mismatch");
     expect(await loadLatestPublishedDexMeasuredTargets(db)).toEqual(targetGeneration);
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
+    const evidence = await loadEvidenceAt2010(db);
     expect(evidence?.quoteGenerationId).toBe("prior-quotes");
     expect([...evidence!.byTargetId.keys()]).toEqual([target.targetId]);
     expect(sqlite.prepare("SELECT state FROM surface_publication_generations WHERE generation_id = 'broken-quotes'").get()).toEqual({ state: "failed" });
@@ -542,7 +544,7 @@ describe("measured execution last-known-good selection", () => {
       historical: [{ target: measuredTarget, profile: historicalProfile }],
     });
 
-    const entry = (await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))
+    const entry = (await loadEvidenceAt2010(db))
       ?.byTargetId.get(measuredTarget.targetId);
 
     expect(entry).toMatchObject({ status: "failed", resolution: "latest", failureReason });
@@ -576,7 +578,7 @@ describe("measured execution last-known-good selection", () => {
     });
     const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
+    const evidence = await loadEvidenceAt2010(db);
 
     expect(evidence?.byTargetId.get(measuredTarget.targetId)).toMatchObject({
       status: "failed",
@@ -615,7 +617,7 @@ describe("measured execution last-known-good selection", () => {
       ],
     });
 
-    const entry = (await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))?.byTargetId.get(measuredTarget.targetId);
+    const entry = (await loadEvidenceAt2010(db))?.byTargetId.get(measuredTarget.targetId);
 
     expect(entry).toMatchObject({
       resolution: "last-known-good",
@@ -644,7 +646,7 @@ describe("measured execution last-known-good selection", () => {
       historical: [{ target: measuredTarget, profile: historicalProfile }],
     });
 
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
+    const evidence = await loadEvidenceAt2010(db);
     const entry = evidence?.byTargetId.get(measuredTarget.targetId);
 
     expect(entry).toMatchObject({
@@ -684,7 +686,7 @@ describe("measured execution last-known-good selection", () => {
       ],
     });
 
-    const entry = (await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))?.byTargetId.get(measuredTarget.targetId);
+    const entry = (await loadEvidenceAt2010(db))?.byTargetId.get(measuredTarget.targetId);
 
     expect(entry).toMatchObject({
       status: "failed",
@@ -714,7 +716,7 @@ describe("measured execution last-known-good selection", () => {
       historical: [{ target: measuredTarget, profile: historicalProfile }],
     });
 
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
+    const evidence = await loadEvidenceAt2010(db);
     const entry = evidence?.byTargetId.get(measuredTarget.targetId);
 
     expect(entry).toMatchObject({
@@ -744,7 +746,7 @@ describe("measured execution last-known-good selection", () => {
       historical: [{ target: historicalTarget, profile: historicalProfile }],
     });
 
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
+    const evidence = await loadEvidenceAt2010(db);
     const latestEntry = evidence?.byTargetId.get(latestTarget.targetId);
     const historicalEntry = evidence?.byTargetId.get(historicalTarget.targetId);
 
@@ -782,7 +784,7 @@ describe("measured execution last-known-good selection", () => {
       historical,
     });
 
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
+    const evidence = await loadEvidenceAt2010(db);
 
     expect(evidence?.byTargetId).toHaveLength(66);
     expect(evidence?.byTargetId.get(historical[64]!.target.targetId)).toMatchObject({
@@ -880,7 +882,7 @@ describe("measured execution clock-bounded cohort reads", () => {
     // routeObservedAt to its source slot, which measured cohort publication can
     // land after.
     const clockSec = 1_400;
-    const unbounded = await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010);
+    const unbounded = await loadEvidenceAt2010(db);
     expect(unbounded?.quoteGenerationId).toBe("quote-generation-latest");
     expect(unbounded?.byTargetId.get(target.targetId)?.observationHistory?.observationWindowEndedAt)
       .toBeGreaterThan(clockSec);
@@ -929,7 +931,7 @@ describe("measured execution clock-bounded cohort reads", () => {
     }
 
     const clockSec = 1_400;
-    expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))?.byTargetId.get(deferred.targetId))
+    expect((await loadEvidenceAt2010(db))?.byTargetId.get(deferred.targetId))
       .toMatchObject({ status: "measured", resolution: "last-known-good", quoteGenerationId: "quote-generation-displaced" });
 
     expect((await loadLatestPublishedDexMeasuredQuoteEvidence(db, clockSec, undefined, {

@@ -30,6 +30,8 @@ const signalsJson = JSON.stringify({
   price: { value: 5, available: true },
 });
 
+const getStressSignals = (db: D1Database) => handleStressSignals(db, new URL("https://x/api/stress-signals"));
+
 const AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL = `
   SELECT /* pharos:stress-signals:legacy-latest-all */
     s.stablecoin_id, s.score, s.band, s.signals_json, s.computed_at
@@ -270,7 +272,7 @@ describe("handleStressSignals contract tests", () => {
       },
     ]);
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
 
     const body = (await readJsonResponse(res, 200)) as { computedCount: number; signals: Record<string, unknown> };
     expect(body.computedCount).toBe(1);
@@ -307,7 +309,7 @@ describe("handleStressSignals contract tests", () => {
       ],
     );
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       computedCount: number;
@@ -334,7 +336,7 @@ describe("handleStressSignals contract tests", () => {
       completedDewsAt,
     );
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       computedCount: number;
@@ -377,7 +379,7 @@ describe("handleStressSignals contract tests", () => {
         current: null, currentStatus: "unavailable", history: [],
         currentReasons: expect.arrayContaining(["single-coin-current-row-missing"]),
       });
-      const unavailableResponse = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+      const unavailableResponse = await getStressSignals(db);
       expect(StressSignalsAllResponseSchema.parse(await readJsonResponse(unavailableResponse, 200))).toMatchObject({
         signals: {}, computedCount: 0, coverageStatus: "unavailable",
         coverageReasons: expect.arrayContaining(["no-current-rows"]),
@@ -388,7 +390,7 @@ describe("handleStressSignals contract tests", () => {
       const accepted = await readDetail();
       expect(accepted.current?.score).toBe(25);
       expect(accepted.history.map((row) => row.score)).toEqual([25]);
-      const recoveredResponse = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+      const recoveredResponse = await getStressSignals(db);
       expect(StressSignalsAllResponseSchema.parse(await readJsonResponse(recoveredResponse, 200))).toMatchObject({
         computedCount: 1, signals: { "usdt-tether": { score: 25 } },
       });
@@ -534,7 +536,7 @@ describe("handleStressSignals contract tests", () => {
       },
     ]);
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
     const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, unknown>;
       malformedRows: number;
@@ -569,7 +571,7 @@ describe("handleStressSignals contract tests", () => {
       },
     ]);
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
     const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, unknown>;
     };
@@ -602,7 +604,7 @@ describe("handleStressSignals contract tests", () => {
       },
     ]);
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
     const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, unknown>;
       eligibleCount: number;
@@ -627,7 +629,7 @@ describe("handleStressSignals contract tests", () => {
     }));
     const db = makeStrictLatestAggregateDb(rows);
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       eligibleCount: number;
@@ -664,7 +666,7 @@ describe("handleStressSignals contract tests", () => {
       },
     ]);
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
     const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, {
         signals: Record<string, unknown>;
@@ -693,7 +695,7 @@ describe("handleStressSignals contract tests", () => {
       },
     ]);
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
     const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, { amplifiers: { psi: number; contagion: number } }>;
     };
@@ -765,7 +767,7 @@ describe("handleStressSignals contract tests", () => {
       },
     ]);
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       updatedAt: number;
@@ -800,7 +802,7 @@ describe("handleStressSignals contract tests", () => {
       },
     ]);
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, { ageClassification?: string }>;
@@ -813,7 +815,7 @@ describe("handleStressSignals contract tests", () => {
   it("marks an empty aggregate as unavailable without synthesizing a fresh data-age header", async () => {
     const db = makeStrictAggregateDb([]);
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       computedCount: number;
@@ -833,7 +835,7 @@ describe("handleStressSignals contract tests", () => {
   it("marks the aggregate unavailable when the publication pointer is invalid", async () => {
     const db = mockD1([invalidDewsPublicationPointerMatch()], { strict: true });
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       updatedAt: number;
@@ -858,7 +860,7 @@ describe("handleStressSignals contract tests", () => {
       throwError: new Error("D1 read failed"),
     }], { strict: true });
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       coverageStatus: string;
@@ -915,7 +917,7 @@ describe("handleStressSignals contract tests", () => {
       },
     ]);
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, unknown>;
@@ -1062,7 +1064,7 @@ describe("handleStressSignals contract tests", () => {
       },
     ]);
 
-    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    const res = await getStressSignals(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       signals: Record<string, unknown>;

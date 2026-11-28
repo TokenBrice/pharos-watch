@@ -128,6 +128,14 @@ function inferExpectedProtocolLabel(project: string): string {
     .join(" ");
 }
 
+/** One newly listed USDC lending pool in a fresh DEX-cache read. */
+function mockNewUsdcLenderPool(): void {
+  mockLoadDlStablecoinPools.mockResolvedValue({
+    pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
+    meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
+  });
+}
+
 describe("buildProtocolCategoryLookupFromCachePayload", () => {
   it("accepts the allowed lending categories for high-confidence recommendations", () => {
     expect(isHighConfidenceProtocolCategory("Lending")).toBe(true);
@@ -215,10 +223,7 @@ describe("runYieldCoverageAudit", () => {
     ["malformed", "{"],
     ["malformed", JSON.stringify({ unexpected: [] })],
   ])("defers without publishing falsely clean supply evidence for %s cache", async (state, value) => {
-    mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
-      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
-    });
+    mockNewUsdcLenderPool();
     mockComputeSafetyScoresSnapshot.mockResolvedValue(successfulSafetySnapshot());
     mockGetCache.mockImplementation(async (_db, key) => {
       if (key === "yield-rankings") return { value: JSON.stringify({ rankings: [] }), updatedAt: 1_774_526_300 };
@@ -235,10 +240,7 @@ describe("runYieldCoverageAudit", () => {
   });
 
   it("defers when the compact safety snapshot is not complete and never requests computed V8 scores", async () => {
-    mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
-      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
-    });
+    mockNewUsdcLenderPool();
     mockComputeSafetyScoresSnapshot.mockResolvedValue({
       kind: "degraded",
       mode: "map",
@@ -285,10 +287,7 @@ describe("runYieldCoverageAudit", () => {
     JSON.stringify({ rankings: [{ id: "coin", altSources: [{ sourceKey: "alternate", sourceRisk: { venueProtocol: 42 } }] }] }),
     JSON.stringify({ rankings: [{ id: "coin", provenance: { sourceKey: 42 } }] }),
   ])("defers without report or durable candidate writes for malformed rankings: %s", async (value) => {
-    mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
-      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
-    });
+    mockNewUsdcLenderPool();
     mockGetCache.mockImplementation(async (_db, key) =>
       key === "yield-rankings"
         ? { value, updatedAt: 1_774_526_300 }
@@ -310,10 +309,7 @@ describe("runYieldCoverageAudit", () => {
 
   it("treats a validated empty rankings array as available coverage", async () => {
     lifecycleFixture.coins = [{ id: "sbold-k3-capital", symbol: "sBOLD" }, { id: "susde-ethena", symbol: "sUSDe" }];
-    mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
-      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
-    });
+    mockNewUsdcLenderPool();
     mockComputeSafetyScoresSnapshot.mockResolvedValue(successfulSafetySnapshot());
     mockGetCache.mockImplementation(async (_db, key) => {
       if (key === "yield-rankings") return { value: JSON.stringify({ rankings: [] }), updatedAt: 1_774_526_300 };
@@ -456,10 +452,7 @@ describe("runYieldCoverageAudit", () => {
     ["malformed V9 marker", "active-safety-score:activation-marker-invalid"],
     ["mismatched V9 identity", "active-safety-score:v9-identity-mismatch"],
   ])("defers with explicit V9 provenance for %s", async (_label, reason) => {
-    mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
-      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
-    });
+    mockNewUsdcLenderPool();
     mockComputeSafetyScoresSnapshot.mockResolvedValue({
       kind: "degraded",
       mode: "map",
@@ -661,10 +654,7 @@ describe("runYieldCoverageAudit", () => {
     ["ok", JSON.stringify([{ slug: "uncategorized" }, { slug: "unknown", category: null }]), 2, 0],
     ["ok", JSON.stringify({ data: [{ slug: "new-lender", category: "Lending" }] }), 1, 1],
   ])("publishes admitted protocol evidence and matching terminal status: %s %s", async (status, value, count, categorized) => {
-    mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
-      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
-    });
+    mockNewUsdcLenderPool();
     mockGetCache.mockImplementation(async (_db, key) => {
       if (key === "defillama-protocols" && typeof value === "string") return { value, updatedAt: 1_774_526_300 };
       if (key === "stablecoins") return { value: "[]", updatedAt: 1_774_526_300 };
@@ -698,10 +688,7 @@ describe("runYieldCoverageAudit", () => {
     expect(buckets.reviewDueAdapterCount).toBe(count);
     expect(buckets.reviewDueAdapters).toHaveLength(Math.min(count, 100));
     expect(buckets.reviewDueAdaptersTruncated).toBe(count > 100);
-    mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
-      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
-    });
+    mockNewUsdcLenderPool();
     mockGetCache.mockImplementation(async (_db, key) => {
       if (key === "stablecoins" || key === "defillama-protocols") return { value: "[]", updatedAt: 1_774_526_300 };
       if (key === "yield-rankings") return { value: '{"rankings":[]}', updatedAt: 1_774_526_300 };

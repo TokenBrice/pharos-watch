@@ -113,6 +113,12 @@ interface StubOptions {
   consumeLedgerPages?: number;
 }
 
+/** 3 USDT in, then the same 3 USDT out, both before the freeze. */
+const IN_THEN_OUT_3M: Flow[] = [
+  { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
+  { timestampMs: FREEZE_MS - 60_000, value: 3_000_000n, direction: "out" },
+];
+
 async function stubEvidence(flows: Flow[], overrides: StubOptions = {}) {
   const account = await tronHexAddressToBase58(FREEZE_ADDRESS);
   const tokenHex = await tronBase58ToHex(config.contractAddress);
@@ -218,6 +224,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** Replays the default freeze row through the default config and provider. */
+const recoverDefaultRow = async () => recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+
 describe("proven-zero repair queue", () => {
   it("closes proved zeroes without re-enqueuing them as legacy derived zeroes", async () => {
     const sqlite = new DatabaseSync(":memory:");
@@ -299,7 +308,7 @@ describe("recoverTronFreezeAmountForRow", () => {
       { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "out" },
       ...(net > 0n ? [{ timestampMs: FREEZE_MS - 90_000, value: net, direction: "in" as const }] : []),
     ], { ledgerWatermarkMs: FREEZE_MS - 60_000, consumeLedgerPages: 2 });
-    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    const recovery = await recoverDefaultRow();
     expect(recovery).toMatchObject({ amount: null, lastErrorClass: "state_raced", pagesUsed: 2 });
     expect(fetchTronRawTokenBalance).not.toHaveBeenCalled();
     expect(fetchTronDestroyWindowClear).not.toHaveBeenCalled();
@@ -309,7 +318,7 @@ describe("recoverTronFreezeAmountForRow", () => {
     await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: 2_000_000n, direction: "in" }], {
       ledgerWatermarkMs: ANCHOR_MS,
     });
-    expect(await recoverTronFreezeAmountForRow(await makeRow(), config, provider()))
+    expect(await recoverDefaultRow())
       .toMatchObject({ amount: 2, lastErrorClass: null });
   });
 
@@ -317,47 +326,35 @@ describe("recoverTronFreezeAmountForRow", () => {
     await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: 2_000_000n, direction: "in" }], {
       settleWatermarkMs: SETTLE_HEAD_MS - 1,
     });
-    expect(await recoverTronFreezeAmountForRow(await makeRow(), config, provider()))
+    expect(await recoverDefaultRow())
       .toMatchObject({ amount: null, lastErrorClass: "state_raced" });
   });
 
   it("resolves a non-trivial reconciled zero with a clear destroy window", async () => {
-    await stubEvidence([
-      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
-      { timestampMs: FREEZE_MS - 60_000, value: 3_000_000n, direction: "out" },
-    ]);
-    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    await stubEvidence(IN_THEN_OUT_3M);
+    const recovery = await recoverDefaultRow();
     expect(recovery.amount).toBe(0);
     expect(recovery.lastErrorClass).toBeNull();
   });
 
   it("keeps a zero unresolved when a later destroy cannot be excluded", async () => {
-    await stubEvidence([
-      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
-      { timestampMs: FREEZE_MS - 60_000, value: 3_000_000n, direction: "out" },
-    ]);
+    await stubEvidence(IN_THEN_OUT_3M);
     vi.mocked(fetchTronDestroyWindowClear).mockResolvedValue(destroyResult("evidence_mismatch"));
-    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    const recovery = await recoverDefaultRow();
     expect(recovery.amount).toBeNull();
     expect(recovery.lastErrorClass).toBe("evidence_mismatch");
   });
 
   it("keeps a destroy-window index race uncounted as a state race", async () => {
-    await stubEvidence([
-      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
-      { timestampMs: FREEZE_MS - 60_000, value: 3_000_000n, direction: "out" },
-    ]);
+    await stubEvidence(IN_THEN_OUT_3M);
     vi.mocked(fetchTronDestroyWindowClear).mockResolvedValue(destroyResult("state_raced"));
-    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    const recovery = await recoverDefaultRow();
     expect(recovery.amount).toBeNull();
     expect(recovery.lastErrorClass).toBe("state_raced");
   });
 
   it("treats a destroy window truncated by the remaining run budget as a runtime condition", async () => {
-    await stubEvidence([
-      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
-      { timestampMs: FREEZE_MS - 60_000, value: 3_000_000n, direction: "out" },
-    ]);
+    await stubEvidence(IN_THEN_OUT_3M);
     // Only three pages remain for the row, so the destroy window is capped at
     // three; the provider's cap exit proves the window was truncated, and a
     // truncated window is a runtime condition that must not park the row.
@@ -368,10 +365,7 @@ describe("recoverTronFreezeAmountForRow", () => {
   });
 
   it("keeps a destroy observed on the final budget page a deterministic mismatch", async () => {
-    await stubEvidence([
-      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
-      { timestampMs: FREEZE_MS - 60_000, value: 3_000_000n, direction: "out" },
-    ]);
+    await stubEvidence(IN_THEN_OUT_3M);
     // Same three-page budget as the truncation case, but the mismatch is a
     // positively observed victim on the last allowed page (no cap exit), so it
     // stays evidence_mismatch instead of being reclassified as a runtime condition.
@@ -383,7 +377,7 @@ describe("recoverTronFreezeAmountForRow", () => {
 
   it("does not mistake an empty history and zero balance for proven zero", async () => {
     await stubEvidence([]);
-    expect((await recoverTronFreezeAmountForRow(await makeRow(), config, provider())).amount).toBeNull();
+    expect((await recoverDefaultRow()).amount).toBeNull();
   });
 
   it("rejects a negative freeze balance even if later inflows reconcile", async () => {
@@ -391,7 +385,7 @@ describe("recoverTronFreezeAmountForRow", () => {
       { timestampMs: FREEZE_MS - 60_000, value: 1_000_000n, direction: "out" },
       { timestampMs: FREEZE_MS + 60_000, value: 2_000_000n, direction: "in" },
     ]);
-    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    const recovery = await recoverDefaultRow();
     expect(recovery.amount).toBeNull();
     expect(recovery.lastErrorClass).toBe("evidence_mismatch");
   });
@@ -401,7 +395,7 @@ describe("recoverTronFreezeAmountForRow", () => {
       { timestampMs: FREEZE_MS - 60_000, value: BigInt(3_000_000), direction: "in" },
       { timestampMs: FREEZE_MS + 30_000, value: BigInt(1_000_000), direction: "in" },
     ]);
-    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    const recovery = await recoverDefaultRow();
     expect(recovery.amount).toBe(3);
     expect(recovery.lastErrorClass).toBeNull();
   });
@@ -410,7 +404,7 @@ describe("recoverTronFreezeAmountForRow", () => {
     await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: BigInt(2_000_000), direction: "in" }], {
       balance: BigInt(2_500_000),
     });
-    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    const recovery = await recoverDefaultRow();
     expect(recovery.amount).toBeNull();
     expect(recovery.lastErrorClass).toBe("evidence_mismatch");
   });
@@ -423,7 +417,7 @@ describe("recoverTronFreezeAmountForRow", () => {
     // flows still cancel at the current-balance checkpoint (net 3M), but the
     // duplicated pre-freeze inflow would inflate the derived freeze balance.
     await stubEvidence([base, matchedIn, matchedOut, matchedIn, matchedOut]);
-    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    const recovery = await recoverDefaultRow();
     expect(recovery.amount).toBeNull();
     expect(recovery.lastErrorClass).toBe("evidence_mismatch");
   });
@@ -432,7 +426,7 @@ describe("recoverTronFreezeAmountForRow", () => {
     await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: BigInt(2_000_000), direction: "in" }], {
       settleFlows: [{ timestampMs: ANCHOR_MS + 1_000, value: BigInt(5), direction: "in" }],
     });
-    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    const recovery = await recoverDefaultRow();
     expect(recovery.amount).toBeNull();
     expect(recovery.lastErrorClass).toBe("state_raced");
   });
@@ -441,7 +435,7 @@ describe("recoverTronFreezeAmountForRow", () => {
     await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: BigInt(2_000_000), direction: "in" }], {
       settleComplete: false,
     });
-    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    const recovery = await recoverDefaultRow();
     expect(recovery.lastErrorClass).toBe("state_raced");
   });
 
@@ -450,7 +444,7 @@ describe("recoverTronFreezeAmountForRow", () => {
       { timestampMs: FREEZE_MS - 60_000, value: BigInt(2_000_000), direction: "in" },
       { timestampMs: FREEZE_MS, value: BigInt(10), direction: "in" },
     ]);
-    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    const recovery = await recoverDefaultRow();
     expect(recovery.amount).toBeNull();
     expect(recovery.lastErrorClass).toBe("ambiguous");
   });
@@ -459,14 +453,14 @@ describe("recoverTronFreezeAmountForRow", () => {
     await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: BigInt(2_000_000), direction: "in" }], {
       ledgerComplete: false,
     });
-    const truncated = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    const truncated = await recoverDefaultRow();
     expect(truncated.lastErrorClass).toBe("history_over_cap");
 
     await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: BigInt(2_000_000), direction: "in" }], {
       ledgerComplete: false,
       ledgerStopped: true,
     });
-    const stopped = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    const stopped = await recoverDefaultRow();
     expect(stopped.lastErrorClass).toBe("runtime_budget");
   });
 
@@ -474,7 +468,7 @@ describe("recoverTronFreezeAmountForRow", () => {
     await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: BigInt(2_000_000), direction: "in" }], {
       receiptTimestampMs: FREEZE_MS + 1000,
     });
-    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    const recovery = await recoverDefaultRow();
     expect(recovery.amount).toBeNull();
     expect(recovery.lastErrorClass).toBe("evidence_mismatch");
   });
@@ -486,7 +480,7 @@ describe("recoverTronFreezeAmountForRow", () => {
       blockNumber: FREEZE_BLOCK + 2,
       timestampMs: FREEZE_MS + 60_000,
     });
-    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    const recovery = await recoverDefaultRow();
     expect(recovery.amount).toBeNull();
     // Too-young index evidence is a transient state race, never a counted
     // evidence failure (docs/runbooks/blacklist-sync.md#event-and-coverage-rules).
@@ -497,7 +491,7 @@ describe("recoverTronFreezeAmountForRow", () => {
     vi.mocked(fetchTronTransactionInfo).mockRejectedValue(
       new TronReplayProviderError("provider_http_error", "HTTP 503"),
     );
-    const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
+    const recovery = await recoverDefaultRow();
     expect(recovery.amount).toBeNull();
     expect(recovery.lastErrorClass).toBe("provider_http_error");
   });
@@ -573,7 +567,7 @@ describe("backfillTronBlacklistAmounts", () => {
       }), { headers: { "content-type": "application/json" } });
     }));
     const admitted = shape === "short";
-    expect(await recoverTronFreezeAmountForRow(await makeRow(), config, provider()))
+    expect(await recoverDefaultRow())
       .toMatchObject({ amount: admitted ? 2 : null, lastErrorClass: admitted ? null : "provider_null" });
 
     await prepareEvidence();
@@ -728,10 +722,7 @@ describe("backfillTronBlacklistAmounts", () => {
 
   it("does not book an attempt when the destroy window races the index", async () => {
     const row = await makeRow();
-    await stubEvidence([
-      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
-      { timestampMs: FREEZE_MS - 60_000, value: 3_000_000n, direction: "out" },
-    ]);
+    await stubEvidence(IN_THEN_OUT_3M);
     vi.mocked(fetchTronDestroyWindowClear).mockResolvedValue(destroyResult("state_raced"));
     const db = mockD1([
       { match: "blacklist-tron-replay-candidates", rows: [row as unknown as Record<string, unknown>] },
@@ -749,10 +740,7 @@ describe("backfillTronBlacklistAmounts", () => {
     const rows = [await makeRow(), await makeRow({ id: `tron-${FREEZE_TX}-2` })];
     const destroyCaps: number[] = [];
     let lane: TronReplayProviderContext | undefined;
-    await stubEvidence([
-      { timestampMs: FREEZE_MS - 120_000, value: 3_000_000n, direction: "in" },
-      { timestampMs: FREEZE_MS - 60_000, value: 3_000_000n, direction: "out" },
-    ], { consumeLedgerPages: 110 });
+    await stubEvidence(IN_THEN_OUT_3M, { consumeLedgerPages: 110 });
     vi.mocked(fetchTronDestroyWindowClear).mockImplementation(async (ctx, _contract, _account, _events, _from, _through, maxPages) => {
       if (maxPages === undefined) throw new Error("Expected an explicit destroy-window page cap");
       destroyCaps.push(maxPages);

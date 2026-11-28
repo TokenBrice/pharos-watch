@@ -48,6 +48,27 @@ function makeDb() {
   return makeYieldHistoryDb([], { createDb: yieldMockD1 });
 }
 
+const SDAI_ONCHAIN_RATE = {
+  stablecoinId: "100",
+  chain: "ethereum",
+  contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+  selector: "0x07a2d13a",
+  decimals: 18,
+  inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+} as const;
+
+/** Registers the sDAI convertToAssets rate read; each test empties the list again. */
+function addSdaiOnChainRate() {
+  const onChainConfigs = yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
+  onChainConfigs.push({ ...SDAI_ONCHAIN_RATE });
+  return onChainConfigs;
+}
+
+function rankingProvenance(db: Parameters<typeof getYieldRankingsCachePayload>[0], id: string) {
+  const payload = getYieldRankingsCachePayload(db) as { rankings: Array<{ id: string; provenance?: Record<string, unknown> | null }> };
+  return payload.rankings.find((entry) => entry.id === id)?.provenance;
+}
+
 describe("deterministic on-chain alternative coverage", () => {
   it("does not let a rejected non-on-chain row mask a total deterministic failure", () => {
     const evaluatedSources = [
@@ -119,22 +140,12 @@ describe("syncYieldData", () => {
     // price-derived should be is_best (higher APY than DL's 0%)
     expect(priceDerivedRow?.is_best).toBe(1);
 
-    const rankingsPayload = getYieldRankingsCachePayload(db) as {
-      rankings: Array<{
-        id: string;
-        provenance?: {
-          sourceObservedAt: number;
-          sourceAgeSeconds: number;
-          comparisonAnchorObservedAt?: number | null;
-          comparisonAnchorAgeSeconds?: number | null;
-        } | null;
-      }>;
-    };
-    const ranking = rankingsPayload.rankings.find((entry) => entry.id === "100");
-    expect(ranking?.provenance?.sourceObservedAt).toBe(latestQuoteAt);
-    expect(ranking?.provenance?.sourceAgeSeconds).toBe(nowSec - latestQuoteAt);
-    expect(ranking?.provenance?.comparisonAnchorObservedAt).toBe(nowSec - 30 * 86400);
-    expect(ranking?.provenance?.comparisonAnchorAgeSeconds).toBe(30 * 86400);
+    expect(rankingProvenance(db, "100")).toEqual(expect.objectContaining({
+      sourceObservedAt: latestQuoteAt,
+      sourceAgeSeconds: nowSec - latestQuoteAt,
+      comparisonAnchorObservedAt: nowSec - 30 * 86400,
+      comparisonAnchorAgeSeconds: 30 * 86400,
+    }));
   });
 
   it("uses the oldest available 7-45 day price anchor for young navToken coverage", async () => {
@@ -330,16 +341,7 @@ describe("syncYieldData", () => {
 
   it("produces valid APY entry from expanded ON_CHAIN_RATE_CONFIGS", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const onChainConfigs =
-      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
-    onChainConfigs.push({
-      stablecoinId: "100",
-      chain: "ethereum",
-      contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
-      selector: "0x07a2d13a",
-      decimals: 18,
-      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    });
+    const onChainConfigs = addSdaiOnChainRate();
 
     const db = makeYieldHistoryDb([
       makeYieldHistoryRow({
@@ -376,37 +378,18 @@ describe("syncYieldData", () => {
     expect(onChainRow).toBeDefined();
     expect(Number(onChainRow?.current_apy)).toBeGreaterThan(0);
 
-    const rankingsPayload = getYieldRankingsCachePayload(db) as {
-      rankings: Array<{
-        id: string;
-        provenance?: {
-          sourceObservedAt: number;
-          sourceAgeSeconds: number;
-          comparisonAnchorObservedAt?: number | null;
-          comparisonAnchorAgeSeconds?: number | null;
-        } | null;
-      }>;
-    };
-    const ranking = rankingsPayload.rankings.find((entry) => entry.id === "100");
-    expect(ranking?.provenance?.sourceObservedAt).toBe(nowSec);
-    expect(ranking?.provenance?.sourceAgeSeconds).toBe(0);
-    expect(ranking?.provenance?.comparisonAnchorObservedAt).toBe(nowSec - 8 * 86400);
-    expect(ranking?.provenance?.comparisonAnchorAgeSeconds).toBe(8 * 86400);
+    expect(rankingProvenance(db, "100")).toEqual(expect.objectContaining({
+      sourceObservedAt: nowSec,
+      sourceAgeSeconds: 0,
+      comparisonAnchorObservedAt: nowSec - 8 * 86400,
+      comparisonAnchorAgeSeconds: 8 * 86400,
+    }));
 
     onChainConfigs.length = 0;
   });
 
   it("publishes independent rows with a quality alarm when all deterministic on-chain sources fail", async () => {
-    const onChainConfigs =
-      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
-    onChainConfigs.push({
-      stablecoinId: "100",
-      chain: "ethereum",
-      contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
-      selector: "0x07a2d13a",
-      decimals: 18,
-      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    });
+    const onChainConfigs = addSdaiOnChainRate();
 
     const db = makeDb();
     installYieldCacheReader(vi.mocked(getCache), {
@@ -437,20 +420,11 @@ describe("syncYieldData", () => {
   });
 
   it("keeps the run healthy when deterministic on-chain reads fail but every affected coin has non-onchain coverage", async () => {
-    const onChainConfigs =
-      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
     // Alternative coverage for an on-chain coin comes from its curated pool pin;
     // the base-symbol fallback never runs for a coin with an on-chain rate config.
     const poolMap = yieldPools.YIELD_POOL_MAP as Record<string, string>;
     poolMap["100"] = "pool-sdai-1";
-    onChainConfigs.push({
-      stablecoinId: "100",
-      chain: "ethereum",
-      contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
-      selector: "0x07a2d13a",
-      decimals: 18,
-      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    });
+    const onChainConfigs = addSdaiOnChainRate();
 
     const db = makeDb();
     mockHealthyRiskFreeRateCache();
@@ -499,16 +473,7 @@ describe("syncYieldData", () => {
 
   it("falls back to the secondary RPC URL before degrading the deterministic lane", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const onChainConfigs =
-      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
-    onChainConfigs.push({
-      stablecoinId: "100",
-      chain: "ethereum",
-      contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
-      selector: "0x07a2d13a",
-      decimals: 18,
-      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    });
+    const onChainConfigs = addSdaiOnChainRate();
 
     const db = makeYieldHistoryDb([
       makeYieldHistoryRow({
@@ -566,16 +531,7 @@ describe("syncYieldData", () => {
 
   it("falls back to the Etherscan proxy when Worker RPC reads all fail", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const onChainConfigs =
-      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
-    onChainConfigs.push({
-      stablecoinId: "100",
-      chain: "ethereum",
-      contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
-      selector: "0x07a2d13a",
-      decimals: 18,
-      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    });
+    const onChainConfigs = addSdaiOnChainRate();
 
     const db = makeYieldHistoryDb([
       makeYieldHistoryRow({
@@ -641,16 +597,7 @@ describe("syncYieldData", () => {
 
   it("records explorer fallback failures when deterministic RPC and explorer reads both return empty", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const onChainConfigs =
-      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
-    onChainConfigs.push({
-      stablecoinId: "100",
-      chain: "ethereum",
-      contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
-      selector: "0x07a2d13a",
-      decimals: 18,
-      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    });
+    const onChainConfigs = addSdaiOnChainRate();
 
     const db = makeYieldHistoryDb([
       makeYieldHistoryRow({
@@ -705,16 +652,7 @@ describe("syncYieldData", () => {
 
   it("reuses legacy rate history without aliasing its source identity", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const onChainConfigs =
-      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
-    onChainConfigs.push({
-      stablecoinId: "100",
-      chain: "ethereum",
-      contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
-      selector: "0x07a2d13a",
-      decimals: 18,
-      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    });
+    addSdaiOnChainRate();
 
     const db = makeYieldHistoryDb([
       makeYieldHistoryRow({
@@ -819,17 +757,8 @@ describe("syncYieldData", () => {
 
   it("retains both on-chain and curated rows when the native pool overlaps with ON_CHAIN_RATE_CONFIGS", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const onChainConfigs =
-      yieldRateSources.ON_CHAIN_RATE_CONFIGS as typeof yieldRateSources.ON_CHAIN_RATE_CONFIGS;
     const poolMap = yieldPools.YIELD_POOL_MAP as Record<string, string>;
-    onChainConfigs.push({
-      stablecoinId: "100",
-      chain: "ethereum",
-      contract: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
-      selector: "0x07a2d13a",
-      decimals: 18,
-      inputAmount: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-    });
+    const onChainConfigs = addSdaiOnChainRate();
     poolMap["100"] = "pool-sdai-native";
 
     const db = makeYieldHistoryDb([

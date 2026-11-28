@@ -105,6 +105,9 @@ function review(census: SafetyScoreV9DeploymentSupplyCensus | undefined) {
   return buildSafetyScoreV9SupplyAdmission(fixedInput(census), ASSET_ID, profile());
 }
 
+const expectNoUpperBoundRoute = (result: { selectedBridgeRoutes: Array<{ evidenceKind?: string }> } | null | undefined) =>
+  expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+
 describe("deployment supply census admission", () => {
   it("admits only sub-bar deployments as upper-bound rows and keeps the chain residual", () => {
     const { review: result, censusDiagnostics } = review(packet());
@@ -214,7 +217,7 @@ describe("deployment supply census admission", () => {
 
   it("rejects a packet dated after the capture clock", () => {
     const { review: result, censusDiagnostics } = review(packet({ observedAtSec: CLOCK_SEC + 1 }));
-    expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expectNoUpperBoundRoute(result);
     expect(censusDiagnostics).toEqual([
       { deploymentRouteKey: null, code: "census-rejected:future-dated-pin" },
     ]);
@@ -226,7 +229,7 @@ describe("deployment supply census admission", () => {
       deployments: [row(unreviewedRoute, 0.005)],
       conservation: { ...packet().conservation, measuredSupplyUsd: 0.5, measuredShareSum: 0.005 },
     }));
-    expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expectNoUpperBoundRoute(result);
     expect(censusDiagnostics).toEqual([
       { deploymentRouteKey: unreviewedRoute, code: "census-rejected:route-unreviewed" },
     ]);
@@ -286,7 +289,7 @@ describe("deployment supply census admission", () => {
       deployments: [row(ETH_ROUTE, 0.005, CLOCK_SEC - 5_461), row(ETH_SECOND_ROUTE, 0.37, CLOCK_SEC - 5_461),
         row(BASE_ROUTE, 0.001, CLOCK_SEC - 5_461)],
     }));
-    expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expectNoUpperBoundRoute(result);
     expect(censusDiagnostics).toContainEqual({
       deploymentRouteKey: null,
       code: "census-rejected:observation-stale",
@@ -306,7 +309,7 @@ describe("deployment supply census admission", () => {
         conserved: false,
       },
     }));
-    expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expectNoUpperBoundRoute(result);
     expect(censusDiagnostics).toContainEqual({
       deploymentRouteKey: null,
       code: "census-rejected:roster-incomplete",
@@ -349,7 +352,7 @@ describe("deployment supply census admission", () => {
       aggregateCirculatingById: aggregate === undefined ? {} : { [ASSET_ID]: aggregate },
     } as SafetyScoreV9CompilerInput;
     const { review: result, censusDiagnostics } = buildSafetyScoreV9SupplyAdmission(input, ASSET_ID, profile());
-    expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expectNoUpperBoundRoute(result);
     expect(censusDiagnostics).toEqual([
       { deploymentRouteKey: null, code: "census-rejected:read-unavailable" },
     ]);
@@ -361,7 +364,7 @@ describe("deployment supply census admission", () => {
       conservation: { ...packet().conservation, rosterComplete: false, conserved: false },
       rejected: [{ routeId: null, code: "census-rejected:read-unavailable" }],
     }));
-    expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expectNoUpperBoundRoute(result);
     expect(censusDiagnostics).toEqual([
       { deploymentRouteKey: null, code: "census-rejected:read-unavailable" },
     ]);
@@ -371,7 +374,7 @@ describe("deployment supply census admission", () => {
     const { review: result, censusDiagnostics } = review(packet({
       conservation: { ...packet().conservation, aggregateSupplyUsd: AGGREGATE_USD * 2 },
     }));
-    expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expectNoUpperBoundRoute(result);
     expect(censusDiagnostics).toEqual([
       { deploymentRouteKey: null, code: "census-rejected:conservation-breach" },
     ]);

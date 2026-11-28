@@ -69,6 +69,12 @@ beforeEach(() => {
 });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
+/** Headers keep the requested height; "finalized" resolves to `finalized`. Every header carries `timestamp`. */
+function mockFinalizedAt(finalized: number, timestamp: number): void {
+  vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+    ({ number: number === "finalized" ? finalized : number, timestamp, hash: HASH }));
+}
+
 describe("reviewed economic supply observation", () => {
   it("journals typed body rejection and bounded exact leaf provenance without changing old IDs", () => {
     const payload: SupplyAttributionJournalV1Payload = { schemaVersion: 1, lane: "supply-attribution", assetId: "alpha", attemptId: "attempt", sourceId: "reviewed.economic-deployment-partition.v1", sourceOriginClass: "issuer-disclosure-plus-onchain", baseInputGenerationId: "input", sourceGeneration: "source", registryFingerprint: "a".repeat(64), routeInventoryDigest: null, attemptCode: "supply-attribution.collector.attempted", admissionCode: admissionCodeForSupplyAttributionRejection("observer-body-over-cap"), fallbackCode: "supply-attribution.fallback.aggregate-only", rejectionCode: "observer-body-over-cap", attemptedAtSec: CLOCK, completedAtSec: CLOCK, scoringClockSec: CLOCK, sourceObservedAtSec: null, failedRouteId: "route", contentSha256: null };
@@ -109,8 +115,7 @@ describe("reviewed economic supply observation", () => {
     const f = fixture();
     f.plan.deployments[0]!.read = { kind: "evm-total-supply", safeBlockLag: 15059, pinPolicy: "finalized-preferred" };
     vi.mocked(evmRpc.fetchEvmBlockNumber).mockResolvedValue(20000);
-    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
-      ({ number: number === "finalized" ? 19000 : number, timestamp: CLOCK - 900, hash: HASH }));
+    mockFinalizedAt(19000, CLOCK - 900);
     expect((await f.run()).status).toBe("accepted");
     expect(evmRpc.fetchEvmBlockHeader).toHaveBeenCalledWith("ethereum", 19000,
       expect.objectContaining({ observedHeadBlock: 20000 }));
@@ -161,8 +166,7 @@ describe("reviewed economic supply observation", () => {
   });
   it.each([1847, 1790])("rejects %is-old pins without enough capture headroom before reading quantities", async age => {
     const f = fixture();
-    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
-      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - age, hash: HASH }));
+    mockFinalizedAt(100, CLOCK - age);
     const result = await observeReviewedEconomicDeploymentPartitionAttempt({ ...f, assetDeadlineMs: Date.now() + 30_000 });
     expect(result).toMatchObject({ status: "rejected" });
     expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
@@ -171,8 +175,7 @@ describe("reviewed economic supply observation", () => {
     const f = fixture();
     let elapsed = 0;
     vi.spyOn(Date, "now").mockImplementation(() => CLOCK * 1000 + elapsed);
-    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
-      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - 1790, hash: HASH }));
+    mockFinalizedAt(100, CLOCK - 1790);
     vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls) => {
       elapsed = 20_000;
       return calls.map(call => ({ label: call.label, success: true, returnData: word(call.label.endsWith(":decimals") ? 6n : 100000000n) }));
@@ -258,8 +261,7 @@ describe("reviewed economic supply observation", () => {
 
   it("admits pre-capture state newer than the previous source clock without redating its source", async () => {
     const f = fixture();
-    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
-      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK + 599, hash: HASH }));
+    mockFinalizedAt(100, CLOCK + 599);
     const result = await f.run(undefined, CLOCK + 600);
     expect(result).toMatchObject({ status: "accepted", attribution: {
       baseInputGenerationId: f.fixedInput.baseInputGenerationId, sourceGeneration: "source",
@@ -468,8 +470,7 @@ describe("reviewed economic supply observation", () => {
     vi.spyOn(Date, "now").mockReturnValue(CLOCK * 1000);
     const f = pendingFixture();
     // A pin captured by the previous run's finalized heads is ~1806 s old once the reserve is added.
-    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
-      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - 1776, hash: HASH }));
+    mockFinalizedAt(100, CLOCK - 1776);
     const result = await observeReviewedEconomicDeploymentPartitionAttempt({
       ...f, assetDeadlineMs: CLOCK * 1000 + 30_000,
     });
@@ -481,8 +482,7 @@ describe("reviewed economic supply observation", () => {
     vi.spyOn(Date, "now").mockReturnValue(CLOCK * 1000);
     const f = pendingFixture(), onDiagnostic = vi.fn();
     const pinAgeSec = 1800 + BASE_FINALITY_MARGIN_SEC - 20;
-    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
-      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - pinAgeSec, hash: HASH }));
+    mockFinalizedAt(100, CLOCK - pinAgeSec);
     expect(await observeReviewedEconomicDeploymentPartitionAttempt({
       ...f, onDiagnostic, assetDeadlineMs: CLOCK * 1000 + 30_000,
     })).toEqual({ status: "rejected", rejectionCode: "deployment-state-unavailable",
@@ -499,8 +499,7 @@ describe("reviewed economic supply observation", () => {
     vi.spyOn(Date, "now").mockReturnValue(CLOCK * 1000);
     // witry-brix's MegaETH finalized head trailed by ~2010 s; the reserved 30 s capture window still has to fit.
     const f = pendingFixture(undefined, undefined, "megaeth");
-    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
-      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - pinAgeSec, hash: HASH }));
+    mockFinalizedAt(100, CLOCK - pinAgeSec);
     const result = await observeReviewedEconomicDeploymentPartitionAttempt({
       ...f, assetDeadlineMs: CLOCK * 1000 + 30_000,
     });
@@ -513,8 +512,7 @@ describe("reviewed economic supply observation", () => {
   it("rejects mandatory pins before quantities when the reserved capture window would expire them", async () => {
     vi.spyOn(Date, "now").mockReturnValue(CLOCK * 1000);
     const f = pendingFixture(undefined, undefined, "polygon"), onDiagnostic = vi.fn();
-    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
-      ({ number: number === "finalized" ? 100 : number, timestamp: CLOCK - 1790, hash: HASH }));
+    mockFinalizedAt(100, CLOCK - 1790);
     expect(await observeReviewedEconomicDeploymentPartitionAttempt({
       ...f, onDiagnostic, assetDeadlineMs: CLOCK * 1000 + 30_000,
     })).toEqual({ status: "rejected", rejectionCode: "deployment-state-unavailable",

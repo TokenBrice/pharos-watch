@@ -23,6 +23,8 @@ import {
   REQUEST_CACHE_MAX_TOTAL_BYTES,
 } from "../request";
 
+const newRequestCtx = () => ({ requestCache: new Map<string, Promise<unknown>>() });
+
 describe("buildBrowserHeaders", () => {
   it("allows a distinct Referer when an adapter uses a deeper path", () => {
     const headers = buildBrowserHeaders(
@@ -53,7 +55,7 @@ describe("buildBrowserHeaders", () => {
   });
 
   it("evicts failed cached requests so the next call can recover", async () => {
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     let calls = 0;
 
     await expect(getCachedRequest("recoverable", async () => {
@@ -117,7 +119,7 @@ describe("buildBrowserHeaders", () => {
   });
 
   it("never serializes returned values or invokes getters to account retention", async () => {
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     const getter = vi.fn(() => { throw new Error("must not inspect"); });
     const value = Object.defineProperty({}, "toJSON", { get: getter });
     await expect(getCachedRequest("opaque", async () => ({
@@ -142,7 +144,7 @@ describe("buildBrowserHeaders", () => {
   });
 
   it.each([null, -1, Infinity, 0.5])("bypasses unknown or invalid estimates %s without failing work", async (cacheBytes) => {
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     await expect(getCachedRequest("uncached", async () => ({
       value: "ok", cacheBytes, basis: "declared-estimate",
     }), ctx)).resolves.toBe("ok");
@@ -266,7 +268,7 @@ describe("adapter request cache", () => {
     const network = installAdapterNetwork({
       json: { "https://issuer.example/reserves": (request: Request) => ({ json: { origin: request.headers.get("origin") } }) },
     });
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     const signal = new AbortController().signal;
     const first = await fetchJsonWithRetry<{ origin: string }>(
       "https://issuer.example/reserves", signal, 1_000, ctx,
@@ -283,7 +285,7 @@ describe("adapter request cache", () => {
 
   it("does not share JSON and text reads for the same URL", async () => {
     const network = installAdapterNetwork({ json: { "https://issuer.example/reserves": { ok: true } } });
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     const signal = new AbortController().signal;
     await fetchJsonWithRetry("https://issuer.example/reserves", signal, 1_000, ctx);
     const text = await fetchTextWithRetry("https://issuer.example/reserves", signal, 1_000, ctx);
@@ -295,7 +297,7 @@ describe("adapter request cache", () => {
     const network = installAdapterNetwork({
       html: { "https://issuer.example/reserves": (request) => request.headers.get("referer") ?? "none" },
     });
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     const signal = new AbortController().signal;
     const first = await fetchTextWithRetry(
       "https://issuer.example/reserves", signal, 1_000, ctx,
@@ -316,7 +318,7 @@ describe("adapter request cache", () => {
         "https://issuer.example/graphql": async (request: Request) => ({ json: { body: await request.clone().text() } }),
       },
     });
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     const signal = new AbortController().signal;
     await fetchJsonPostWithRetry("https://issuer.example/graphql", { coin: "usdc" }, signal, 1_000, ctx);
     await fetchJsonPostWithRetry("https://issuer.example/graphql", { coin: "usdc" }, signal, 1_000, ctx);
@@ -420,7 +422,7 @@ describe.each(["GET", "POST"] as const)("JSON %s transport identity", (method) =
     const network = installAdapterNetwork({
       json: { [url]: (received: Request) => ({ json: { redirect: received.redirect } }) },
     });
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     const policies = ["follow", "manual"] as const;
     const results = await Promise.all(policies.map((redirect) => request(ctx, { redirect })));
     expect(results).toEqual(policies.map((redirect) => ({ redirect })));
@@ -448,7 +450,7 @@ describe.each(["GET", "POST"] as const)("JSON %s transport identity", (method) =
 
   it("dedupes equivalent reordered/cased records, Headers and entry arrays", async () => {
     const network = installAdapterNetwork({ json: { [url]: { ok: true } } });
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     const variants: HeadersInit[] = [
       { Authorization: "Bearer shared", Origin: "https://issuer.example" },
       { origin: "https://issuer.example", authorization: "Bearer shared" },
@@ -463,7 +465,7 @@ describe.each(["GET", "POST"] as const)("JSON %s transport identity", (method) =
 
   it("shares implicit and explicit effective default profiles", async () => {
     const network = installAdapterNetwork({ json: { [url]: { ok: true } } });
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     const name = method === "GET" ? "accept" : "content-type";
     const options = { headers: { [name]: "application/json", "user-agent": ADAPTER_USER_AGENT }, redirect: "follow" as const };
     expect(await Promise.all([request(ctx), request(ctx, options)])).toEqual([{ ok: true }, { ok: true }]);
@@ -477,7 +479,7 @@ describe.each(["GET", "POST"] as const)("JSON %s transport identity", (method) =
       const onRequestCache = vi.fn<(event: { hit: boolean }) => void>();
       const ctx = {
         ioLimiter, onRequestCache, abortSignal: new AbortController().signal,
-        ...(cached ? { requestCache: new Map<string, Promise<unknown>>() } : {}),
+        ...(cached ? newRequestCtx() : {}),
       };
       const executor = getChainObservationRequests(createAdapterChainObservationContext(ctx));
       const signal = new AbortController().signal;
@@ -498,7 +500,7 @@ describe.each(["GET", "POST"] as const)("JSON %s transport identity", (method) =
     const network = installAdapterNetwork({
       json: { [url]: (received: Request) => ({ json: { auth: received.headers.get("authorization") } }) },
     });
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     const [first, second] = await Promise.all([
       request(ctx, { headers: { Authorization: "Bearer first" } }),
       request(ctx, { headers: { authorization: "Bearer second" } }),
@@ -517,7 +519,7 @@ describe.each(["GET", "POST"] as const)("JSON %s transport identity", (method) =
       return response;
     });
     vi.stubGlobal("fetch", fetchMock);
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     await expect(request(ctx)).resolves.toEqual({ request: 0 });
     const first = vi.fn();
     const second = vi.fn();
@@ -542,7 +544,7 @@ describe.each(["GET", "POST"] as const)("JSON %s transport identity", (method) =
 
   it("does not populate the cache with observer-only requests", async () => {
     const network = installAdapterNetwork({ json: { [url]: { ok: true } } });
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     const onResponse = vi.fn();
     await Promise.all([request(ctx, { onResponse }), request(ctx, { onResponse })]);
     expect(onResponse).toHaveBeenCalledTimes(2);
@@ -564,7 +566,7 @@ describe.each(["GET", "POST"] as const)("JSON %s transport identity", (method) =
       .mockResolvedValueOnce(responses[2]);
     vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     const first = vi.fn();
     const second = vi.fn();
     await request(ctx, { maxRetries: 1, onResponse: first });
@@ -609,7 +611,7 @@ describe.each(["GET", "POST"] as const)("JSON %s transport identity", (method) =
     vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const onResponse = vi.fn();
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     await expect(request(ctx, { onResponse, maxRetries: 0, maxResponseBytes: 8 }))
       .rejects.toMatchObject({ code: "resource-budget-exceeded" });
     expect(onResponse.mock.calls[0][0]).toBe(response);
@@ -629,7 +631,7 @@ describe.each(["GET", "POST"] as const)("JSON %s transport identity", (method) =
     vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const onResponse = vi.fn();
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     await expect(request(ctx, { onResponse, maxRetries: 0 }, 50))
       .rejects.toMatchObject({ name: "TimeoutError" });
     expect(onResponse.mock.calls[0][0]).toBe(response);
@@ -749,7 +751,7 @@ describe("JSON POST retry and size limits", () => {
 
 describe("body intake attribution", () => {
   it("counts partial interruption without inventing a budget rejection", () => {
-    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const ctx = newRequestCtx();
     const observer = createRequestBodyObserver(ctx, 4);
     observer.onBodyRead({ intakeBytes: 2, declaredBytes: null, limitBytes: 4, outcome: "rejected" });
     expect(getRequestResourceSnapshot(ctx, "abort")).toMatchObject({

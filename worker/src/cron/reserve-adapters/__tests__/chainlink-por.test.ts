@@ -74,6 +74,8 @@ function runPor(
 
 
 
+const expectNoCollateralizationRatio = (result: { metadata?: { collateralizationRatio?: unknown } | null }) => expect(result.metadata?.collateralizationRatio).toBeUndefined();
+
 describe("adaptChainlinkPorResponse", () => {
   const params: ChainlinkPorParams = {
     porFeedAddress: "0xBE456fd14720C3aCCc30A2013Bffd782c9Cb75D5",
@@ -158,7 +160,7 @@ describe("adaptChainlinkPorResponse", () => {
     });
     expect(result.metadata?.totalReserveUsd).toBeUndefined();
     expect(result.metadata?.supplyUsd).toBeUndefined();
-    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expectNoCollateralizationRatio(result);
     expect(result.warnings?.some((w) => w.code === "por-reserve-under-supply")).not.toBe(true);
     expect(result.warnings?.some((w) => w.code === "por-reserve-over-supply")).not.toBe(true);
   });
@@ -238,7 +240,7 @@ describe("adaptChainlinkPorResponse", () => {
     // snapshot keeps the quantities and withholds any coverage verdict.
     expect(result.metadata?.totalReserveQuantity).toBeCloseTo(2_567_133.466, 3);
     expect(result.metadata?.supplyTokens).toBeCloseTo(1_640_000, 3);
-    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expectNoCollateralizationRatio(result);
     expect(result.metadata).toMatchObject({
       supplyReadComplete: true,
       supplyCoverageComplete: false,
@@ -273,7 +275,7 @@ describe("adaptChainlinkPorResponse", () => {
       supplyCoverageComplete: false,
       ratioUnavailableReason: "liability-scope-unclassified-chain",
     });
-    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expectNoCollateralizationRatio(result);
   });
 
   it("withholds coverage when any EVM supply source fails", () => {
@@ -289,7 +291,7 @@ describe("adaptChainlinkPorResponse", () => {
       supplyCoverageComplete: false,
       ratioUnavailableReason: "included-supply-read-failed",
     });
-    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expectNoCollateralizationRatio(result);
     const warning = result.warnings?.find((w) => w.code === "partial-supply-read-failure");
     expect(warning).toBeDefined();
     expect(warning?.effect).toBe("degraded");
@@ -352,7 +354,7 @@ describe("fetchChainlinkPorReserves", () => {
       supplyCoverageComplete: false,
       ratioUnavailableReason: "liability-scope-unclassified-chain",
     });
-    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expectNoCollateralizationRatio(result);
     const contributions = result.metadata?.supplyContributions as Array<{ chain: string }> | undefined;
     expect(contributions?.some((contribution) => contribution.chain === "tron")).toBe(true);
     expectWarnings(result, ["por-supply-chain-omitted"]);
@@ -387,7 +389,7 @@ describe("fetchChainlinkPorReserves", () => {
     expect(warning?.effect).toBe("degraded");
     expect(warning?.message).toContain("tron");
     expect(result.metadata?.supplyUsd).toBeCloseTo(600, 5);
-    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expectNoCollateralizationRatio(result);
   });
 
   it("does not call the Tron reader or change behavior for coins without a tron contract", async () => {
@@ -490,7 +492,7 @@ describe("fetchChainlinkPorReserves", () => {
       totalReserveQuantity: 12_345,
     });
     expect(result.metadata?.supplyUsd).toBeUndefined();
-    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expectNoCollateralizationRatio(result);
   });
 
   it("compares gram feed answers against token supply for gram-pegged commodity units", async () => {
@@ -556,7 +558,7 @@ describe("fetchChainlinkPorReserves", () => {
     expect(network.rpcCalls.filter((call) => call.selector === "0x18160ddd")).toHaveLength(1);
     expect(result.metadata?.totalReserveQuantity).toBeCloseTo(2_567_133.466, 3);
     expect(result.metadata?.supplyTokens).toBeCloseTo(1_640_000, 3);
-    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expectNoCollateralizationRatio(result);
     expect(result.metadata).toMatchObject({
       supplyCoverageComplete: false,
       ratioUnavailableReason: "not-comparable",
@@ -588,7 +590,7 @@ describe("fetchChainlinkPorReserves", () => {
     expect(result.warnings?.some((w) => w.code === "partial-supply-read-failure")).not.toBe(true);
     expect(result.metadata?.supplyReadComplete).toBe(true);
     expect(result.metadata?.supplyCoverageComplete).toBe(false);
-    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expectNoCollateralizationRatio(result);
   });
 
   it("treats a zero totalSupply read as a valid empty deployment, not a read failure", async () => {
@@ -698,7 +700,7 @@ describe("fetchChainlinkPorReserves with TUSD's reviewed liability scope", () =>
       network: tusdNetwork({ tronSupply: null }),
     });
 
-    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expectNoCollateralizationRatio(result);
     expect(result.metadata).toMatchObject({
       supplyReadComplete: false,
       supplyCoverageComplete: false,
@@ -723,7 +725,7 @@ describe("fetchChainlinkPorReserves with TUSD's reviewed liability scope", () =>
     });
 
     expect(coin.contracts?.some((contract) => contract.chain === "base")).toBe(true);
-    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expectNoCollateralizationRatio(result);
     expect(result.metadata?.supplyUsd).toBeCloseTo(EXPECTED_SUPPLY, 2);
     expect(result.metadata).toMatchObject({
       supplyCoverageComplete: false,

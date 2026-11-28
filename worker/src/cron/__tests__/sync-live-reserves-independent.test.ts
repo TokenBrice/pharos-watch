@@ -111,7 +111,6 @@ describe("syncLiveReserves", () => {
     previousLastSuccessAt: number;
     previousLastSuccessAttemptId: string;
   }) {
-    const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const db = dbWithPreviousLiveReserveRows(buildPreviousLiveReserveRows({
       coin: args.coin,
       lastStatus: "ok",
@@ -217,7 +216,6 @@ describe("syncLiveReserves", () => {
     const now = 1_900_000_000;
     const coin = getIndependentConfiguredCoin();
     const lastSuccessAt = now - 30 * 60;
-    const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const db = dbWithPreviousLiveReserveRows(buildPreviousLiveReserveRows({
       coin, lastStatus: "ok", lastAttemptedAt: lastSuccessAt, lastSuccessAt,
     }));
@@ -291,7 +289,6 @@ describe("syncLiveReserves", () => {
         },
       },
     } as ConfiguredCoin;
-    const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const db = mockLiveReserveD1();
     const result = await syncReserveCoin({
       db,
@@ -389,7 +386,6 @@ describe("syncLiveReserves", () => {
       && candidate.liveReservesConfig.scoring?.allowedDegradedWarningCodes?.includes("partial-supply-read-failure")
     ) as ConfiguredCoin | undefined;
     expect(coin).toBeDefined();
-    const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const db = mockLiveReserveD1();
     const now = Math.floor(Date.now() / 1000);
     const result = await syncReserveCoin({
@@ -466,7 +462,6 @@ describe("syncLiveReserves", () => {
         }],
       },
     ]);
-    const { loadFreshIndependentLiveReserveMap } = await import("../../lib/live-reserves/store");
     const scoringMap = await loadFreshIndependentLiveReserveMap(persistedDb, now);
     expect(scoringMap.has(coin!.id)).toBe(true);
   });
@@ -477,7 +472,6 @@ describe("syncLiveReserves", () => {
       && candidate.liveReservesConfig.scoring?.allowedDegradedWarningCodes?.includes("unknown-position")
     ) as ConfiguredCoin | undefined;
     expect(coin).toBeDefined();
-    const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const db = mockLiveReserveD1();
     const result = await syncReserveCoin({
       db,
@@ -531,7 +525,6 @@ describe("syncLiveReserves", () => {
       candidate.liveReservesConfig?.adapter === "reservoir"
     ) as ConfiguredCoin | undefined;
     expect(coin).toBeDefined();
-    const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const db = mockLiveReserveD1();
     await syncReserveCoin({
       db,
@@ -572,7 +565,6 @@ describe("syncLiveReserves", () => {
       && candidate.liveReservesConfig.scoring?.allowedDegradedWarningCodes?.includes("unknown-position")
     ) as ConfiguredCoin | undefined;
     expect(coin).toBeDefined();
-    const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const db = mockLiveReserveD1();
     const result = await syncReserveCoin({
       db,
@@ -638,7 +630,6 @@ describe("syncLiveReserves", () => {
 
   it("leaves the exact domain attempt pending when injection fires after pending begin", async () => {
     const coin = getIndependentConfiguredCoin();
-    const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const db = mockLiveReserveD1();
 
     await expect(syncReserveCoin({
@@ -661,7 +652,6 @@ describe("syncLiveReserves", () => {
 
   it("keeps authority and atomic history intact when the post-commit hook throws", async () => {
     const coin = getIndependentConfiguredCoin();
-    const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const db = mockLiveReserveD1();
 
     const result = await syncReserveCoin({
@@ -696,7 +686,6 @@ describe("syncLiveReserves", () => {
     const db = dbWithPreviousLiveReserveRows(buildPreviousLiveReserveRows({
       coin, lastStatus: "ok", lastAttemptedAt: lastSuccessAt, lastSuccessAt,
     }));
-    const { syncReserveCoin } = await import("../sync-live-reserves-core");
     const runAdapter = vi.fn(async () => ({
       slices: [{ name: "Should not run", pct: 100, risk: "low" as const }],
       metadata: { freshnessMode: "not-applicable" as const },
@@ -755,7 +744,6 @@ describe("syncLiveReserves", () => {
       const db = dbWithPreviousLiveReserveRows(buildPreviousLiveReserveRows({
         coin, lastStatus: "ok", lastAttemptedAt: lastSuccessAt, lastSuccessAt,
       }));
-      const { syncReserveCoin } = await import("../sync-live-reserves-core");
       const result = await syncReserveCoin({
         db,
         coin,

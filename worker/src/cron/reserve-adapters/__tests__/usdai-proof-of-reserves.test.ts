@@ -28,6 +28,14 @@ function twoWords(first: bigint, second = 0n): string {
   return `0x${first.toString(16).padStart(64, "0")}${second.toString(16).padStart(64, "0")}`;
 }
 
+/** The fixture's two-slice composition: ~94.4% PYUSD collateral and ~5.6% GPU-backed loans. */
+function expectPyusdAndGpuLoanSlices(result: { slices: unknown }): void {
+  expect(result.slices).toEqual([
+    { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: expect.closeTo(94.4, 10), risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
+    { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: expect.closeTo(5.6, 10), risk: "high" },
+  ]);
+}
+
 describe("USD.AI captured full-book boundary", () => {
   it("does not promote an undated share book or add its six auxiliary amount-only entries", async () => {
     const { result, report } = await runAdapter("usdai-proof-of-reserves", NO_ANCHOR_COIN, {
@@ -401,10 +409,7 @@ describe("usdai-proof-of-reserves adapter", () => {
   it("groups live PYUSD and deal exposures into readable reserve slices", () => {
     const result = adaptUsdAiProofOfReserves(parseUsdAiProofOfReserves(SAMPLE_RAW_PAYLOAD));
 
-    expect(result.slices).toEqual([
-      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: expect.closeTo(94.4, 10), risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
-      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: expect.closeTo(5.6, 10), risk: "high" },
-    ]);
+    expectPyusdAndGpuLoanSlices(result);
     expect(result.metadata).toMatchObject({
       apiEntryCount: 3,
       liquidBucketCount: 1,
@@ -423,10 +428,7 @@ describe("usdai-proof-of-reserves adapter", () => {
   it("ignores amount-only rows when share-bearing rows already disclose the full mix", () => {
     const result = adaptUsdAiProofOfReserves(MIXED_WEIGHT_PAYLOAD);
 
-    expect(result.slices).toEqual([
-      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: expect.closeTo(94.4, 10), risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
-      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: expect.closeTo(5.6, 10), risk: "high" },
-    ]);
+    expectPyusdAndGpuLoanSlices(result);
     expect(result.warnings).toContainEqual({
       code: "missing-share-rows-ignored",
       message:
@@ -448,10 +450,7 @@ describe("usdai-proof-of-reserves adapter", () => {
       { type: "DEAL", name: "NVIDIA B300 [9]", chain: 42161, amount: "560", remainingAmount: "560" },
     ]);
 
-    expect(result.slices).toEqual([
-      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: expect.closeTo(94.4, 10), risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
-      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: expect.closeTo(5.6, 10), risk: "high" },
-    ]);
+    expectPyusdAndGpuLoanSlices(result);
     expect(result.metadata).toMatchObject({
       apiEntryCount: 2,
       liquidBucketCount: 1,
@@ -470,10 +469,7 @@ describe("usdai-proof-of-reserves adapter", () => {
       { type: "DEAL", name: "NVIDIA B300 [9]", chain: 42161, share: "30000000000000000", amount: "560", remainingAmount: "560" },
     ]);
 
-    expect(result.slices).toEqual([
-      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: expect.closeTo(94.4, 10), risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
-      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: expect.closeTo(5.6, 10), risk: "high" },
-    ]);
+    expectPyusdAndGpuLoanSlices(result);
     expect(result.warnings).toContainEqual(
       expect.objectContaining({
         code: "usdai-share-coverage-gap",

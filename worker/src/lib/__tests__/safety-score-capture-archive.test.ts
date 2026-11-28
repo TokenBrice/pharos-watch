@@ -48,6 +48,8 @@ function backgroundContext() {
   return { ctx, waits };
 }
 
+const archiveRowCount = (sqlite: { prepare(sql: string): { get(): { n?: unknown } | undefined } }) => sqlite.prepare("SELECT count(*) AS n FROM safety_score_capture_archive").get()?.n;
+
 describe("accepted Safety capture archive", () => {
   it("stores exact committed strings/clocks and indexes the exact R2 SHA/bytes after upload", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
@@ -60,7 +62,7 @@ describe("accepted Safety capture archive", () => {
     });
     const { bucket, put } = bucketFixture();
     put.mockImplementation(async () => {
-      expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_capture_archive").get()?.n).toBe(0);
+      expect(archiveRowCount(sqlite)).toBe(0);
       return { key: "stored" };
     });
     const result = await archiveSafetyScoreCapture({ db, bucket, publication, cacheRows });
@@ -106,7 +108,7 @@ describe("accepted Safety capture archive", () => {
     put.mockRejectedValue(new Error("R2 unavailable"));
     await expect(archiveSafetyScoreCapture({ db, bucket, publication: makeWorkerSafetyScoreV9Publication(), cacheRows: rows() }))
       .resolves.toMatchObject({ status: "failed", reason: "capture-upload-failed" });
-    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_capture_archive").get()?.n).toBe(0);
+    expect(archiveRowCount(sqlite)).toBe(0);
   });
 
   it("isolates index failure after upload, leaving object expiry to the lifecycle", async () => {
@@ -127,7 +129,7 @@ describe("accepted Safety capture archive", () => {
     await expect(archiveSafetyScoreCapture({ db, bucket, publication: makeWorkerSafetyScoreV9Publication(), cacheRows }))
       .resolves.toMatchObject({ status: "skipped", reason: "capture-too-large", bytes: Buffer.byteLength(cacheRows[field].value) });
     expect(put).not.toHaveBeenCalled();
-    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_capture_archive").get()?.n).toBe(0);
+    expect(archiveRowCount(sqlite)).toBe(0);
   });
 
   it("guards total JSON bytes including escaping even when each value fits", async () => {
@@ -169,7 +171,7 @@ describe("accepted Safety capture archive", () => {
       publication: makeWorkerSafetyScoreV9Publication(), cacheRows: rows() }))
       .resolves.toMatchObject({ status: "failed", reason: "capture-aborted" });
     expect(put).not.toHaveBeenCalled();
-    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_capture_archive").get()?.n).toBe(0);
+    expect(archiveRowCount(sqlite)).toBe(0);
   });
 
   it("settles abort during PUT promptly and owns late success with waitUntil", async () => {
@@ -184,10 +186,10 @@ describe("accepted Safety capture archive", () => {
     await expect(result).resolves.toMatchObject({ status: "failed", reason: "capture-aborted",
       outcome: "pending-continuation" });
     expect(waits).toHaveLength(1);
-    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_capture_archive").get()?.n).toBe(0);
+    expect(archiveRowCount(sqlite)).toBe(0);
     upload.resolve({ key: "stored" } as R2Object);
     await Promise.all(waits);
-    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_capture_archive").get()?.n).toBe(1);
+    expect(archiveRowCount(sqlite)).toBe(1);
   });
 
   it("times out within the remaining publication budget and indexes a late upload independently", async () => {
@@ -207,7 +209,7 @@ describe("accepted Safety capture archive", () => {
       outcome: "pending-continuation" });
     upload.resolve({ key: "stored" } as R2Object);
     await Promise.all(waits);
-    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_capture_archive").get()?.n).toBe(1);
+    expect(archiveRowCount(sqlite)).toBe(1);
     expect(logger).toHaveBeenCalledWith(expect.objectContaining({
       event: "safety_score_capture_archive_late_indexed",
     }));
@@ -227,7 +229,7 @@ describe("accepted Safety capture archive", () => {
     await expect(result).resolves.toMatchObject({ reason: "capture-upload-timeout" });
     upload.reject(new Error("late R2 failure"));
     await Promise.all(waits);
-    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_capture_archive").get()?.n).toBe(0);
+    expect(archiveRowCount(sqlite)).toBe(0);
     expect(logger).toHaveBeenCalledWith(expect.objectContaining({
       event: "safety_score_capture_archive_late_failed",
       metadata: expect.objectContaining({ reason: "capture-upload-failed" }),
@@ -254,7 +256,7 @@ describe("accepted Safety capture archive", () => {
     }));
     upload.resolve({ key: "stored" } as R2Object);
     await upload.pending;
-    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_capture_archive").get()?.n).toBe(0);
+    expect(archiveRowCount(sqlite)).toBe(0);
     expect(vi.getTimerCount()).toBe(0);
   });
 
@@ -270,7 +272,7 @@ describe("accepted Safety capture archive", () => {
       outcome: "outcome-unknown" });
     upload.resolve({ key: "stored" } as R2Object);
     await upload.pending;
-    expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_capture_archive").get()?.n).toBe(0);
+    expect(archiveRowCount(sqlite)).toBe(0);
   });
 
   it("repeated same-generation upload uses identical bytes and INSERT OR IGNORE preserves one index", async () => {

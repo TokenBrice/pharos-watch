@@ -163,11 +163,14 @@ beforeEach(() => {
   });
 });
 
+const loadOnlyConfigState = (state: ReturnType<typeof makeState>) =>
+  mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+
 describe("blacklist config scan accounting", () => {
   it.each([2, 52, BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS])(
     "tolerates a proven all-topic %i-block residual without renewing full coverage", async (lag) => {
       const state = makeState(EVM_CONFIG, { lastSucceededAt: 10 });
-      mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+      loadOnlyConfigState(state);
       mocks.fetchEvmEventsIncremental.mockResolvedValueOnce({
         ...evmResult(), safeHead: 120 + lag, incomplete: true, coverageOutcome: "incomplete",
         failureSamples: ["behind-safe-head"],
@@ -191,7 +194,7 @@ describe("blacklist config scan accounting", () => {
     { failureSamples: ["behind-safe-head", "decode-error"] },
   ])("keeps missing or failed evidence outside tolerance: %j", async (overrides) => {
     const state = makeState();
-    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    loadOnlyConfigState(state);
     mocks.fetchEvmEventsIncremental.mockResolvedValueOnce({
       ...evmResult(), safeHead: 122, incomplete: true, coverageOutcome: "incomplete",
       failureSamples: ["behind-safe-head"], ...overrides,
@@ -202,7 +205,7 @@ describe("blacklist config scan accounting", () => {
 
   it("retains catch-up progress and lag without refreshing success until safe head is reached", async () => {
     const state = makeState(EVM_CONFIG, { lastSucceededAt: 10 });
-    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    loadOnlyConfigState(state);
     mocks.fetchEvmEventsIncremental.mockResolvedValueOnce({
       ...evmResult(), safeHead: 900, incomplete: true, coverageOutcome: "incomplete",
       failureSamples: ["behind-safe-head"],
@@ -254,7 +257,7 @@ describe("blacklist config scan accounting", () => {
 
   it("retains unavailable frontier evidence instead of inventing zero lag", async () => {
     const state = makeState();
-    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    loadOnlyConfigState(state);
     mocks.fetchEvmEventsIncremental.mockResolvedValueOnce({
       ...evmResult(), apiError: true, coverageOutcome: "provider_error",
       scannedToBlock: null, safeHead: null, failureSamples: ["rpc-error"],
@@ -271,7 +274,7 @@ describe("blacklist config scan accounting", () => {
 
   it("keeps Tron failure diagnostic units and source reason", async () => {
     const state = makeState(TRON_CONFIG);
-    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    loadOnlyConfigState(state);
     mocks.fetchTronEventsIncremental.mockResolvedValueOnce({
       rows: [], maxBlock: 120, scannedToTimestamp: 120_000, safeHead: 900_000,
       incomplete: true, apiError: false, topicCount: 1, coveredTopicCount: 0, providerCalls: 1,
@@ -307,7 +310,7 @@ describe("blacklist config scan accounting", () => {
 
   it("counts a failed attempt claim as a conflict and skip", async () => {
     const state = makeState();
-    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    loadOnlyConfigState(state);
     mocks.claimBlacklistConfigAttempt.mockResolvedValueOnce(null);
 
     const result = await scanBlacklistConfigs(scanArgs());
@@ -321,7 +324,7 @@ describe("blacklist config scan accounting", () => {
 
   it("finalizes a Tron config skipped by an open provider circuit", async () => {
     const state = makeState(TRON_CONFIG);
-    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    loadOnlyConfigState(state);
     mocks.shouldAttemptFetch.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
 
     const result = await scanBlacklistConfigs(scanArgs());
@@ -346,7 +349,7 @@ describe("blacklist config scan accounting", () => {
 
   it("records and finalizes exceptions without losing failure counters", async () => {
     const state = makeState();
-    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    loadOnlyConfigState(state);
     mocks.fetchEvmEventsIncremental.mockRejectedValueOnce(new TypeError("provider exploded"));
 
     const result = await scanBlacklistConfigs(scanArgs());
@@ -388,7 +391,7 @@ describe("Tron native scan admission", () => {
 
   it("keeps admitted Dwellir scanning with TronGrid's circuit open without recording a TronGrid success", async () => {
     const state = makeState(TRON_CONFIG);
-    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    loadOnlyConfigState(state);
     mocks.shouldAttemptFetch.mockResolvedValue(false);
     mocks.fetchTronEventsWithRpc.mockResolvedValue(result);
     const summary = await scanBlacklistConfigs({ ...scanArgs(), dwellirNative: { readJson: vi.fn() } });
@@ -404,7 +407,7 @@ describe("Tron native scan admission", () => {
 
   it("preserves partial all-topic progress without renewing the full-coverage clock", async () => {
     const state = makeState(TRON_CONFIG, { lastSucceededAt: 10 });
-    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    loadOnlyConfigState(state);
     mocks.fetchTronEventsWithRpc.mockResolvedValue({ ...result, safeHead: 300, incomplete: true });
     const summary = await scanBlacklistConfigs({ ...scanArgs(), dwellirNative: { readJson: vi.fn() } });
     expect(summary.configsSucceeded).toBe(0);
@@ -419,7 +422,7 @@ describe("Tron native scan admission", () => {
     const cursorValue = desiredSafeHead - 6 * 60 * 60_000;
     const lastSucceededAt = Math.floor(cursorValue / 1000);
     const state = makeState(TRON_CONFIG, { cursorValue, lastSucceededAt });
-    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    loadOnlyConfigState(state);
     const staleResult: FetchTronEventsIncrementalResult = {
       ...result,
       maxBlock: cursorValue,
@@ -456,7 +459,7 @@ describe("Tron native scan admission", () => {
 
   it("retains the old event path when Tron is disabled in the admitted capability", async () => {
     const state = makeState(TRON_CONFIG);
-    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    loadOnlyConfigState(state);
     mocks.fetchTronEventsIncremental.mockResolvedValue({ ...result, usedRpcLogs: false, tronRpc: undefined });
     await scanBlacklistConfigs({ ...scanArgs(), dwellirNative: { readJson: vi.fn(), isNetworkEnabled: () => false } });
     expect(mocks.fetchTronEventsWithRpc).not.toHaveBeenCalled();
@@ -465,7 +468,7 @@ describe("Tron native scan admission", () => {
 
   it("leaves the TronGrid circuit untouched when local admission truncates the event scan", async () => {
     const state = makeState(TRON_CONFIG);
-    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    loadOnlyConfigState(state);
     mocks.fetchTronEventsIncremental.mockResolvedValue({
       ...result, usedRpcLogs: false, tronRpc: undefined,
       incomplete: true, apiError: false, scannedToTimestamp: null,

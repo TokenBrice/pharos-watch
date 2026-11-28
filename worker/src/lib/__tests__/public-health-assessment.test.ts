@@ -19,6 +19,8 @@ const LARGE_MARKET_CAP_USD = 2_400_000_000;
 const PUBLICATION_BREADTH = getActiveAssetServiceBreadthThreshold(ACTIVE_IDS.size)!;
 afterEach(() => fixtures.closeAll());
 
+const assess = (db: D1Database, nowSec: number) => assessPublicHealth(db, nowSec, { logPrefix: "test" });
+
 describe("assessPublicHealth Safety Score publication", () => {
   const now = 1_800_000_000;
   const current: V9PublicationHealth = {
@@ -190,7 +192,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeMinimalDb(nowSec);
 
-    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+    const result = await assess(db, nowSec);
 
     // `fx-rates` exists in CACHE_FRESHNESS_THRESHOLDS; it also has a mapping,
     // which verifies attribution works for more than just the stablecoins lane.
@@ -217,7 +219,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       daysUntilExhaustion: 25,
     });
 
-    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+    const result = await assess(db, nowSec);
 
     expect(result.d1Capacity?.thresholdState).toBe("warning");
     expect(result.d1CapacityImpactStatus).toBe("degraded");
@@ -277,7 +279,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       },
     });
 
-    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+    const result = await assess(db, nowSec);
 
     expect(result.stablecoinPublication).toMatchObject({
       status: "incomplete",
@@ -430,7 +432,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
         producerHistoryError: new Error("cron lookup failed"),
       });
 
-      const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+      const result = await assess(db, nowSec);
 
       expect(result.caches["yield-data"]).toMatchObject({
         freshnessSource: "freshness-sentinel",
@@ -483,7 +485,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       publicationMetadata: makePriceCoverageMetadata(nowSec, missingId),
     });
 
-    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+    const result = await assess(db, nowSec);
 
     expect(result.stablecoinPublication.status).toBe("complete");
     expect(result.activePriceCoverage).toMatchObject({
@@ -571,7 +573,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       ),
     });
 
-    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+    const result = await assess(db, nowSec);
 
     expect(result.activePriceCoverageImpactStatus).toBe("healthy");
     expect(result.overallStatus).toBe("healthy");
@@ -592,7 +594,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       ),
     });
 
-    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+    const result = await assess(db, nowSec);
 
     expect(result.activePriceCoverageImpactStatus).toBe("healthy");
     expect(result.overallStatus).toBe("healthy");
@@ -614,7 +616,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       ),
     });
 
-    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+    const result = await assess(db, nowSec);
 
     expect(result.activePriceCoverageImpactStatus).toBe("healthy");
     expect(result.overallStatus).toBe("healthy");
@@ -630,7 +632,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
       publicationMetadata: makePriceCoverageMetadata(nowSec, missingId, 1, false),
     });
 
-    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+    const result = await assess(db, nowSec);
 
     // Eligibility gates operator warnings, not the public availability status.
     expect(result.overallStatus).toBe("healthy");
@@ -652,7 +654,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     const missingId = activeIds[0]!;
     const db = makeMinimalDb(nowSec, undefined, makePriceCoverageMetadata(nowSec, missingId, 4, true, true));
 
-    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+    const result = await assess(db, nowSec);
 
     expect(result.activePriceCoverage.missingActiveAssets).toEqual([
       expect.objectContaining({
@@ -708,12 +710,12 @@ describe("assessPublicHealth mint/burn subquery failures", () => {
         "repair-debt": { metadata: { autoRepairCount: 3 } },
       },
     }));
-    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+    const result = await assess(db, nowSec);
 
     expect(result.mintBurn.totalEvents).toBe(7654);
     expect(result.repairRunnerAutoRepairCount).toBe(3);
     insert.run("mint-burn-growth-watchdog", nowSec - 10, 8888, JSON.stringify({ rowCount: 222 }));
-    const watchdog = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+    const watchdog = await assess(db, nowSec);
     expect(watchdog.mintBurn.totalEvents).toBe(8888);
     expect(watchdog.repairRunnerAutoRepairCount).toBeNull();
   });
@@ -726,7 +728,7 @@ describe("assessPublicHealth mint/burn subquery failures", () => {
     });
 
     try {
-      const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+      const result = await assess(db, nowSec);
 
       expect(result.mintBurnQueryError).toBe("Mint/burn health data unavailable.");
       expect(result.mintBurn.queryErrors).toEqual({
@@ -755,7 +757,7 @@ describe("assessPublicHealth mint/burn subquery failures", () => {
     });
 
     try {
-      const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+      const result = await assess(db, nowSec);
 
       expect(result.mintBurnQueryError).toBeNull();
       expect(result.mintBurn.queryErrors).toEqual({
@@ -779,7 +781,7 @@ describe("assessPublicHealth mint/burn subquery failures", () => {
       rowCount: null,
     });
 
-    const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+    const result = await assess(db, nowSec);
 
     expect(result.mintBurnQueryError).toBeNull();
     expect(result.mintBurn.queryErrors).toEqual({
@@ -800,7 +802,7 @@ describe("assessPublicHealth mint/burn subquery failures", () => {
         publicationQueryError: new Error("coverage read failed"),
       });
 
-      const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });
+      const result = await assess(db, nowSec);
 
       expect(result.stablecoinPublication.status).toBe("unknown");
       expect(result.activePriceCoverage.status).toBe("unknown");

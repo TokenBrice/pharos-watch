@@ -135,13 +135,16 @@ const v2Review = { ...review, producer: { ...review.producer, maxFunctions: "rev
 beforeEach(() => { Object.assign(state, initialState); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
 afterEach(() => vi.useRealTimers());
 
+const expectRealizedOutputInconsistent = (args: Parameters<typeof observeErc4626InstantExit>[0]) =>
+  expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+
 describe("reviewed synchronous ERC4626 exact execution", () => {
   it("certifies the full stress request only after observing the same-call output transfer and share burn", async () => {
     const result = await observeErc4626InstantExit(args);
     expect(result.points[0]).toMatchObject({ executableUsd: 100_000, requestedRawInput: "100000000000", executedRawInput: "100000000000", certification: "exact-complete", outputs: [{ rawUnits: "100000000000" }] });
     expect(result.source).toMatchObject({ number: 100, hash: HASH, complete: true, truncated: false });
     state.realizedMismatch = true;
-    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    await expectRealizedOutputInconsistent(args);
   });
   it("admits an exact receipt when conservative conversion rounding is not a one-unit inverse", async () => {
     state.inverseOffset = 846_920n;
@@ -149,11 +152,11 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       certification: "exact-complete", executedRawInput: "100000000000", outputs: [{ rawUnits: "100000000000" }],
     });
     state.realizedMismatch = true;
-    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    await expectRealizedOutputInconsistent(args);
   });
   it("certifies a reviewed gross return and preview using the exact rebasing-token net receipt, not a dust tolerance", async () => {
     state.outputDust = 1n; state.grossPreview = true; state.grossReturn = true;
-    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    await expectRealizedOutputInconsistent(args);
     const grossReview = { ...review, producer: { ...review.producer, previewRedeem: "gross-before-fee", redeemReturns: "gross-before-fee" } } as ExitExecutionModelReview;
     expect((await observeErc4626InstantExit({ ...args, review: grossReview })).points[0]).toMatchObject({
       certification: "exact-complete", outputs: [{ rawUnits: "99999999999" }], fees: [{ rawUnits: "1" }],
@@ -169,13 +172,13 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       certification: "exact-complete", executedRawInput: "100000000000", outputs: [{ rawUnits: "100000000000" }],
     });
     state.holderBurnMismatch = true;
-    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    await expectRealizedOutputInconsistent(args);
   });
   it("rejects unexplained supply increases and decreases despite an exact holder receipt", async () => {
     state.unexplainedSupplyDelta = 1n;
-    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    await expectRealizedOutputInconsistent(args);
     state.unexplainedSupplyDelta = -1n;
-    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    await expectRealizedOutputInconsistent(args);
   });
   it.each(["missing-getter", "wrong-balance", "changed-getter", "unreadable-balance", "holder-recipient"])("rejects fee share mint with %s proof", async (failure) => {
     state.feeShares = 11n;
@@ -184,7 +187,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     if (failure === "changed-getter") state.feeGetterChanged = true;
     if (failure === "unreadable-balance") state.feeBalanceFails = true;
     if (failure === "holder-recipient") state.feeRecipient = BigInt("0xca11bde05977b3631167028862be2a173976ca11");
-    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    await expectRealizedOutputInconsistent(args);
   });
   it.each([9_999n, 0n])("proves full execution even when ordinary max functions conservatively underestimate at %s bps", async (maxBps) => {
     state.maxBps = maxBps;
@@ -301,7 +304,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
   });
   it("admits a source-reviewed gross preview only through the actual net receipt and retains default net-preview rejection", async () => {
     state.feeBps = 50n; state.grossPreview = true;
-    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    await expectRealizedOutputInconsistent(args);
     const grossReview = { ...review, producer: { ...review.producer, previewRedeem: "gross-before-fee" } } as ExitExecutionModelReview;
     expect((await observeErc4626InstantExit({ ...args, review: grossReview })).points[0]).toMatchObject({
       certification: "exact-complete", executionCostBps: 50, allInCostBps: 50,
@@ -312,7 +315,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
   });
   it("values a reviewed gross redeem return by actual net proceeds and rejects escrow transfers without share burn", async () => {
     state.feeBps = 50n; state.grossReturn = true;
-    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    await expectRealizedOutputInconsistent(args);
     const grossReturnReview = { ...review, producer: { ...review.producer, redeemReturns: "gross-before-fee" } } as ExitExecutionModelReview;
     expect((await observeErc4626InstantExit({ ...args, review: grossReturnReview })).points[0]).toMatchObject({
       certification: "exact-complete", executionCostBps: 50, outputs: [{ rawUnits: "99500000000" }],
@@ -404,11 +407,11 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
         points: [{ certification: "exact-lower-bound", canonicalAttempt: { outcome: "accepted-but-unfunded" } }] },
     });
     state.realizedMismatch = true; state.corruptOnlyFunded = true;
-    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    await expectRealizedOutputInconsistent(args);
   });
   it("never certifies queued share burns when every bounded probe transfers no underlying", async () => {
     state.deferIlliquid = true; state.optimisticMax = true; state.liquidity = 0n;
-    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    await expectRealizedOutputInconsistent(args);
     const result = await observeReviewedExitExecutionRoutes({
       assetId: "fixture-vault", circulatingUsd: 10_000_000, clockSec: CLOCK,
       reviews: [review], inputReference, outputReference,

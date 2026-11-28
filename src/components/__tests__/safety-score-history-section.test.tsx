@@ -41,6 +41,8 @@ afterEach(() => {
 
 import { afterEach } from "vitest";
 
+const renderUsdtHistory = () => renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+
 describe("SafetyScoreHistorySection", () => {
   beforeEach(() => {
     useSafetyScoreHistoryMock.mockReset();
@@ -78,7 +80,7 @@ describe("SafetyScoreHistorySection", () => {
       error: null,
     });
 
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+    const html = renderUsdtHistory();
 
     expect(html).toContain("Best grade");
     expect(html).toContain("Lowest grade");
@@ -232,7 +234,7 @@ describe("SafetyScoreHistorySection", () => {
 
     useSafetyScoreHistoryV2Mock.mockReturnValue({ data: { schemaVersion: 2, history: [] }, meta: null, isLoading: false, error: null });
 
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+    const html = renderUsdtHistory();
     expect(html).not.toContain(" as of ");
     expect(html).not.toContain("Streak");
     expect(html).toContain("Best grade");
@@ -258,7 +260,7 @@ describe("SafetyScoreHistorySection", () => {
   ])("retains legacy B with %s V2 but claims no current B or B-to-now", (_name, v2) => {
     useSafetyScoreHistoryMock.mockReturnValue(LEGACY_B);
     useSafetyScoreHistoryV2Mock.mockReturnValue(v2);
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+    const html = renderUsdtHistory();
     expect(html).toContain("Grade History");
     expect(html).toContain("Initial grade");
     expect(html).not.toContain("Streak");
@@ -272,7 +274,7 @@ describe("SafetyScoreHistorySection", () => {
   it("names a failed V2 lane with nothing retained while keeping legacy rows", () => {
     useSafetyScoreHistoryMock.mockReturnValue(LEGACY_B);
     useSafetyScoreHistoryV2Mock.mockReturnValue({ data: undefined, meta: null, isLoading: false, error: new Error("v2 down") });
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+    const html = renderUsdtHistory();
     expect(html).toContain("Could not refresh Safety Score history");
     expect(html).toContain("Initial grade");
   });
@@ -286,7 +288,7 @@ describe("SafetyScoreHistorySection", () => {
       isLoading: false,
       error: new Error("refresh failed"),
     });
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+    const html = renderUsdtHistory();
     const asOf = new Date(v2Generation * 1000).toISOString().slice(0, 10);
     expect(html).toContain(`Streak as of ${asOf}`);
     expect(html).toContain(">1d</span>");
@@ -301,7 +303,7 @@ describe("SafetyScoreHistorySection", () => {
   it("never merges unequal or null lane clocks into one freshness claim", () => {
     useSafetyScoreHistoryMock.mockReturnValue({ ...LEGACY_B, meta: { updatedAt: null, ageSeconds: null, status: "unknown" } });
     useSafetyScoreHistoryV2Mock.mockReturnValue({ data: V2_ROWS, meta: { updatedAt: NOW_SEC - 60, ageSeconds: 60, status: "fresh" }, isLoading: false, error: null });
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+    const html = renderUsdtHistory();
     expect(html).toContain("Safety Score history as of");
     expect(html).not.toContain("Legacy history as of");
     // A retained lane with an unknown clock leaves no defensible endpoint.
@@ -311,28 +313,28 @@ describe("SafetyScoreHistorySection", () => {
   it("renders retained rows while a sibling lane is loading, and nothing when both are unavailable", () => {
     useSafetyScoreHistoryMock.mockReturnValue({ data: undefined, meta: null, isLoading: true, error: null });
     useSafetyScoreHistoryV2Mock.mockReturnValue({ data: V2_ROWS, meta: { updatedAt: NOW_SEC - 60, ageSeconds: 60, status: "fresh" }, isLoading: false, error: null });
-    expect(renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />)).toContain("Upgraded </span>from B");
+    expect(renderUsdtHistory()).toContain("Upgraded </span>from B");
 
     useSafetyScoreHistoryMock.mockReturnValue({ data: undefined, meta: null, isLoading: false, error: new Error("legacy down") });
     useSafetyScoreHistoryV2Mock.mockReturnValue({ data: undefined, meta: null, isLoading: false, error: new Error("v2 down") });
-    const failed = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+    const failed = renderUsdtHistory();
     expect(failed).toContain("Could not refresh");
     expect(failed).not.toContain("Failed to load this dataset");
 
     useSafetyScoreHistoryMock.mockReturnValue({ data: [], meta: { updatedAt: NOW_SEC, ageSeconds: 0, status: "fresh" }, isLoading: false, error: null });
     useSafetyScoreHistoryV2Mock.mockReturnValue({ data: { schemaVersion: 2, history: [] }, meta: { updatedAt: NOW_SEC, ageSeconds: 0, status: "fresh" }, isLoading: false, error: null });
-    expect(renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />)).toBe("");
+    expect(renderUsdtHistory()).toBe("");
   });
 
   it("keeps a retained refresh failure silent and warns only on material lane age", () => {
     useSafetyScoreHistoryMock.mockReturnValue({ ...LEGACY_B, error: new Error("refetch failed") });
-    const silent = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+    const silent = renderUsdtHistory();
     // The age chip's live region stays empty; no notice is drawn.
     expect(silent).not.toMatch(/role="status"[^>]*>[^<]/);
     expect(silent).not.toContain("Showing an older snapshot");
 
     useSafetyScoreHistoryMock.mockReturnValue({ ...LEGACY_B, meta: { updatedAt: NOW_SEC - 30 * 86_400, ageSeconds: 30 * 86_400, status: "stale" } });
-    const stale = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+    const stale = renderUsdtHistory();
     expect(stale).toContain("Showing an older snapshot");
     expect(stale).toContain("Legacy history");
   });
@@ -344,7 +346,7 @@ describe("SafetyScoreHistorySection", () => {
       isLoading: false,
       error: null,
     });
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+    const html = renderUsdtHistory();
     expect(html).not.toContain("Best grade");
     expect(html).not.toContain("Lowest grade");
   });

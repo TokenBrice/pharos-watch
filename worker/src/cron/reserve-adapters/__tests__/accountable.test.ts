@@ -70,6 +70,9 @@ const NEUTRL_ACCOUNTABLE_TEST_CONFIG: LiveReservesConfig = {
   },
 };
 
+/** yzUSD's production config; cases that need another coin declare their own `config`. */
+const config = yzusd.liveReservesConfig as LiveReservesConfig;
+
 async function runAccountablePayload(config: LiveReservesConfig, data: Record<string, unknown>) {
   const primary = config.inputs.primary;
   if (primary.kind !== "http-json") {
@@ -568,7 +571,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("maps the current Yuzu Accountable exposure buckets without unknown exposure warnings", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
     const result = await runAccountablePayload(config, {
       collateralization: 1.101272,
@@ -626,7 +628,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("links Yuzu mGLOBAL and mGLO exposures with reviewed risk labels", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
     const result = await runAccountablePayload(config, {
       collateralization: 1,
@@ -661,7 +662,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("maps new Yuzu USDG positions without inventing token links and keeps the dust signed bucket informational", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
     const result = await runAccountablePayload(config, makeTimestampedYuzuPayload({
       exposure_split_ts: "2026.09.11 15:47:21 UTC",
       exposure_split: {
@@ -688,7 +688,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("keeps sub-material signed exposure informational while material signed exposure still degrades", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
     const subMaterial = await runAccountablePayload(config, {
       collateralization: 1,
@@ -723,7 +722,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("maps the new Yuzu [Re]_reUSD_LP and [Morpho]_USDC buckets with reviewed classifications", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
     const result = await runAccountablePayload(config, {
       collateralization: 1.101272,
@@ -766,7 +764,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("omits the current signed Yuzu USDG loop bucket without inflating reserve composition", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
     const result = await runAccountablePayload(config, {
       collateralization: 1.083117,
@@ -802,7 +799,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("reconciles a timestamped Yuzu exposure split against the nearest contemporaneous timeline total", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
     const result = await runAccountablePayload(config, {
       collateralization: 1.088759,
@@ -841,7 +837,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("degrades the current signed Yuzu exposure split whose net exceeds the reserve total instead of failing the snapshot", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
     // Captured 2026-09-11 from https://cache.accountable.capital/dashboard/yuzu: every
     // exposure_split bucket now wraps its value in an empty-key object, and the Pendle PT loop
@@ -871,7 +866,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("uses exposure_split_ts, not the newer dashboard envelope timestamp, for Yuzu freshness", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
     const result = await runAccountablePayload(config, makeTimestampedYuzuPayload());
 
     expect(result.metadata).toMatchObject({
@@ -882,7 +876,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("admits Yuzu's periodic exposure snapshot inside the 14-day Accountable ceiling and degrades it beyond", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
     const result = await runAccountablePayload(config, makeTimestampedYuzuPayload());
     const sourceTimestamp = result.metadata?.sourceTimestamp as number;
     const adapter = getReserveAdapter("accountable") ?? undefined;
@@ -908,7 +901,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("bounds Yuzu residual admission while preserving signed-book rejection", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
     await expect(runAccountablePayload(config, makeTimestampedYuzuPayload({
       total_reserves: 63_527_322.23,
@@ -946,7 +938,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("accepts a Yuzu exposure split that matches either dated timeline bracket", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
     // 2026-10-24 production shape: the nearer prior point misses by 1.25%, the
     // following dated point reconciles within 1%.
     const result = await runAccountablePayload(config, makeTimestampedYuzuPayload({
@@ -966,7 +957,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("never reconciles a Yuzu exposure split against the moving live timeline point", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
     const live = { ts: "1787848065315", reserves: 1_000 };
     await expect(runAccountablePayload(config, makeTimestampedYuzuPayload({
       timeline: [{ ts: "1787600794262", reserves: 1_100 }, live],
@@ -978,7 +968,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("still fails a frozen Yuzu exposure split that misses both dated brackets", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
     // 2026-10-12..10-19 production gap: split frozen at $58.36M vs ~$66.26M.
     await expect(runAccountablePayload(config, makeTimestampedYuzuPayload({
       total_reserves: 66_260_883.04,
@@ -992,7 +981,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("fails closed when a timestamped Yuzu exposure split has no valid timeline reserve total", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
     await expect(runAccountablePayload(config, makeTimestampedYuzuPayload({
       timeline: [
@@ -1003,7 +991,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("fails closed when the nearest Yuzu timeline reserve total is more than 24 hours away", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
 
     await expect(runAccountablePayload(config, makeTimestampedYuzuPayload({
       timeline: [{ ts: "1787466675000", reserves: 1_000 }],
@@ -1011,7 +998,6 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("rejects the partial signed Yuzu exposure split when it does not reconcile to total reserves", async () => {
-    const config = yzusd.liveReservesConfig as LiveReservesConfig;
     expect(config.params).not.toHaveProperty("skipTotalReservesValidation");
 
     await expect(runAccountablePayload(config, {

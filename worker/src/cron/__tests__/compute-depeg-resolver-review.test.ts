@@ -228,6 +228,8 @@ function chunkAbortDb(input: {
   };
 }
 
+const storesWithIncident = (incident: Awaited<ReturnType<DdrV2StoreContracts["loadCanonicalIncidents"]>>[number]) => durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+
 describe("buildDepegResolverReviewSnapshot", () => {
   it("can build DDRR from durable first-publication exposure when the v2 scorer is provided", async () => {
     const db = mockD1([]);
@@ -935,7 +937,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       ended_at: USR_FROZEN_AT - 2 * 86400, recovery_price: 1, close_reason: "recovered-primary",
     })]);
     const snapshot = await buildDepegResolverReviewSnapshot(db, USR_FROZEN_AT + 2 * 86400, undefined, {
-      storeContracts: durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) }),
+      storeContracts: storesWithIncident(incident),
     });
     expect(snapshot.rows[0]).toMatchObject({
       kind: "coverage", sourceEventState: "recovered", actualOutcome: "recovered",
@@ -1116,7 +1118,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
         recovery_price: null,
       },
     ]);
-    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+    const stores = storesWithIncident(incident);
 
     const snapshot = await buildDepegResolverReviewSnapshot(db, USR_FROZEN_ELIGIBLE_AT + 3600, undefined, {
       storeContracts: stores,
@@ -1160,7 +1162,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
         recovery_price: null,
       },
     ]);
-    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+    const stores = storesWithIncident(incident);
 
     const snapshot = await buildDepegResolverReviewSnapshot(db, DDR_V2_EFFECTIVE_AT + 3600, undefined, {
       storeContracts: stores,
@@ -1201,7 +1203,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       ],
     },
     ]);
-    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+    const stores = storesWithIncident(incident);
 
     const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
       storeContracts: stores,
@@ -1257,7 +1259,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       throwError: new Error("unexpected tape row query"),
     },
     ]);
-    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+    const stores = storesWithIncident(incident);
 
     const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
       storeContracts: stores,
@@ -1293,7 +1295,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       ],
     },
     ]);
-    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+    const stores = storesWithIncident(incident);
 
     const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
       storeContracts: stores,
@@ -1314,7 +1316,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       const db = reviewDb([eventRow({ id: 94 })], [
         { match: "FROM tape_events", rows: [], throwError: new Error(message) },
       ]);
-      const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+      const stores = storesWithIncident(incident);
 
       await expect(
         buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, { storeContracts: stores }),
@@ -1337,7 +1339,7 @@ describe("buildDepegResolverReviewSnapshot", () => {
       policyUniverseIncluded: true,
     };
     const db = reviewDb([{ id: 93, stablecoin_id: "usr-resolv", started_at: startedAt, ended_at: null, recovery_price: null }]);
-    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
+    const stores = storesWithIncident(incident);
 
     const snapshot = await buildDepegResolverReviewSnapshot(db, eligibleAt + 3600, undefined, {
       storeContracts: stores,

@@ -192,6 +192,8 @@ function makeTarget(fixture: ReplayFixture): DexMeasuredExecutionTarget {
   };
 }
 
+const deploymentFor = (fixture: ReplayFixture) => getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+
 describe("QuoterV2 pinned-block replay proofs", () => {
   beforeEach(() => {
     rpcMocks.fetchEvmCodeStatusAtBlock.mockReset();
@@ -231,7 +233,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
 
   it("keeps a QuoterV2 factory-binding transport outage operational", async () => {
     const fixture = REPLAYS[0]!;
-    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    const deployment = deploymentFor(fixture);
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue(null);
 
     const [outcome] = await resolveQuoterV2PoolBindings({
@@ -255,7 +257,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
   for (const fixture of REPLAYS) {
     it(`decodes the million-dollar wire vector for ${fixture.name}`, async () => {
       const target = makeTarget(fixture);
-      const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+      const deployment = deploymentFor(fixture);
       rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
         async (_chain: string, calls: Array<{ label: string }>) =>
           calls.map((call) => ({ label: call.label, success: true, returnData: fixture.quoteReturnData })),
@@ -388,7 +390,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
   it("rejects a factory return that resolves to a different physical pool", async () => {
     const fixture = REPLAYS[0]!;
     const target = makeTarget(fixture);
-    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    const deployment = deploymentFor(fixture);
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
       async (_chain: string, calls: Array<{ label: string }>) =>
         calls.map((call) => ({
@@ -418,7 +420,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     const fixture = REPLAYS[0]!;
     const target = makeTarget(fixture);
     target.tokenIn.decimals = 255;
-    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    const deployment = deploymentFor(fixture);
 
     const result = await quoteQuoterV2Requests({
       blockHash: `0x${"ab".repeat(32)}`,
@@ -440,7 +442,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
   it("preserves the Quoter adaptive multicall golden split", async () => {
     const fixture = REPLAYS[0]!;
     const target = makeTarget(fixture);
-    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    const deployment = deploymentFor(fixture);
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
       async (_chain: string, calls: Array<{ label: string }>) =>
         calls.length > 2
@@ -480,7 +482,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
   it("preserves the Quoter adaptive multicall golden unattempted result", async () => {
     const fixture = REPLAYS[0]!;
     const target = makeTarget(fixture);
-    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    const deployment = deploymentFor(fixture);
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue(null);
     const budget = createDexMeasuredExecutionRpcBudget({
       maxRequests: 100,
@@ -514,7 +516,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
   it("retries failed inner quotes as serialized singletons", async () => {
     const fixture = REPLAYS[0]!;
     const target = makeTarget(fixture);
-    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    const deployment = deploymentFor(fixture);
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
       async (_chain: string, calls: Array<{ label: string }>) =>
         calls.map((call, index) => ({
@@ -545,7 +547,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
   it("retains a decoded singleton revert as a non-passing capacity proof", async () => {
     const fixture = REPLAYS[0]!;
     const target = makeTarget(fixture);
-    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    const deployment = deploymentFor(fixture);
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
       async (_chain: string, calls: Array<{ label: string }>) =>
         calls.map((call) => ({ label: call.label, success: false, returnData: "0x" })),
@@ -574,7 +576,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
   it("keeps RPC transport failures operationally degraded", async () => {
     const fixture = REPLAYS[0]!;
     const target = makeTarget(fixture);
-    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    const deployment = deploymentFor(fixture);
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue(null);
 
     const [outcome] = await quoteQuoterV2Requests({
@@ -594,7 +596,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
   it("keeps malformed successful returndata operationally degraded", async () => {
     const fixture = REPLAYS[0]!;
     const target = makeTarget(fixture);
-    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    const deployment = deploymentFor(fixture);
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
       async (_chain: string, calls: Array<{ label: string }>) =>
         calls.map((call) => ({ label: call.label, success: true, returnData: "0x1234" })),
@@ -617,7 +619,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
   it("rejects a reverted proof carrying ABI-decodable success data", () => {
     const fixture = REPLAYS[0]!;
     const target = makeTarget(fixture);
-    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    const deployment = deploymentFor(fixture);
     const profile: DexMeasuredExecutionProfile = {
       schemaVersion: DEX_MEASURED_EXECUTION_SCHEMA_VERSION,
       kind: "measured-executable-depth",

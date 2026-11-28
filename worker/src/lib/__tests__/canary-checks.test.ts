@@ -582,6 +582,8 @@ function healthyD1(
   ]);
 }
 
+const snapshotCompletenessResult = (summary: { results: Array<{ checkId: string }> }) => summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness");
+
 describe("worker data invariant canaries", () => {
   it("normalizes canary rollout modes", () => {
     expect(normalizeWorkerCanaryMode(undefined)).toBe("off");
@@ -841,7 +843,7 @@ describe("worker data invariant canaries", () => {
     const summary = await runNow(healthyD1({
       publicDataset: { evidence: { stablecoin_count: 0 } },
     }));
-    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+    expect(snapshotCompletenessResult(summary))
       .toMatchObject({
         status: "error",
         error: "sealed public snapshot has an empty stablecoins section",
@@ -853,7 +855,7 @@ describe("worker data invariant canaries", () => {
     const summary = await runNow(healthyD1({
       publicDataset: { evidence: { liquidity_count: 3 } },
     }));
-    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+    expect(snapshotCompletenessResult(summary))
       .toMatchObject({
         status: "degraded",
         error: "sealed liquidity section has 3 rows for a 408-row published generation",
@@ -866,7 +868,7 @@ describe("worker data invariant canaries", () => {
         evidence: { liquidity_count: 408, dex_published_row_count: 500, sealed_dex_row_count: 408 },
       },
     }));
-    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+    expect(snapshotCompletenessResult(summary))
       .toMatchObject({
         status: "ok",
         metadata: { liquidityCount: 408, sealedDexPublicationRowCount: 408 },
@@ -879,7 +881,7 @@ describe("worker data invariant canaries", () => {
         evidence: { liquidity_count: 408, dex_published_row_count: 500, sealed_dex_row_count: null },
       },
     }));
-    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+    expect(snapshotCompletenessResult(summary))
       .toMatchObject({
         status: "degraded",
         error: "sealed liquidity section has 408 rows for a 500-row published generation",
@@ -890,7 +892,7 @@ describe("worker data invariant canaries", () => {
     const summary = await runNow(healthyD1({
       publicDataset: { evidence: { dews_computed_at: NOW - 10_000 } },
     }));
-    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+    expect(snapshotCompletenessResult(summary))
       .toMatchObject({
         status: "degraded",
         error: "sealed DEWS generation exceeded its 3600s consumer budget (6400s)",
@@ -901,7 +903,7 @@ describe("worker data invariant canaries", () => {
     const summary = await runNow(healthyD1({
       publicDataset: { evidence: null },
     }));
-    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+    expect(snapshotCompletenessResult(summary))
       .toMatchObject({
         status: "skipped",
         error: "public-snapshot-publication-metadata-unavailable",
@@ -928,7 +930,7 @@ describe("worker data invariant canaries", () => {
     }));
 
     const summary = await runNow(db);
-    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+    expect(snapshotCompletenessResult(summary))
       .toMatchObject({
         status: "ok",
         metadata: {

@@ -118,7 +118,6 @@ describe("syncLiveReserves adapter latency telemetry", () => {
         return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }], metadata: { freshnessMode: "not-applicable" as const } };
       },
     }));
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const result = await syncLiveReserves(mockLiveReserveD1(), new AbortController().signal, {});
     expect(exercised).toBe(true);
     expect(metadataOf(result).adapterLatency.requestCacheHits).toBe(1);
@@ -221,7 +220,6 @@ describe("syncLiveReserves adapter latency telemetry", () => {
 
     const db = mockLiveReserveD1();
     const assertCost = observeMockD1Cost(db);
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const result = await syncLiveReserves(
       db,
       new AbortController().signal,
@@ -320,7 +318,6 @@ describe("syncLiveReserves adapter latency telemetry", () => {
       };
     });
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const result = await syncLiveReserves(mockLiveReserveD1(), new AbortController().signal, {});
 
     expect(observedErrors).toEqual(["async I/O failed", "sync I/O failed"]);
@@ -379,7 +376,6 @@ describe("syncLiveReserves adapter latency telemetry", () => {
       };
     });
 
-    const { syncLiveReserves } = await import("../sync-live-reserves");
     const result = await syncLiveReserves(
       mockLiveReserveD1(),
       new AbortController().signal,

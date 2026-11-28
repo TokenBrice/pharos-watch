@@ -123,6 +123,8 @@ function runJob(
   return runtime.runLeasedCron(JOB, async () => fn());
 }
 
+const dwellirRuntime = (db: Parameters<typeof buildRuntime>[0]["db"]) => buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
+
 describe("scheduled runtime Dwellir enablement", () => {
   const warnings: string[] = [];
 
@@ -142,7 +144,7 @@ describe("scheduled runtime Dwellir enablement", () => {
 
   it("builds chainRpcs registry-only until a job runs", () => {
     const { db } = makeContextDb();
-    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
+    const runtime = dwellirRuntime(db);
     const registryOnly = buildChainRpcs(ALCHEMY_API_KEY, DRPC_API_KEY);
 
     expect(dwellirUrls(runtime.chainRpcs)).toEqual([]);
@@ -153,7 +155,7 @@ describe("scheduled runtime Dwellir enablement", () => {
 
   it("admits reviewed placement and adds supplemental-only chains on missing-record boot", async () => {
     const { db } = makeContextDb();
-    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
+    const runtime = dwellirRuntime(db);
     const registryOnly = buildChainRpcs(ALCHEMY_API_KEY, DRPC_API_KEY);
 
     await runJob(runtime);
@@ -203,7 +205,7 @@ describe("scheduled runtime Dwellir enablement", () => {
 
   it.each(["not-json", "{}", '{"state":"closed"}'])("denies malformed circuit %s without changing the map", async (value) => {
     const { db } = makeContextDb({ cacheRows: { [CIRCUIT_CACHE_KEY]: value } });
-    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
+    const runtime = dwellirRuntime(db);
     const before = [...runtime.chainRpcs];
     await runJob(runtime);
     expect([...runtime.chainRpcs]).toEqual(before);
@@ -273,7 +275,7 @@ describe("scheduled runtime Dwellir enablement", () => {
 
   it("withholds Dwellir when the credit ledger cannot be read", async () => {
     const { db } = makeContextDb({ cacheRows: { [ledgerCacheKey()]: "not-json" } });
-    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
+    const runtime = dwellirRuntime(db);
     const before = JSON.stringify([...runtime.chainRpcs]);
 
     await runJob(runtime);
@@ -297,7 +299,7 @@ describe("scheduled runtime Dwellir enablement", () => {
         }),
       },
     });
-    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
+    const runtime = dwellirRuntime(db);
     const before = JSON.stringify([...runtime.chainRpcs]);
 
     await runJob(runtime);
@@ -312,7 +314,7 @@ describe("scheduled runtime Dwellir enablement", () => {
 
   it("reads the budget once for concurrently started jobs", async () => {
     const { db, cacheReadsFor } = makeContextDb({ cacheRows: { [ledgerCacheKey()]: ledgerRow(0) } });
-    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
+    const runtime = dwellirRuntime(db);
 
     await Promise.all([runJob(runtime), runJob(runtime)]);
 
@@ -325,7 +327,7 @@ describe("scheduled runtime Dwellir enablement", () => {
       cacheRows: { [ledgerCacheKey()]: ledgerRow(0) },
       failCacheReadsFor: [CIRCUIT_CACHE_KEY],
     });
-    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
+    const runtime = dwellirRuntime(db);
 
     const first = await runJob(runtime, async () => ({ itemCount: 5 }));
     const second = await runJob(runtime, async () => ({ itemCount: 6 }));
@@ -338,7 +340,7 @@ describe("scheduled runtime Dwellir enablement", () => {
 
   it("flushes credits accrued by a successful job body into the monthly ledger", async () => {
     const { db, cacheRows } = makeContextDb();
-    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
+    const runtime = dwellirRuntime(db);
 
     const result = await runJob(runtime, async () => {
       recordDwellirCredits(3);
@@ -354,7 +356,7 @@ describe("scheduled runtime Dwellir enablement", () => {
 
   it("flushes credits accrued by a throwing job body and preserves the failure", async () => {
     const { db, cacheRows } = makeContextDb();
-    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
+    const runtime = dwellirRuntime(db);
 
     await expect(
       runJob(runtime, async () => {

@@ -99,6 +99,8 @@ async function fixture(held = false, pipelineGap = false, safetyPublishedAt = NO
   return { sqlite, db, input, payload };
 }
 
+const expectCoinOk = async (db: D1Database, url: URL) => expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+
 describe("rankings score-index hydration", () => {
   const sourceKey = "protocol-api:k3:ethereum:0x23346b04a7f55b8760e5860aa5a77383d63491cd";
   const linkedKey = `linked-variant:sbold-k3-capital:${sourceKey}`;
@@ -588,7 +590,7 @@ describe("rankings score-index hydration", () => {
       vi.setSystemTime(NOW * 1000 + 1234);
       return getCache(...args);
     });
-    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    await expectCoinOk(db, url);
     const signature = readPublishedCohort(sqlite)!.signature;
     expect(log).toHaveBeenCalledTimes(2);
     expect(log).toHaveBeenCalledWith({
@@ -607,14 +609,14 @@ describe("rankings score-index hydration", () => {
         leaseOwner: expect.any(String), durationMs: 1234 },
     }));
     // Warm reads never claim or re-log.
-    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    await expectCoinOk(db, url);
     expect(log).toHaveBeenCalledTimes(2);
   });
 
   it.each(["missing", "expired", "future"])("bounds waiter reads when the previous assessment is %s", async previous => {
     const { db, sqlite } = await fixture();
     const url = coinUrl();
-    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    await expectCoinOk(db, url);
     const published = readPublishedCohort(sqlite)!;
     const signature = published.signature;
     replaceWithStalledLease(sqlite, signature);
@@ -733,7 +735,7 @@ describe("rankings score-index hydration", () => {
   it("fences stale owners from publication and release without destroying the complete assessment", async () => {
     const { db, sqlite } = await fixture();
     const url = coinUrl();
-    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    await expectCoinOk(db, url);
     const published = YieldCoinCohortSchema.parse(readPublishedCohort(sqlite));
     expect(await cohortCache.claimYieldCoinCohort(db, published.signature, "redundant", NOW)).toBeNull();
     expect(await cohortCache.claimYieldCoinCohort(db, "next", "old-owner", NOW)).not.toBeNull();
@@ -751,7 +753,7 @@ describe("rankings score-index hydration", () => {
   it.each(["incomplete", "clock-mismatch"])("rejects a previous assessment with an %s publication envelope", async invalid => {
     const { db, sqlite } = await fixture();
     const url = coinUrl();
-    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    await expectCoinOk(db, url);
     const published = YieldCoinCohortSchema.parse(readPublishedCohort(sqlite));
     replaceWithStalledLease(sqlite, published.signature);
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(COHORT_CACHE_KEY,
@@ -765,7 +767,7 @@ describe("rankings score-index hydration", () => {
   it("logs one preparing diagnostic naming the reason, signature prefix and lease holder", async () => {
     const { db, sqlite } = await fixture();
     const url = coinUrl();
-    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    await expectCoinOk(db, url);
     const signature = readPublishedCohort(sqlite)!.signature;
     replaceWithStalledLease(sqlite, signature);
     const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => {});
@@ -794,7 +796,7 @@ describe("rankings score-index hydration", () => {
   it("keeps the preparing 503 and still logs when the lease diagnostic read fails", async () => {
     const { db, sqlite } = await fixture();
     const url = coinUrl();
-    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    await expectCoinOk(db, url);
     const signature = readPublishedCohort(sqlite)!.signature;
     replaceWithStalledLease(sqlite, signature);
     const failingDb = {
@@ -825,7 +827,7 @@ describe("rankings score-index hydration", () => {
   it.each(["different-signature", "expired"])("rejects a %s comparator published while waiting", async invalid => {
     const { db, sqlite } = await fixture();
     const url = coinUrl();
-    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    await expectCoinOk(db, url);
     const published = readPublishedCohort(sqlite)!;
     replaceWithStalledLease(sqlite, published.signature);
     const cohort = { ...published, ...(invalid === "expired"
@@ -845,7 +847,7 @@ describe("rankings score-index hydration", () => {
   it("keeps a waiter read failure unavailable instead of inventing an empty success", async () => {
     const { db, sqlite } = await fixture();
     const url = coinUrl();
-    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    await expectCoinOk(db, url);
     replaceWithStalledLease(sqlite, readPublishedCohort(sqlite)!.signature);
     let cohortReads = 0;
     const failingDb = {
@@ -874,7 +876,7 @@ describe("rankings score-index hydration", () => {
   it("serves a warm comparator without waiter reads or waits", async () => {
     const { db } = await fixture();
     const url = coinUrl();
-    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    await expectCoinOk(db, url);
     const sleep = vi.spyOn(abort, "sleep");
     const prepare = vi.spyOn(db, "prepare");
     const response = await handleYieldRankingsCoin(db, url);
@@ -901,7 +903,7 @@ describe("rankings score-index hydration", () => {
     const { db } = await fixture();
     const url = coinUrl();
     const prepare = vi.spyOn(db, "prepare");
-    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    await expectCoinOk(db, url);
     vi.setSystemTime((NOW + 30) * 1000);
     let full = YieldRankingsResponseSchema.parse(await (await handleYieldRankings(db)).json());
     let coin = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url)).json());
@@ -922,7 +924,7 @@ describe("rankings score-index hydration", () => {
   it("invalidates comparator coverage on mutable Safety health/index failure without renewing the yield clock", async () => {
     const { db, sqlite } = await fixture();
     const url = coinUrl();
-    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    await expectCoinOk(db, url);
     sqlite.prepare("DELETE FROM cache WHERE key = ?").run(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex);
     const coin = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url)).json());
     const full = YieldRankingsResponseSchema.parse(await (await handleYieldRankings(db)).json());
@@ -955,7 +957,7 @@ describe("rankings score-index hydration", () => {
   it("re-admits a schema-invalid same-generation comparator instead of pinning an unrecoverable miss", async () => {
     const { db, sqlite } = await fixture();
     const url = coinUrl();
-    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    await expectCoinOk(db, url);
     sqlite.prepare("UPDATE cache SET value = json_set(value, '$.warnings', 42) WHERE key = ?").run(COHORT_CACHE_KEY);
     const repaired = await handleYieldRankingsCoin(db, url);
     expect(repaired.status).toBe(200);

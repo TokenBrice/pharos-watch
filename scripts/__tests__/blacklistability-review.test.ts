@@ -50,6 +50,8 @@ const parentRelationships: Partial<StablecoinMeta>[] = [
   },
 ];
 
+const unblacklistableParent = () => makeMeta("parent", { blacklistabilityReview: makeReview(false) });
+
 describe("blacklistability review data checks", () => {
   it("requires review coverage", () => {
     const direct = makeMeta("direct", {
@@ -109,7 +111,7 @@ describe("blacklistability review data checks", () => {
     );
 
     it.each([undefined, []])("rejects stale parent-only inheritance with reserves %j", (reserves) => {
-      const parent = makeMeta("parent", { blacklistabilityReview: makeReview(false) });
+      const parent = unblacklistableParent();
       const child = makeMeta("child", {
         ...relationship,
         reserves,
@@ -122,7 +124,7 @@ describe("blacklistability review data checks", () => {
     });
 
     it("catches the sDOLA pattern even when the false parent is the entire reserve", () => {
-      const parent = makeMeta("parent", { blacklistabilityReview: makeReview(false) });
+      const parent = unblacklistableParent();
       const child = makeMeta("child", {
         ...relationship,
         reserves: [{ name: "Parent claim", pct: 100, risk: "low", coinId: "parent" }],
@@ -163,7 +165,7 @@ describe("blacklistability review data checks", () => {
   it.each([true, "possible", "inherited"] as const)(
     "keeps an exposed %s reserve candidate without recomputing the 50%% test",
     (reserveStatus) => {
-      const parent = makeMeta("parent", { blacklistabilityReview: makeReview(false) });
+      const parent = unblacklistableParent();
       const reserve = makeMeta("reserve", { blacklistabilityReview: makeReview(reserveStatus) });
       const child = makeMeta("child", {
         variantOf: parent.id,
@@ -196,7 +198,7 @@ describe("blacklistability review data checks", () => {
   ] satisfies Partial<NonNullable<StablecoinMeta["reserves"]>[number]>[])(
     "preserves a structured reserve candidate %j",
     (reserveFields) => {
-      const parent = makeMeta("parent", { blacklistabilityReview: makeReview(false) });
+      const parent = unblacklistableParent();
       const child = makeMeta("child", {
         variantOf: parent.id,
         blacklistabilityReview: makeReview("inherited"),
@@ -216,7 +218,7 @@ describe("blacklistability review data checks", () => {
   ] satisfies Partial<NonNullable<StablecoinMeta["reserves"]>[number]>[])(
     "does not rescue stale inheritance with a non-exposed reserve %j",
     (reserveFields) => {
-      const parent = makeMeta("parent", { blacklistabilityReview: makeReview(false) });
+      const parent = unblacklistableParent();
       const child = makeMeta("child", {
         variantOf: parent.id,
         blacklistabilityReview: makeReview("inherited"),
@@ -229,7 +231,7 @@ describe("blacklistability review data checks", () => {
   );
 
   it("checks both parent declarations and deduplicates an identical parent", () => {
-    const parent = makeMeta("parent", { blacklistabilityReview: makeReview(false) });
+    const parent = unblacklistableParent();
     const other = makeMeta("other", { blacklistabilityReview: makeReview("possible") });
     const child = makeMeta("child", {
       ...parentRelationships[1],
@@ -251,7 +253,7 @@ describe("blacklistability review data checks", () => {
   });
 
   it("accepts a No child of a No parent and does not invent a false status for missing reviews", () => {
-    const parent = makeMeta("parent", { blacklistabilityReview: makeReview(false) });
+    const parent = unblacklistableParent();
     const child = makeMeta("child", { variantOf: parent.id, blacklistabilityReview: makeReview(false) });
     expect(findBlacklistabilityReviewIssues([parent, child])).toEqual([]);
     expect(findBlacklistabilityReviewIssues([

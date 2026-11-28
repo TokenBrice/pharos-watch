@@ -84,6 +84,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+const okRun = () => vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+
 describe("runV9AfterCoreWithinWindow", () => {
   beforeEach(() => {
     leaseMocks.runCronWithLease.mockReset().mockImplementation(async (
@@ -169,7 +171,7 @@ describe("runV9AfterCoreWithinWindow", () => {
       vi.useFakeTimers();
       vi.setSystemTime(scheduledTimeMs + 1_000);
       const fixture = dbWithPublicationSlot(publication);
-      const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+      const run = okRun();
 
       const result = await runV9AfterCoreWithinWindow(attributionOptions(fixture.db, scheduledTimeMs), run);
 
@@ -203,8 +205,8 @@ describe("runV9AfterCoreWithinWindow", () => {
           held = false;
         }
       });
-      const attributionRun = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
-      const publisherRun = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+      const attributionRun = okRun();
+      const publisherRun = okRun();
 
       const [attributionResult, publisherResult] = await Promise.all([
         runV9AfterCoreWithinWindow(attributionOptions(attribution.db, Date.parse("2026-10-23T09:23:00Z")), attributionRun),
@@ -225,7 +227,7 @@ describe("runV9AfterCoreWithinWindow", () => {
       vi.useFakeTimers();
       vi.setSystemTime(scheduledTimeMs + 1_000);
       const fixture = dbWithPublicationSlot({ state: "finished" });
-      const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+      const run = okRun();
 
       const result = await runV9AfterCoreWithinWindow(attributionOptions(fixture.db, scheduledTimeMs), run);
 
@@ -253,7 +255,7 @@ describe("runV9AfterCoreWithinWindow", () => {
            stage,state,execution_owner,created_at,updated_at)
           VALUES ('run-1','v9PublicationOffset',?,?,'src','base','reg','eval','plan','pol',4,'evaluating','active','owner',?,?)`)
           .run(pubSlot, pubSlot, pubSlot, pubSlot);
-        const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+        const run = okRun();
         const yielded = await runV9AfterCoreWithinWindow(attributionOptions(db, scheduledTimeMs), run);
         expect(yielded).toMatchObject({ status: "skipped_neutral", productivity: { reason: "v9-publication-priority" } });
         expect(JSON.parse(yielded.metadata!)).toMatchObject({ publicationSlotState: "queue:evaluating" });
@@ -288,7 +290,7 @@ describe("runV9AfterCoreWithinWindow", () => {
            stage,state,execution_owner,created_at,updated_at)
           VALUES ('run-resumed','v9PublicationOffset',?,?,'src','base','reg','eval','plan','pol',4,'committing','active','owner',?,?)`)
           .run(seedSlot, seedSlot, seedSlot, resumeSlot);
-        const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+        const run = okRun();
         const yielded = await runV9AfterCoreWithinWindow(attributionOptions(db, scheduledTimeMs), run);
         expect(yielded).toMatchObject({ status: "skipped_neutral", productivity: { reason: "v9-publication-priority" } });
         expect(JSON.parse(yielded.metadata!)).toMatchObject({ publicationSlotState: "queue:committing" });
@@ -305,7 +307,7 @@ describe("runV9AfterCoreWithinWindow", () => {
         vi.useFakeTimers();
         vi.setSystemTime(Date.parse(now));
         const fixture = dbWithCoreSlot(okCore);
-        const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+        const run = okRun();
 
         const result = await runV9AfterCoreWithinWindow(attributionOptions(fixture.db, Date.parse(scheduled)), run);
 
@@ -323,7 +325,7 @@ describe("runV9AfterCoreWithinWindow", () => {
       const first = vi.fn().mockResolvedValueOnce(lastHour).mockResolvedValueOnce(null).mockResolvedValue(null);
       const bind = vi.fn(() => ({ first }));
       const db = makeNoopD1({ prepare: vi.fn(() => ({ bind })) });
-      const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+      const run = okRun();
 
       const result = await runV9AfterCoreWithinWindow(attributionOptions(db, scheduledTimeMs), run);
 
@@ -387,7 +389,7 @@ describe("runV9AfterCoreWithinWindow", () => {
       vi.setSystemTime(secondChanceMs + 1_000);
       const acceptedAtSec = Date.parse("2026-10-23T16:16:40Z") / 1_000;
       const fixture = dbWithHealth({ accepted_at: acceptedAtSec });
-      const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+      const run = okRun();
 
       const result = await runV9AfterCoreWithinWindow(secondChanceOptions(fixture.db), run);
 
@@ -410,7 +412,7 @@ describe("runV9AfterCoreWithinWindow", () => {
       vi.useFakeTimers();
       vi.setSystemTime(secondChanceMs + 1_000);
       const fixture = dbWithHealth(health);
-      const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+      const run = okRun();
 
       const result = await runV9AfterCoreWithinWindow(secondChanceOptions(fixture.db), run);
 
@@ -834,7 +836,7 @@ describe("runV9AfterCoreWithinWindow", () => {
         VALUES (?, ?, ?, 'ok', 'owner', ?, ?, 'worker-v2')`);
       seed.run("quarterHourly", core, "finished", core, core);
       seed.run(unrelatedSlotKey, core, "running", core, scheduledTimeMs / 1000);
-      const run = vi.fn(async () => ({ status: "ok" as const, itemCount: 1 }));
+      const run = okRun();
       const result = await runV9AfterCoreWithinWindow(options(db, scheduledTimeMs), run);
       expect(result).toMatchObject({ status: "ok", itemCount: 1 });
       expect(run).toHaveBeenCalledTimes(1);

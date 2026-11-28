@@ -80,6 +80,8 @@ function build(files: Record<string, string> = BASE_FILES) {
   return buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles: TEST_FILES });
 }
 
+const testFilesOf = (files: Record<string, string>) => Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
+
 describe("static import-graph PR test selection", () => {
   it("selects every test whose transitive closure reaches a changed module", () => {
     const graph = build();
@@ -248,7 +250,7 @@ describe("static import-graph PR test selection", () => {
       "shared/data/stablecoins/coins.client.detail/usdt.generated.json": "{\"id\":\"usdt\"}\n",
       "scripts/__tests__/client-detail.test.ts": "import { load } from \"@shared/lib/stablecoins/client-detail\";\nit(\"detail\", () => load);\n",
     };
-    const testFiles = Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
+    const testFiles = testFilesOf(files);
     const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });
     for (const changed of [
       "shared/data/stablecoins/coins.client.detail/usdc.generated.json",
@@ -267,7 +269,7 @@ describe("static import-graph PR test selection", () => {
       "scripts/fixtures/ignored.txt": "not a match\n",
       "scripts/__tests__/globbed.test.ts": "import { modules } from \"../lib/globbed\";\nit(\"glob\", () => modules);\n",
     };
-    const testFiles = Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
+    const testFiles = testFilesOf(files);
     const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });
     expect(selectImportGraphTests(graph, ["scripts/fixtures/a.json"])).toEqual(["scripts/__tests__/globbed.test.ts"]);
     expect(selectImportGraphTests(graph, ["scripts/fixtures/ignored.txt"])).toEqual([]);
@@ -281,7 +283,7 @@ describe("static import-graph PR test selection", () => {
       "scripts/__tests__/dynamic.test.ts": "import { load } from \"@/lib/dynamic\";\nit(\"dynamic\", () => load);\n",
       "scripts/__tests__/glob-any.test.ts": "import { modules } from \"@/lib/glob-any\";\nit(\"glob\", () => modules);\n",
     };
-    const testFiles = Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
+    const testFiles = testFilesOf(files);
     const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });
     expect(graph.unresolved.join("\n")).toContain("without a static directory prefix");
     const selection = planPrTestSelection(["shared/lib/registry.ts"], { graph });
@@ -297,7 +299,7 @@ describe("static import-graph PR test selection", () => {
     ];
     for (const [kind, testFile, source] of cases) {
       const files = { ...BASE_FILES, [testFile]: source };
-      const testFiles = Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
+      const testFiles = testFilesOf(files);
       const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });
       expect(graph.unresolved.join("\n"), kind).toContain(`unterminated ${kind === "regex" ? "regular expression" : kind === "string" ? "string literal" : "template literal"}`);
       expect(planPrTestSelection(["shared/lib/registry.ts"], { graph }).fallback, kind).toContain("unresolved local specifier");
@@ -309,7 +311,7 @@ describe("static import-graph PR test selection", () => {
       ...BASE_FILES,
       "scripts/__tests__/nested.test.ts": "const a = `'${value.replace(/'/g, \"''\")}'`;\nconst b = `${sqlString(`x}`)}`;\n",
     };
-    const testFiles = Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
+    const testFiles = testFilesOf(files);
     const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });
     expect(graph.unresolved).toEqual([]);
   });
@@ -389,7 +391,7 @@ describe("static import-graph PR test selection", () => {
       "scripts/__tests__/stablecoins-deep.test.ts": "import { entry } from \"@/components/entry\";\nit(\"deep\", () => {});\n",
       "src/components/entry.ts": "import { registry } from \"@shared/lib/stablecoins/registry\";\nexport const entry = registry;\n",
     };
-    const testFiles = Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
+    const testFiles = testFilesOf(files);
     const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });
     expect(planPrTestSelection(["shared/data/stablecoins/coins/usdc.json"], { graph })).toEqual({
       files: ["scripts/__tests__/catalog-entry.test.ts", "scripts/__tests__/json.test.ts"],
@@ -407,7 +409,7 @@ describe("static import-graph PR test selection", () => {
       "scripts/__tests__/frozen-snapshots.test.ts": "import { load } from \"@shared/lib/frozen-snapshots\";\nit(\"wrapper\", () => load);\n",
       "scripts/__tests__/frozen-snapshots-deep.test.ts": "import { deep } from \"@shared/lib/frozen-snapshots-deep\";\nit(\"deep\", () => deep);\n",
     };
-    const testFiles = Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
+    const testFiles = testFilesOf(files);
     const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });
     expect(planPrTestSelection(["shared/data/stablecoins/frozen-snapshots.json"], { graph })).toEqual({
       files: ["scripts/__tests__/frozen-snapshots.test.ts"],
@@ -420,7 +422,7 @@ describe("static import-graph PR test selection", () => {
       ...BASE_FILES,
       "scripts/__tests__/broken.test.ts": "import missing from \"@/components/missing\";\nit(\"broken\", () => {});\n",
     };
-    const testFiles = Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
+    const testFiles = testFilesOf(files);
     const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });
     expect(graph.unresolved).toHaveLength(1);
     const selection = planPrTestSelection(["shared/lib/registry.ts"], { graph });

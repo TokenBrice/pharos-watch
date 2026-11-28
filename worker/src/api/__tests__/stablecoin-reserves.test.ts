@@ -45,6 +45,8 @@ function reviewedCompositionRow(fetchedAt: number) {
   };
 }
 
+const parseReserves = async (res: Response) => StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
+
 describe("handleStablecoinReserves", () => {
   it.each(["quarantined", "frozen", "delisted"] as const)(
     "separates %s collection exclusion from synthetic skipped history", async (status) => {
@@ -177,7 +179,7 @@ describe("handleStablecoinReserves", () => {
       });
       try {
         const res = await handleStablecoinReserves(db, acknowledgedReview.stablecoinId);
-        const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
+        const body = await parseReserves(res);
         expect(body.mode).toBe(mode);
         expect(body.sync?.acknowledgedFeed).toEqual(acknowledgedReview);
         expect(body.sync?.status).toBe("error");
@@ -223,7 +225,7 @@ describe("handleStablecoinReserves", () => {
       vi.setSystemTime(now * 1000);
       try {
         const res = await handleStablecoinReserves(db, acknowledgedReview.stablecoinId);
-        const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
+        const body = await parseReserves(res);
         expect(body.sync?.lastError).toBe(initialError);
         expect(body.sync?.lastAttemptedAt).toBe(now);
         expect(body.sync?.acknowledgedFeed).toEqual(initialMatches ? acknowledgedReview : undefined);
@@ -257,7 +259,7 @@ describe("handleStablecoinReserves", () => {
       vi.setSystemTime(now * 1000);
       try {
         const res = await handleStablecoinReserves(db, acknowledgedReview.stablecoinId);
-        const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
+        const body = await parseReserves(res);
         expect(body.sync?.acknowledgedFeed).toBeUndefined();
         expect(body.sync?.status).toBe(state ? "error" : "skipped");
         expect(body.mode).toBe("curated-fallback");
@@ -286,7 +288,7 @@ describe("handleStablecoinReserves", () => {
     vi.setSystemTime(now * 1000);
     try {
       const res = await handleStablecoinReserves(db, acknowledgedReview.stablecoinId);
-      const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
+      const body = await parseReserves(res);
       expect(body.sync?.acknowledgedFeed).toBeUndefined();
       expect(body.sync?.status).toBe("skipped");
       expect(body.sync?.failureCategory).toBe("circuit-open");
@@ -321,7 +323,7 @@ describe("handleStablecoinReserves", () => {
     vi.setSystemTime(now * 1000);
     try {
       const res = await handleStablecoinReserves(db, acknowledgedReview.stablecoinId);
-      const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
+      const body = await parseReserves(res);
       expect(body.sync?.acknowledgedFeed).toEqual(acknowledgedReview);
       expect(body.mode).toBe("live");
       expect(body.provenance?.scoringEligible).toBe(false);
@@ -349,7 +351,7 @@ describe("handleStablecoinReserves", () => {
     const res = await handleStablecoinReserves(db, "usdai-usd-ai");
 
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
-    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
+    const body = await parseReserves(res);
     expect(body).toMatchObject({
       mode: "curated-fallback",
       estimated: false,
@@ -375,7 +377,7 @@ describe("handleStablecoinReserves", () => {
     ]);
     const res = await handleStablecoinReserves(db, id);
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
-    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
+    const body = await parseReserves(res);
     expect(body.mode).toBe("curated-fallback");
     expect(body.estimated).toBe(false);
     expect(body.displayBadge).toBeUndefined();
@@ -433,7 +435,7 @@ describe("handleStablecoinReserves", () => {
     ]);
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=3600, max-age=300");
-    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
+    const body = await parseReserves(res);
     expect(body.reserves).toEqual(slices);
     expect(body.estimated).toBe(false);
     expect(body.source).toBe("infinifi");
@@ -470,7 +472,7 @@ describe("handleStablecoinReserves", () => {
 
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
-    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
+    const body = await parseReserves(res);
     expect(body.mode).toBe("curated-fallback");
     expect(body.provenance).toBeUndefined();
     expect(body.displayBadge).toBeUndefined();
@@ -543,7 +545,7 @@ describe("handleStablecoinReserves", () => {
     ]);
 
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
-    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
+    const body = await parseReserves(res);
     expect(body.sync).toMatchObject({
       status: "error",
       uncertainWrite: true,
@@ -569,7 +571,7 @@ describe("handleStablecoinReserves", () => {
     ]);
 
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
-    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(res, 200));
+    const body = await parseReserves(res);
     expect(body.mode).toBe("live-stale");
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=1800, max-age=120");
     // The route's own fetch budget and the judged generation travel with the verdict.

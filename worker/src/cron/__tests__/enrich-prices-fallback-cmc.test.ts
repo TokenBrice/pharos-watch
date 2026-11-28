@@ -63,6 +63,8 @@ function circuitWrite(db: ReturnType<typeof makeEnrichPricesDb>, source: string)
   return db.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === `circuit:${source}`);
 }
 
+const runCmc = (assets: Parameters<typeof runCmcPass>[0], db: Parameters<typeof runCmcPass>[3]) => runCmcPass(assets, "test-cmc-key", undefined, db);
+
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);
   afterEach(() => vi.useRealTimers());
@@ -172,7 +174,7 @@ describe("enrichMissingPrices", () => {
     const fetchSpy = mockFetch([{ match: "pro-api.coinmarketcap.com", body: cmcCategory([
       { slug: "test-dollar", symbol: "TUSD", quote: { USD: cmcUsdQuote(1) } },
     ]) }]);
-    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmc(assets, db);
     if (admitted) {
       expect(fetchSpy).toHaveBeenCalledTimes(1);
       expect(result.resolved).toBe(1);
@@ -191,7 +193,7 @@ describe("enrichMissingPrices", () => {
       { match: "/v1/cryptocurrency/category", body: cmcCategory([], 301) },
       { match: "/v3/cryptocurrency/quotes/latest", status: 429, body: { status: { error_message: "rate limited" } } },
     ]);
-    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmc(assets, db);
     expect(result.resolved).toBe(0);
     const writes = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "cmc_last_fetch");
     expect(writes).toHaveLength(1);
@@ -423,7 +425,7 @@ describe("enrichMissingPrices", () => {
 
     const fetchSpy = mockFetch();
 
-    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmc(assets, db);
 
     expect(result.resolved).toBe(0);
     expect(result.diagnostics?.[0]).toMatchObject({
@@ -474,7 +476,7 @@ describe("enrichMissingPrices", () => {
     ]);
 
     const fetchSpy = mockFetch();
-    await expect(runCmcPass(assets, "test-cmc-key", undefined, db)).resolves.toEqual({
+    await expect(runCmc(assets, db)).resolves.toEqual({
       resolved: 0,
       failures: [],
     });
@@ -501,7 +503,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmc(assets, db);
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
@@ -523,7 +525,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmc(assets, db);
 
     expect(result.resolved).toBe(1);
     expect(assets[0].priceSource).toBe("coinmarketcap");
@@ -874,7 +876,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmc(assets, db);
 
     expect(result.resolved).toBe(1);
     expect(assets[0]).toMatchObject({
@@ -987,7 +989,7 @@ describe("enrichMissingPrices", () => {
       }],
     })];
 
-    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmc(assets, db);
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
@@ -1153,7 +1155,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmc(assets, db);
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
@@ -1175,7 +1177,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmc(assets, db);
 
     expect(result.resolved).toBe(0);
     expect(result.diagnostics?.[0]).toMatchObject({
@@ -1204,7 +1206,7 @@ describe("enrichMissingPrices", () => {
       },
     ]);
 
-    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmc(assets, db);
 
     expect(result.resolved).toBe(0);
     expect(assets[0].price).toBe(0);
@@ -1232,7 +1234,7 @@ describe("enrichMissingPrices", () => {
     const response = new Response("blocked", { status: 500 });
     installFetch(async () => response);
 
-    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmc(assets, db);
 
     expect(result.resolved).toBe(0);
     expect(response.bodyUsed).toBe(true);
@@ -1251,7 +1253,7 @@ describe("enrichMissingPrices", () => {
       headers: { "Retry-After": "1" },
     }));
 
-    const result = await runCmcPass(assets, "test-cmc-key", undefined, db);
+    const result = await runCmc(assets, db);
 
     expect(result.resolved).toBe(0);
     expect(result.diagnostics?.[0]).toMatchObject({

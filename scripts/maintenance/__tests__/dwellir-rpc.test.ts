@@ -52,6 +52,11 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+/** Answers every JSON-RPC POST from its parsed request body. */
+function onRpc(respond: (body: ReturnType<typeof JSON.parse>) => Promise<Response>): void {
+  fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => respond(JSON.parse(String(init.body))));
+}
+
 describe("pinned supplemental research RPC", () => {
   it.each([
     { name: "missing", extra: [] },
@@ -96,8 +101,7 @@ describe("pinned supplemental research RPC", () => {
   it.each(["eth_call", "batch"])("preserves a pinned %s state override and labels simulation evidence", async (method) => {
     const params = [{ to: "0x1111111111111111111111111111111111111111" }, "1000",
       { "0x1111111111111111111111111111111111111111": { balance: "0x25" } }];
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       if (Array.isArray(body)) {
         expect(body[0].params).toEqual([params[0], "0x3e8", params[2]]);
         return new Response(JSON.stringify(body.map((item) => ({ jsonrpc: "2.0", id: item.id, result: "0x25" }))));
@@ -124,8 +128,7 @@ describe("pinned supplemental research RPC", () => {
   });
 
   it("withholds simulation results when a provider rejects state overrides", async () => {
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       return body.method === "eth_call"
         ? new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, error: { code: -32602, message: "state override unsupported" } }))
         : rpcResponse(body.id, header(body.params[0]));
@@ -135,8 +138,7 @@ describe("pinned supplemental research RPC", () => {
   });
 
   it("captures block provenance and scopes the secret to the header, including provider echoes", async () => {
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       return rpcResponse(body.id, body.method === "eth_call" ? { echo: KEY } : header(body.params[0]));
     });
     const record = await invoke(["--block", "1000"]);
@@ -166,8 +168,7 @@ describe("pinned supplemental research RPC", () => {
   describe.each(["eth_getBlockByNumber", "eth_getBlockByHash"])("%s block-result admission", (method) => {
     it.each(["1000", HASH])("accepts matching standalone and batch headers at pin %s", async (block) => {
       const result = header("0x3e8");
-      fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-        const body = JSON.parse(String(init.body));
+      onRpc(async (body) => {
         return Array.isArray(body)
           ? new Response(JSON.stringify(body.map((item) => ({ jsonrpc: "2.0", id: item.id, result }))))
           : rpcResponse(body.id, result);
@@ -191,8 +192,7 @@ describe("pinned supplemental research RPC", () => {
         { name: "malformed timestamp", result: { ...header("0x3e8"), timestamp: "invalid" }, reason: "invalid-block-header" },
       ])("withholds the whole result for a $name", async ({ result, reason }) => {
         let headerReads = 0;
-        fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-          const body = JSON.parse(String(init.body));
+        onRpc(async (body) => {
           if (Array.isArray(body)) {
             return new Response(JSON.stringify(body.map((item) => ({
               jsonrpc: "2.0", id: item.id, result: item.method === method ? result : "0x25",
@@ -217,8 +217,7 @@ describe("pinned supplemental research RPC", () => {
 
     it.each(["1000", HASH])("accepts execution evidence matching the numeric and canonical hash pin %s", async (block) => {
       const result = { [identityField]: transactionHash, blockNumber: "0x3e8", blockHash: HASH };
-      fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-        const body = JSON.parse(String(init.body));
+      onRpc(async (body) => {
         if (body.method === method) expect(body.params).toEqual([transactionHash]);
         return rpcResponse(body.id, body.method === method ? result : header("0x3e8"));
       });
@@ -234,8 +233,7 @@ describe("pinned supplemental research RPC", () => {
       { block: "1000", blockNumber: "0x3e8", blockHash: `0x${"c".repeat(64)}` },
       { block: HASH, blockNumber: "0x3e8", blockHash: `0x${"c".repeat(64)}` },
     ])("withholds execution evidence with a mismatched block: %j", async ({ block, blockNumber, blockHash }) => {
-      fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-        const body = JSON.parse(String(init.body));
+      onRpc(async (body) => {
         return rpcResponse(body.id, body.method === method ? { [identityField]: transactionHash, blockNumber, blockHash } : header("0x3e8"));
       });
       const record = await invoke(["--block", block], "ethereum", method, params);
@@ -245,8 +243,7 @@ describe("pinned supplemental research RPC", () => {
 
     it("withholds execution evidence if the canonical header changes after the read", async () => {
       let headerReads = 0;
-      fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-        const body = JSON.parse(String(init.body));
+      onRpc(async (body) => {
         if (body.method === method) return rpcResponse(body.id, { [identityField]: transactionHash, blockNumber: "0x3e8", blockHash: HASH });
         headerReads++;
         return rpcResponse(body.id, { ...header("0x3e8"), hash: headerReads === 1 ? HASH : `0x${"c".repeat(64)}` });
@@ -257,8 +254,7 @@ describe("pinned supplemental research RPC", () => {
     });
 
     it("records a null result as empty, never proof of absence", async () => {
-      fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-        const body = JSON.parse(String(init.body));
+      onRpc(async (body) => {
         return rpcResponse(body.id, body.method === method ? null : header("0x3e8"));
       });
       const record = await invoke(["--block", "1000"], "ethereum", method, params);
@@ -274,8 +270,7 @@ describe("pinned supplemental research RPC", () => {
       { name: "nonhex", identity: `0x${"g".repeat(64)}` },
       { name: "nonstring", identity: 42 },
     ])("withholds a $name transaction identity even with the correct block and alternate field", async ({ identity }) => {
-      fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-        const body = JSON.parse(String(init.body));
+      onRpc(async (body) => {
         return rpcResponse(body.id, body.method === method
           ? { hash: transactionHash, transactionHash, [identityField]: identity, blockNumber: "0x3e8", blockHash: HASH }
           : header("0x3e8"));
@@ -288,8 +283,7 @@ describe("pinned supplemental research RPC", () => {
     it.each([false, true])("compares transaction identity case-insensitively without rewriting it: uppercase request %s", async (uppercaseRequest) => {
       const requestHash = uppercaseRequest ? transactionHash.toUpperCase() : transactionHash;
       const identity = uppercaseRequest ? transactionHash : transactionHash.toUpperCase();
-      fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-        const body = JSON.parse(String(init.body));
+      onRpc(async (body) => {
         return rpcResponse(body.id, body.method === method
           ? { [identityField]: identity, blockNumber: "0x3e8", blockHash: HASH } : header("0x3e8"));
       });
@@ -330,8 +324,7 @@ describe("pinned supplemental research RPC", () => {
     { chain: "ethereum", span: 500, provider: "public" },
     { chain: "zksync", span: 500, provider: "dwellir" },
   ])("splits $provider $chain log ranges at its inclusive $span-block span", async ({ chain, span, provider }) => {
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       return rpcResponse(body.id, body.method === "eth_getLogs" ? [] : header(body.params[0]));
     });
     const end = 1_000 + span;
@@ -351,8 +344,7 @@ describe("pinned supplemental research RPC", () => {
 
   it("withholds completed chunks when any later log chunk fails", async () => {
     let logCalls = 0;
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       if (body.method !== "eth_getLogs") return rpcResponse(body.id, header(body.params[0]));
       logCalls++;
       if (logCalls === 2) return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, error: { code: -32005, message: KEY } }));
@@ -367,8 +359,7 @@ describe("pinned supplemental research RPC", () => {
 
   it("splits result-capped log chunks at the provider's suggested bound and preserves order", async () => {
     const ranges: string[][] = [];
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       if (body.method !== "eth_getLogs") return rpcResponse(body.id, header(body.params[0]));
       const { fromBlock, toBlock } = body.params[0];
       const start = BigInt(fromBlock);
@@ -394,8 +385,7 @@ describe("pinned supplemental research RPC", () => {
     { name: "out-of-range suggestion", suffix: ", retry with the range 1000-9999999" },
   ])("bisects capped log chunks with $name", async ({ suffix }) => {
     const ranges: string[][] = [];
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       if (body.method !== "eth_getLogs") return rpcResponse(body.id, header(body.params[0]));
       const { fromBlock, toBlock } = body.params[0];
       const start = BigInt(fromBlock);
@@ -414,8 +404,7 @@ describe("pinned supplemental research RPC", () => {
   });
 
   it("withholds earlier split results when a single block exceeds the result cap", async () => {
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       if (body.method !== "eth_getLogs") return rpcResponse(body.id, header(body.params[0]));
       const { fromBlock, toBlock } = body.params[0];
       if (fromBlock === "0x3e8" && toBlock === "0x3e8") {
@@ -437,8 +426,7 @@ describe("pinned supplemental research RPC", () => {
 
   it("withholds results when the pinned block changes during the read", async () => {
     let headers = 0;
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       if (body.method === "eth_call") return rpcResponse(body.id, "0x1");
       headers++;
       return rpcResponse(body.id, { ...header(body.params[0]), hash: headers === 1 ? HASH : `0x${"b".repeat(64)}` });
@@ -448,8 +436,7 @@ describe("pinned supplemental research RPC", () => {
   });
 
   it("matches batch responses by ID and records member-level empty states", async () => {
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       if (!Array.isArray(body)) return rpcResponse(body.id, header(body.params[0]));
       return new Response(JSON.stringify(body.map((item, index) => ({ jsonrpc: "2.0", id: item.id, result: index === 0 ? "0x" : "0x1" })).reverse()));
     });
@@ -477,8 +464,7 @@ describe("pinned supplemental research RPC", () => {
   });
 
   it("sends Starknet numeric block_id and captures its header", async () => {
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       expect(body.params.block_id).toEqual({ block_number: 1000 });
       return rpcResponse(body.id, body.method === "starknet_call" ? ["0x1"] : { block_number: 1000, block_hash: "0x123", timestamp: 1700000000 });
     });
@@ -515,8 +501,7 @@ describe("pinned supplemental research RPC", () => {
   });
 
   it("records finalized Solana block provenance and full execution data", async () => {
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       expect(body.params[0]).toBe(1000);
       expect(body.params[1].commitment).toBe("finalized");
       return rpcResponse(body.id, { blockhash: "1".repeat(32), blockTime: 1700000000, transactions: [] });
@@ -554,8 +539,7 @@ describe("pinned supplemental research RPC", () => {
   });
 
   it("withholds a Solana transaction from another slot", async () => {
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       return rpcResponse(body.id, body.method === "getTransaction" ? { slot: 999 } : { blockhash: "1".repeat(32), blockTime: 1700000000 });
     });
     const record = await invoke(["--provider", "alchemy", "--block", "1000"], "solana", "getTransaction", '["signature"]');
@@ -563,8 +547,7 @@ describe("pinned supplemental research RPC", () => {
   });
 
   it("retains Solana produced-slot range chunks, not an invented account census", async () => {
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       return rpcResponse(body.id, body.method === "getBlocks" ? [body.params[0], body.params[1]] : { blockhash: "1".repeat(32), blockTime: 1700000000 });
     });
     const record = await invoke(["--provider", "alchemy", "--block", "1001"], "solana", "getBlocks", "[500,1001]");
@@ -586,8 +569,7 @@ describe("pinned supplemental research RPC", () => {
   });
 
   it.each(["public", "drpc"])("keeps missing Filecoin MsgMeta on %s unavailable without archive fallback", async (provider) => {
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id,
         error: { code: 1, message: "failed to create Ethereum block from Filecoin tipset: failed to load msgmeta: ipld: could not find" } }));
     });
@@ -643,8 +625,7 @@ describe("pinned supplemental research RPC", () => {
 
   it("uses dRPC header authentication on a keyless network URL and redacts provider echoes", async () => {
     vi.stubEnv("DRPC_API_KEY", "drpc-secret");
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       return rpcResponse(body.id, body.method === "eth_call" ? { echo: "drpc-secret" } : header(body.params[0]));
     });
     const record = await invoke(["--provider", "drpc", "--block", "1000"], "bsc");
@@ -707,8 +688,7 @@ describe("pinned supplemental research RPC", () => {
   });
 
   it("scopes public Sui object state through Checkpoint.query, never current root state", async () => {
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       expect(body.variables.cp).toBe(1000);
       const checkpoint = { sequenceNumber: "1000", digest: "1".repeat(32), timestamp: "2023-11-14T22:13:20Z" };
       if (body.variables.address) {
@@ -729,8 +709,7 @@ describe("pinned supplemental research RPC", () => {
   });
 
   it.each([1000, 1001])("requires Alchemy account-archive context to equal the requested slot (returned %s)", async (contextSlot) => {
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       if (body.method === "getAccountInfo") {
         expect(body.params[1]).toMatchObject({ slot: 1000, commitment: "finalized" });
         return rpcResponse(body.id, { context: { slot: contextSlot }, value: { owner: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", data: ["AA==", "base64"] } });
@@ -748,8 +727,7 @@ describe("pinned supplemental research RPC", () => {
   });
 
   it("rejects minContextSlot instead of treating it as an Alchemy archive pin", async () => {
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
+    onRpc(async (body) => {
       return rpcResponse(body.id, { blockhash: "1".repeat(32), blockTime: 1700000000 });
     });
     const record = await invoke(["--provider", "alchemy", "--block", "1000"], "solana", "getAccountInfo", '["11111111111111111111111111111111",{"minContextSlot":1000}]');

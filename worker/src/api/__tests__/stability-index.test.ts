@@ -16,6 +16,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+const getStabilityIndex = (db: D1Database) => handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+
 describe("handleStabilityIndex contract tests", () => {
   const nowSec = Math.floor(Date.now() / 1000);
   const yesterdayMidnight = nowSec - 86400 - (nowSec % 86400);
@@ -91,7 +93,7 @@ describe("handleStabilityIndex contract tests", () => {
       { match: "stability_index ORDER BY computed_at DESC", rows: [historyRow] },
     ]);
 
-    const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    const res = await getStabilityIndex(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       current: {
@@ -123,7 +125,7 @@ describe("handleStabilityIndex contract tests", () => {
       yesterdayMidnight, 71, "TREMOR", historyRow.components,
       `{"source":"daily-avg","sampleCount":48${marketCapJson}}`, "3.0",
     );
-    const response = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    const response = await getStabilityIndex(db);
     const body = StabilityIndexResponseSchema.parse(await readJsonResponse(response, 200));
     expect(body.current?.computedAt).toBe(yesterdayMidnight);
     expect(body.current?.score).toBe(71);
@@ -158,7 +160,7 @@ describe("handleStabilityIndex contract tests", () => {
       { match: "stability_index", rows: [legacyHistory] },
     ]);
 
-    const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    const res = await getStabilityIndex(db);
     const body = (await readJsonResponse(res, 200)) as {
       current: { methodologyVersion: string };
       history: Array<{ methodologyVersion: string }>;
@@ -204,7 +206,7 @@ describe("handleStabilityIndex contract tests", () => {
       },
     ]);
 
-    const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    const res = await getStabilityIndex(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       history: Array<{ date: number; score: number; band: string }>;
@@ -228,7 +230,7 @@ describe("handleStabilityIndex contract tests", () => {
       { match: "stability_index", rows: [historyRow] },
     ]);
 
-    const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    const res = await getStabilityIndex(db);
     expect(res.status).toBe(503);
     await expect(res.json()).resolves.toEqual({
       error: "PSI current components payload is malformed",
@@ -245,7 +247,7 @@ describe("handleStabilityIndex contract tests", () => {
       { match: "stability_index_samples", rows: [invalidSample], first: invalidSample },
       { match: "stability_index", rows: [historyRow] },
     ]);
-    const response = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    const response = await getStabilityIndex(db);
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: `PSI current ${label} payload is malformed` });
   });
@@ -255,7 +257,7 @@ describe("handleStabilityIndex contract tests", () => {
       { match: "stability_index_samples", rows: [], first: null },
       { match: "stability_index", rows: [] },
     ]);
-    const response = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    const response = await getStabilityIndex(db);
     expect(await readJsonResponse(response, 200)).toMatchObject({ current: null, history: [] });
   });
 
@@ -295,7 +297,7 @@ describe("handleStabilityIndex contract tests", () => {
       { match: "stability_index", rows: [historyRow] },
     ]);
 
-    const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    const res = await getStabilityIndex(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       current: {
@@ -334,7 +336,7 @@ describe("handleStabilityIndex contract tests", () => {
       { match: "stability_index", rows: [historyRow] },
     ]);
 
-    const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    const res = await getStabilityIndex(db);
 
     const body = (await readJsonResponse(res, 200)) as {
       current: { inputDegradation?: Record<string, unknown> };
@@ -373,7 +375,7 @@ describe("handleStabilityIndex contract tests", () => {
   });
 
   it("keeps legacy input snapshots free of invented omission arrays", async () => {
-    const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    const res = await getStabilityIndex(db);
     const parsed = StabilityIndexResponseSchema.parse(await readJsonResponse(res, 200));
     expect(parsed.current?.inputDegradation).toBeUndefined();
   });
@@ -462,7 +464,7 @@ describe("daily PSI stored provenance compatibility", () => {
     if (duplicate) insertDay.run(day, 88.2, "STEADY", "{}");
     expect(await loadPsiSampleAverage(db, at, day + 86400 + 60)).toEqual({ avg: 90 });
     expect(await loadPsiSampleAverage(db, at, day + 86400 + 60, true)).toEqual({ avg: 75 });
-    const response = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    const response = await getStabilityIndex(db);
     expect(await readJsonResponse(response, 200)).toMatchObject({
       current: { score: 90, avg24h: 75, avg24hBand: "STEADY" },
       history: expect.arrayContaining([expect.objectContaining({ date: day, referenceMarketRepair: { method: "samples" } })]),

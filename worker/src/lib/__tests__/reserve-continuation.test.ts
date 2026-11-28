@@ -54,6 +54,9 @@ beforeEach(() => {
 });
 afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
+const runBatch = (f: { batch: Parameters<typeof handleReserveContinuationBatch>[0]; env: Parameters<typeof handleReserveContinuationBatch>[1]; ctx: Parameters<typeof handleReserveContinuationBatch>[2] }) =>
+  handleReserveContinuationBatch(f.batch, f.env, f.ctx, NOW * 1000);
+
 describe("reserve Queue delivery semantics", () => {
   it("delivers an exhausted sealed cohort as a fresh tail, with no producer frontier", async () => {
     const f = await setup();
@@ -72,7 +75,7 @@ describe("reserve Queue delivery semantics", () => {
       expect(runtime.reserveQueueMetadata?.phase).toBe("tail");
       return { ...buildScheduledSlotSummary([]), reserveTailSettled: true };
     });
-    await handleReserveContinuationBatch(f.batch, f.env, f.ctx, NOW * 1000);
+    await runBatch(f);
     expect(runFourHourlyReserveSyncSlot).toHaveBeenCalledOnce();
     expect(refresh).toHaveBeenCalledOnce();
     expect(f.delivery.ack).toHaveBeenCalledOnce();
@@ -101,7 +104,7 @@ describe("reserve Queue delivery semantics", () => {
       expect(f.sqlite.prepare("SELECT state FROM reserve_continuation_executions").get()).toEqual({ state: "finished" });
       expect(f.sqlite.prepare("SELECT COUNT(*) AS count FROM cron_leases").get()).toEqual({ count: 0 });
     });
-    await handleReserveContinuationBatch(f.batch, f.env, f.ctx, NOW * 1000);
+    await runBatch(f);
     expect(f.delivery.ack).toHaveBeenCalledOnce();
     expect(f.delivery.retry).not.toHaveBeenCalled();
     expect(f.send).toHaveBeenCalledOnce();
@@ -127,7 +130,7 @@ describe("reserve Queue delivery semantics", () => {
     });
     heartbeatMock.mockRejectedValueOnce(new Error("d1 overload blip"));
 
-    const work = handleReserveContinuationBatch(f.batch, f.env, f.ctx, NOW * 1000);
+    const work = runBatch(f);
     await vi.advanceTimersByTimeAsync(30_000);
     expect(heartbeatMock).toHaveBeenCalledTimes(1);
     releaseProducer();
@@ -142,8 +145,8 @@ describe("reserve Queue delivery semantics", () => {
   it("acks duplicates without running adapters or falling through to config recovery", async () => {
     const f = await setup();
     vi.mocked(runFourHourlyReserveSyncSlot).mockResolvedValue(buildScheduledSlotSummary([]));
-    await handleReserveContinuationBatch(f.batch, f.env, f.ctx, NOW * 1000);
-    await handleReserveContinuationBatch(f.batch, f.env, f.ctx, NOW * 1000);
+    await runBatch(f);
+    await runBatch(f);
     expect(runFourHourlyReserveSyncSlot).toHaveBeenCalledOnce();
     expect(f.delivery.ack).toHaveBeenCalledTimes(2);
   });
@@ -151,12 +154,12 @@ describe("reserve Queue delivery semantics", () => {
   it("retries an unclaimed infrastructure failure and lets the next delivery claim", async () => {
     const f = await setup();
     vi.spyOn(f.db, "prepare").mockImplementationOnce(() => { throw new Error("binding unavailable"); });
-    await handleReserveContinuationBatch(f.batch, f.env, f.ctx, NOW * 1000);
+    await runBatch(f);
     await Promise.all(f.pending);
     expect(f.delivery.retry).toHaveBeenCalledWith({ delaySeconds: 60 });
     expect((await loadLiveReserveCheckpoint(f.db, f.message))?.state).toBe("ready");
     vi.mocked(runFourHourlyReserveSyncSlot).mockResolvedValue(buildScheduledSlotSummary([]));
-    await handleReserveContinuationBatch(f.batch, f.env, f.ctx, NOW * 1000);
+    await runBatch(f);
     expect(runFourHourlyReserveSyncSlot).toHaveBeenCalledOnce();
     expect(f.delivery.ack).toHaveBeenCalledOnce();
   });
@@ -164,11 +167,11 @@ describe("reserve Queue delivery semantics", () => {
   it("records consumer failure; redelivery cannot create another domain attempt", async () => {
     const f = await setup();
     vi.mocked(runFourHourlyReserveSyncSlot).mockRejectedValue(new Error("consumer crashed"));
-    await handleReserveContinuationBatch(f.batch, f.env, f.ctx, NOW * 1000);
+    await runBatch(f);
     await Promise.all(f.pending);
     expect(f.delivery.retry).toHaveBeenCalledWith({ delaySeconds: 60 });
     expect(f.sqlite.prepare("SELECT result_status FROM reserve_continuation_executions").get()).toEqual({ result_status: "error" });
-    await handleReserveContinuationBatch(f.batch, f.env, f.ctx, NOW * 1000);
+    await runBatch(f);
     expect(runFourHourlyReserveSyncSlot).toHaveBeenCalledOnce();
     expect(f.delivery.ack).toHaveBeenCalledOnce();
   });
@@ -179,7 +182,7 @@ describe("reserve Queue delivery semantics", () => {
       await continueLiveReserveCheckpoint(f.db, runtime.recoveryCheckpoint!);
       return buildScheduledSlotSummary([{ job: "sync-redemption-backstops", outcome: "error", status: "error", reason: "provider-failed" }]);
     });
-    await handleReserveContinuationBatch(f.batch, f.env, f.ctx, NOW * 1000);
+    await runBatch(f);
     expect(f.delivery.ack).toHaveBeenCalledOnce();
     expect(f.delivery.retry).not.toHaveBeenCalled();
     expect(f.send).not.toHaveBeenCalled();

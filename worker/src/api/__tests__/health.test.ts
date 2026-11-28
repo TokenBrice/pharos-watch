@@ -149,6 +149,8 @@ function telegramHealthDb(deliveries: Pick<MockTableConfig, "first" | "throwErro
   ]);
 }
 
+const healthBody = async (db: D1Database) => await (await handleHealth(db)).json() as HealthResponse;
+
 describe("handleHealth", () => {
   afterEach(cleanupStatusTest);
   it.each(["nominal", "observed", "neither"] as const)(
@@ -293,7 +295,7 @@ describe("handleHealth", () => {
 
   it("keeps a held colour at read time and re-dates its label", async () => {
     const now = pinnedNow();
-    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    const publicHealth = await healthBody(makeHealthyHealthDb(now));
     Object.assign(publicHealth, { circuits: null, circuitsUnavailableReason: "circuits-read-failed", assessedAt: now - 60 });
     const held = { since: now - 960, confirmedAt: now - 1801, sections: ["circuits"], expired: false };
     const degraded = (withHeld: boolean) => projectPublicStatus(publicHealth).components.map(({ held: _held, ...item }) =>
@@ -310,7 +312,7 @@ describe("handleHealth", () => {
 
   it.each(["none", "stale", "future", "scheduler"] as const)("holds a publication over the live fallback (snapshot: %s)", async (mode) => {
     const now = pinnedNow();
-    const published = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    const published = await healthBody(makeHealthyHealthDb(now));
     const at = mode === "scheduler" ? now - 60 : now - 4000;
     const publicHealth = { ...published, assessedAt: at,
       components: published.components!.map((item) => item.id === "data-refresh" ? { ...item, state: "degraded" as const } : item),
@@ -332,7 +334,7 @@ describe("handleHealth", () => {
   ] as const)("ages cached evidence across the %ss band within snapshot TTL", async (band, before, after, state, healthy) => {
     const now = pinnedNow();
     const assessedAt = now - 60;
-    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    const publicHealth = await healthBody(makeHealthyHealthDb(now));
     publicHealth.timestamp = assessedAt;
     publicHealth.status = before;
     for (const evidence of ["published", "legacy"] as const) {
@@ -349,7 +351,7 @@ describe("handleHealth", () => {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: [STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY], rows: [], first: row,
       }] });
-      const body = await (await handleHealth(db)).json() as HealthResponse;
+      const body = await healthBody(db);
       expect(body).toMatchObject({ status: after, timestamp: now, assessedAt });
       expect(body.caches.stablecoins).toMatchObject({ ageSeconds: band + 30, healthy, maxAge: 600 });
       if (evidence === "published") {
@@ -371,7 +373,7 @@ describe("handleHealth", () => {
       statusExcludingCacheFreshness?: HealthResponse["status"],
       options: { statusExcludingCacheEvidence?: HealthResponse["status"]; degradedReason?: string } = {},
     ) {
-      const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+      const publicHealth = await healthBody(makeHealthyHealthDb(now));
       publicHealth.timestamp = now - 60;
       publicHealth.assessedAt = now - 60;
       publicHealth.status = "degraded";
@@ -466,7 +468,7 @@ describe("handleHealth", () => {
       stillLate.rows = [{ ...stillLate.rows![0], updated_at: lateAt,
         value: JSON.stringify({ updatedAt: lateAt, source: "sync-yield-data", publishStatus: "ok", generationId: "recovered-generation" }) }];
       const db = sentinelDb(now, await delayedYieldSnapshot(now, "healthy"), stillLate);
-      const body = await (await handleHealth(db)).json() as HealthResponse;
+      const body = await healthBody(db);
       expect(body.status).toBe("degraded");
       expect(body.components!.find((item) => item.id === "yield")!.state).toBe("delayed");
       const sentinelReads = db.getHistory().filter((entry) => entry.sql.includes("FROM cache WHERE key IN"));
@@ -479,7 +481,7 @@ describe("handleHealth", () => {
       if (kind === "read failure") sentinel.throwError = new Error("sentinel read failed");
       if (kind === "legacy snapshot") sentinel.allowUnused = true;
       const db = sentinelDb(now, await delayedYieldSnapshot(now, kind === "legacy snapshot" ? undefined : "healthy"), sentinel);
-      const body = await (await handleHealth(db)).json() as HealthResponse;
+      const body = await healthBody(db);
       expect(body.status).toBe("degraded");
       expect(body.caches["yield-data"].ageSeconds).toBe(3 * yieldInterval + 660);
       expect(body.components!.find((item) => item.id === "yield")!.state).toBe("delayed");
@@ -501,7 +503,7 @@ describe("handleHealth", () => {
       reasons: held ? [{ code: "dex-stale" }] : [],
     });
     async function retainedSnapshot(now: number, mutate: (health: HealthResponse) => void) {
-      const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+      const publicHealth = await healthBody(makeHealthyHealthDb(now));
       expect(publicHealth.status).toBe("healthy");
       publicHealth.timestamp = now - 60;
       publicHealth.assessedAt = now - 60;
@@ -519,7 +521,7 @@ describe("handleHealth", () => {
       const now = pinnedNow();
       const { entry } = await retainedSnapshot(now, lateSafety(now));
       const db = makeHealthyHealthDb(now, { extras: [entry] });
-      const body = await (await handleHealth(db)).json() as HealthResponse;
+      const body = await healthBody(db);
       expect(body.safetyScorePublication).toMatchObject({ acceptedAtSec: now - 60, status: "current" });
       expect(body).toMatchObject({ status: "healthy", assessedAt: now, timestamp: now });
       expect(body.warnings).not.toContain("safety-score-publication-stale");
@@ -539,7 +541,7 @@ describe("handleHealth", () => {
 
     it("clears late mint/burn sync and its run warning from confirmed newer output", async () => {
       const now = pinnedNow();
-      const live = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+      const live = await healthBody(makeHealthyHealthDb(now));
       expect(live.mintBurn.sync.lastSuccessfulSyncAt).not.toBeNull();
       const { entry } = await retainedSnapshot(now, (health) => {
         health.status = "stale";
@@ -549,7 +551,7 @@ describe("handleHealth", () => {
         } };
       });
       const db = makeHealthyHealthDb(now, { extras: [entry] });
-      const body = await (await handleHealth(db)).json() as HealthResponse;
+      const body = await healthBody(db);
       expect(body.mintBurn.sync).toMatchObject({ lastSuccessfulSyncAt: live.mintBurn.sync.lastSuccessfulSyncAt, warning: null });
       expect(body).toMatchObject({ status: "healthy", assessedAt: now });
       expect(assessmentsRun(db)).toBe(1);
@@ -563,7 +565,7 @@ describe("handleHealth", () => {
         health.warnings = [...health.warnings, "safety-score-publication-held"];
       });
       const db = makeHealthyHealthDb(now, { extras: [entry] });
-      const body = await (await handleHealth(db)).json() as HealthResponse;
+      const body = await healthBody(db);
       expect(body.safetyScorePublication!.status).toBe("current");
       expect(assessmentsRun(db)).toBe(1);
       expect(body.warnings).not.toContain("safety-score-publication-held");
@@ -574,7 +576,7 @@ describe("handleHealth", () => {
       const now = pinnedNow();
       const { entry } = await retainedSnapshot(now, lateSafety(now));
       const db = makeHealthyHealthDb(now, { extras: [entry, safetyHealthRow(safetyHealth(now - LATE_SEC, now - 60, true))] });
-      const body = await (await handleHealth(db)).json() as HealthResponse;
+      const body = await healthBody(db);
       expect(body.safetyScorePublication).toMatchObject({ acceptedAtSec: now - LATE_SEC, attemptedAtSec: now - 60, status: "held" });
       expect(body.status).not.toBe("healthy");
       expect(body.components!.find((item) => item.id === "safety-scores")!.state).not.toBe("operational");
@@ -591,7 +593,7 @@ describe("handleHealth", () => {
         ? safetyHealthRow(replacement(now))
         : { match: SNAPSHOT_KEY_MATCH, matchBinds: ["report-cards:v9:publication-health"], rows: [], first: null };
       const db = makeHealthyHealthDb(now, { extras: [entry, safetyRow] });
-      const body = await (await handleHealth(db)).json() as HealthResponse;
+      const body = await healthBody(db);
       expect(body.safetyScorePublication!.acceptedAtSec).toBe(now - LATE_SEC);
       expect(body).toMatchObject({ status: "stale", assessedAt: now - 60, timestamp: now });
       expect(body.warnings).not.toContain("health-recovery-read-failed");
@@ -612,7 +614,7 @@ describe("handleHealth", () => {
             : { first: { value: "{not json", updated_at: now - 60 } }),
         };
         const db = makeHealthyHealthDb(now, { extras: [entry, safetyRow] });
-        const body = await (await handleHealth(db)).json() as HealthResponse;
+        const body = await healthBody(db);
         expect(body.safetyScorePublication!.acceptedAtSec).toBe(now - LATE_SEC);
         expect(body).toMatchObject({ status: "stale", assessedAt: now - 60 });
         expect(body.warnings).toContain("health-recovery-read-failed");
@@ -629,7 +631,7 @@ describe("handleHealth", () => {
         { key: "circuit:coingecko-prices", value: open(now - 540) },
         { key: "circuit:dexscreener-prices", value: open(now - 480) },
       ] }] });
-      const body = await (await handleHealth(db)).json() as HealthResponse;
+      const body = await healthBody(db);
       expect(body.safetyScorePublication!.acceptedAtSec).toBe(now - 60);
       expect(body.status).toBe("degraded");
     });
@@ -638,7 +640,7 @@ describe("handleHealth", () => {
       const now = pinnedNow();
       const { entry } = await retainedSnapshot(now, () => {});
       const db = makeHealthyHealthDb(now, { extras: [entry] });
-      const body = await (await handleHealth(db)).json() as HealthResponse;
+      const body = await healthBody(db);
       expect(body.assessedAt).toBe(now - 60);
       expect(assessmentsRun(db)).toBe(0);
     });
@@ -646,7 +648,7 @@ describe("handleHealth", () => {
 
   it.each([false, true])("retains independent raw and quality blockers (rejected clock: %s)", async (rejectedClock) => {
     const now = pinnedNow();
-    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    const publicHealth = await healthBody(makeHealthyHealthDb(now));
     publicHealth.timestamp = now - 60;
     publicHealth.assessedAt = now - 60;
     publicHealth.status = "stale";
@@ -666,7 +668,7 @@ describe("handleHealth", () => {
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
       matchBinds: [STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY], rows: [], first: row,
     }] });
-    const body = await (await handleHealth(db)).json() as HealthResponse;
+    const body = await healthBody(db);
     expect(body).toMatchObject({ status: "stale", timestamp: now, assessedAt: now - 60 });
     expect(body.warnings).toContain("independent-blocker");
     expect(body.caches.stablecoins).toMatchObject({
@@ -684,13 +686,13 @@ describe("handleHealth", () => {
   });
   it("detects a stall from live starts despite a healthy fresh snapshot", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    const publicHealth = await healthBody(makeHealthyHealthDb(now));
     const row = makePublicHealthSnapshotRow(now, publicHealth);
     const db = buildStatusD1Scenario({ sections: [], overrides: [
       { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY], rows: [], first: row },
       { match: "AS last_any", rows: [], first: { observed_at: now, last_any: now - 1, reserve: now - 1201, telegram: now - 1201, digest: now - 1201, heavy: now - 30 } },
     ] });
-    const body = await (await handleHealth(db)).json() as HealthResponse;
+    const body = await healthBody(db);
     expect(body.status).toBe("stale");
     expect(body.warnings).toContain("scheduled_delivery_stalled");
     expect(body.schedulerLiveness?.ageSeconds).toBe(1201);
@@ -702,7 +704,7 @@ describe("handleHealth", () => {
   ] as const)("detects heavy delivery loss (%s) through a healthy cached projection", async (age, status, warning) => {
     // Keep the exact age assertion independent of a wall-clock second boundary.
     const now = pinnedNow();
-    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    const publicHealth = await healthBody(makeHealthyHealthDb(now));
     const row = makePublicHealthSnapshotRow(now, publicHealth);
     const db = buildStatusD1Scenario({ sections: [], overrides: [
       { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY], rows: [], first: row },
@@ -712,7 +714,7 @@ describe("handleHealth", () => {
         heavy: age == null ? null : now - age,
       } },
     ] });
-    const body = await (await handleHealth(db)).json() as HealthResponse;
+    const body = await healthBody(db);
     expect(body.status).toBe(status);
     expect(body.schedulerLiveness?.status).toBe("healthy");
     expect(body.schedulerLiveness?.heavy.ageSeconds).toBe(age);
@@ -721,7 +723,7 @@ describe("handleHealth", () => {
   });
   it("clears a cached heavy scheduler floor by recomputing independent blockers live", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    const publicHealth = await healthBody(makeHealthyHealthDb(now));
     publicHealth.status = "stale";
     publicHealth.warnings = ["heavy_scheduled_delivery_stalled"];
     publicHealth.schedulerLiveness!.heavy.status = "stale";
@@ -733,13 +735,13 @@ describe("handleHealth", () => {
   });
   it("clears a cached scheduler floor only through live recomputation, retaining independent stale caches", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    const publicHealth = await healthBody(makeHealthyHealthDb(now));
     publicHealth.status = "stale";
     publicHealth.warnings = ["scheduled_delivery_stalled"];
     publicHealth.schedulerLiveness!.status = "stale";
     const row = makePublicHealthSnapshotRow(now, publicHealth);
     const db = makeHealthyHealthDb(now, { dexAge: 1_000_000, extraCacheRows: [row] });
-    const body = await (await handleHealth(db)).json() as HealthResponse;
+    const body = await healthBody(db);
     expect(body.schedulerLiveness?.status).toBe("healthy");
     expect(body.warnings).not.toContain("scheduled_delivery_stalled");
     expect(body.status).toBe("stale");
@@ -871,7 +873,7 @@ describe("handleHealth", () => {
         rows: [],
         first,
       }] });
-      const body = await (await handleHealth(db)).json() as HealthResponse;
+      const body = await healthBody(db);
       // Evidence-plane fault: named and unknown, never healthy evidence, but not a public service impact.
       expect(body.status).toBe("healthy");
       expect(body.warnings).toContain(`d1-capacity-${reason}`);
@@ -1031,7 +1033,7 @@ describe("handleHealth", () => {
       { match: "publication_identity", rows: [], first: { publication_identity: JSON.stringify(envelope) } },
       yieldHealthEntry(now, true, identity.publicationGenerationId),
     ] });
-    const body = await (await handleHealth(db)).json() as HealthResponse;
+    const body = await healthBody(db);
     expect(body.status).toBe(status);
     expect(body.components!.find((component) => component.id === "safety-scores")).toMatchObject({
       state: "operational", reasons: expect.arrayContaining(["safety-score-publication-held"]),
@@ -1052,7 +1054,7 @@ describe("handleHealth", () => {
       { match: "publication_identity", rows: [], first: { publication_identity: publicationEnvelopeIdentityJson("a".repeat(64)) } },
       entry,
     ] });
-    const body = await (await handleHealth(db)).json() as HealthResponse;
+    const body = await healthBody(db);
     expect(body.status).toBe("degraded");
     expect(body.warnings).toContain("yield-safety-availability-unknown");
   });

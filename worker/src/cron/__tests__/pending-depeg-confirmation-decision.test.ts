@@ -152,6 +152,8 @@ afterEach(() => {
   sqliteFixtures.closeAll();
 });
 
+const lifecycleOf = (sqlite: DatabaseSync, row: { stablecoin_id: string; id: number }) => readLifecycle(sqlite, row.stablecoin_id, row.id);
+
 describe("evaluatePromotionDecision", () => {
   it("promotes and persists complete event and outcome rows", async () => {
     const { sqlite, db } = openFixture();
@@ -174,7 +176,7 @@ describe("evaluatePromotionDecision", () => {
 
     await settle(db, plan, evidence);
 
-    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
+    const state = lifecycleOf(sqlite, row);
     expect(state.pending).toBeUndefined();
     expect(state.events).toEqual([{
       stablecoin_id: row.stablecoin_id,
@@ -230,7 +232,7 @@ describe("evaluatePromotionDecision", () => {
 
     await settle(db, plan, evidence);
 
-    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
+    const state = lifecycleOf(sqlite, row);
     expect(state.events[0]).toMatchObject({ peak_deviation_bps: -600, peak_price: 0.94 });
     expect(state.outcomes[0]).toMatchObject({
       outcome: "promoted",
@@ -258,7 +260,7 @@ describe("evaluatePromotionDecision", () => {
 
     await settle(db, plan, evidence);
 
-    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
+    const state = lifecycleOf(sqlite, row);
     expect(state.events).toEqual([]);
     expect(state.pending).toBeUndefined();
     expect(state.outcomes[0]).toMatchObject({
@@ -280,7 +282,7 @@ describe("evaluatePromotionDecision", () => {
 
     await settle(db, plan, evidence);
 
-    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
+    const state = lifecycleOf(sqlite, row);
     expect(state.events).toEqual([]);
     expect(state.pending).toBeUndefined();
     expect(state.outcomes[0]).toMatchObject({
@@ -296,7 +298,7 @@ describe("evaluatePromotionDecision", () => {
 
     await settle(db, makePlan({ row }), makeEvidence());
 
-    expect(readLifecycle(sqlite, row.stablecoin_id, row.id)).toMatchObject({
+    expect(lifecycleOf(sqlite, row)).toMatchObject({
       pending: { id: row.id },
       events: [],
       outcomes: [],
@@ -315,7 +317,7 @@ describe("evaluatePromotionDecision", () => {
 
     await settle(db, plan, evidence);
 
-    expect(readLifecycle(sqlite, row.stablecoin_id, row.id)).toMatchObject({
+    expect(lifecycleOf(sqlite, row)).toMatchObject({
       pending: { id: row.id },
       events: [],
       outcomes: [],
@@ -346,7 +348,7 @@ describe("evaluatePromotionDecision", () => {
 
     await settle(db, makePlan({ row, age }), makeEvidence());
 
-    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
+    const state = lifecycleOf(sqlite, row);
     expect(state.pending).toBeUndefined();
     expect(state.outcomes[0]).toMatchObject({
       outcome: expectedOutcome,
@@ -359,7 +361,7 @@ describe("evaluatePromotionDecision", () => {
     const row = makePendingRow({ id: 109, first_seen_bps: -242, first_price: 0.9758, peak_seen_bps: -242, peak_price: 0.9758, peg_reference: 1, reason: "large-cap+native-origin" });
     insertPending(sqlite, row);
     await settle(db, makePlan({ row, authoritativePrice: 0.9758, primaryStatus: "confirm", primarySameDirectionDepegged: true, primaryConfirmationSources: ["primary:oracle:pyth"], temporalSameDirectionConfirmed: true }), makeEvidence());
-    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
+    const state = lifecycleOf(sqlite, row);
     expect(state.pending).toBeUndefined();
     expect(state.events[0]).toMatchObject({ peak_deviation_bps: -242, peak_price: 0.9758, confirmation_sources: "temporal:15m+primary:oracle:pyth", pending_reason: "large-cap+native-origin" });
     expect(state.outcomes[0]).toMatchObject({
@@ -376,7 +378,7 @@ describe("evaluatePromotionDecision", () => {
     const plan = makePlan({ row, primaryStatus: "recover", primarySameDirectionDepegged: false });
     const evidence = makeEvidence({ opposingSources: ["primary:defillama"] });
     await settle(db, plan, evidence);
-    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
+    const state = lifecycleOf(sqlite, row);
     expect(state.events).toEqual([]);
     expect(state.pending).toBeUndefined();
     expect(state.outcomes[0]).toMatchObject({ outcome: "rejected", opposing_sources: "primary:defillama", final_decision_reason: "secondary-evidence-opposes" });
@@ -396,7 +398,7 @@ describe("evaluatePromotionDecision", () => {
 
     await settle(db, plan, evidence);
 
-    expect(readLifecycle(sqlite, row.stablecoin_id, row.id)).toMatchObject({
+    expect(lifecycleOf(sqlite, row)).toMatchObject({
       pending: { id: row.id },
       events: [],
       outcomes: [],
@@ -448,7 +450,7 @@ describe("evaluatePromotionDecision native quote plausibility bound", () => {
 
     await settle(db, plan, evidence);
 
-    expect(readLifecycle(sqlite, row.stablecoin_id, row.id)).toMatchObject({
+    expect(lifecycleOf(sqlite, row)).toMatchObject({
       pending: { id: row.id },
       events: [],
       outcomes: [],
@@ -497,7 +499,7 @@ describe("evaluatePromotionDecision native quote plausibility bound", () => {
 
     await settle(db, plan, evidence);
 
-    expect(readLifecycle(sqlite, row.stablecoin_id, row.id)).toMatchObject({
+    expect(lifecycleOf(sqlite, row)).toMatchObject({
       pending: { id: row.id },
       events: [],
       outcomes: [],
@@ -525,7 +527,7 @@ describe("evaluatePromotionDecision opposite-direction corroboration", () => {
       expect(evidence).toMatchObject({ dexStatus: "insufficient", dexConfirmationVeto: true,
         dexConfirmationKeys: [], dexPeakCandidates: [], confirmingSources: [] });
       await settle(db, plan, evidence);
-      expect(readLifecycle(sqlite, row.stablecoin_id, row.id)).toMatchObject({ pending: { id: row.id }, events: [], outcomes: [] });
+      expect(lifecycleOf(sqlite, row)).toMatchObject({ pending: { id: row.id }, events: [], outcomes: [] });
     }
   });
 
@@ -577,7 +579,7 @@ describe("evaluatePromotionDecision opposite-direction corroboration", () => {
     expect(evidence.dexStatus).toBe("contradict");
     expect(evidence.unavailableSources).not.toContain("dex:aggregate-untrusted");
     await settle(db, plan, evidence);
-    expect(readLifecycle(sqlite, row.stablecoin_id, row.id)).toMatchObject({
+    expect(lifecycleOf(sqlite, row)).toMatchObject({
       events: [], pending: undefined,
       outcomes: [{ outcome: "rejected", final_decision_reason: "secondary-evidence-opposes" }],
     });
@@ -629,7 +631,7 @@ describe("evaluatePromotionDecision opposite-direction corroboration", () => {
 
     await settle(db, makePlan({ row }), evidence);
 
-    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
+    const state = lifecycleOf(sqlite, row);
     expect(state.events).toEqual([]);
     if (expectedReject) {
       expect(state.pending).toBeUndefined();
@@ -665,7 +667,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
       offchainStatus: "confirm", offchainSourceKey: "native:eur",
       offchainPeakCandidate: { bps: -900, price: 0.91, quoteDomain: candidateDomain },
     }));
-    expect(readLifecycle(sqlite, row.stablecoin_id, row.id).events[0]).toMatchObject({
+    expect(lifecycleOf(sqlite, row).events[0]).toMatchObject({
       peak_deviation_bps: -200, peak_price: price, peg_reference: reference,
     });
   });
@@ -687,7 +689,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
       }))]]),
     });
     await settle(db, plan, evidence);
-    expect(readLifecycle(sqlite, row.stablecoin_id, row.id).events[0]).toMatchObject({ peak_deviation_bps: -200, peak_price: dexPrice });
+    expect(lifecycleOf(sqlite, row).events[0]).toMatchObject({ peak_deviation_bps: -200, peak_price: dexPrice });
   });
 
   it("keeps a continuous pre-close onset and reloads the promoted peer-relative basis", async () => {
@@ -759,7 +761,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
     if (!supported) {
       if (plan.kind !== "mutate") throw new Error("Expected rejection of the stored peer onset");
       await db.batch(plan.statements);
-      expect(readLifecycle(sqlite, row.stablecoin_id, row.id)).toMatchObject({
+      expect(lifecycleOf(sqlite, row)).toMatchObject({
         events: [], pending: undefined, outcomes: [{ outcome: "rejected", final_decision_reason: "peer-event-rollback-incompatible" }],
       });
       return;
@@ -878,7 +880,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
     const plan = planFor(db, row, input);
     if (plan.kind !== "ready") throw new Error("Expected admission to reach the bounded expiry decision");
     await settle(db, plan, plan.evidence, now);
-    expect(readLifecycle(sqlite, row.stablecoin_id, row.id).outcomes[0]).toMatchObject({ outcome: "expired" });
+    expect(lifecycleOf(sqlite, row).outcomes[0]).toMatchObject({ outcome: "expired" });
   });
 
   it("does not confirm a native EUR discount with two USD prices at the same value", async () => {
@@ -920,7 +922,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
     const evidence = await collectPlanEvidence(db, plan);
     expect(evidence.offchainPeakCandidate?.price).toBeCloseTo(0.90, 10);
     await settle(db, plan, evidence);
-    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
+    const state = lifecycleOf(sqlite, row);
     expect(state.pending).toBeUndefined();
     expect(state.events[0]).toMatchObject({
       start_price: reference * 0.98, peg_reference: reference, peak_deviation_bps: -200,
@@ -948,7 +950,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
     });
     const evidence = await collectPlanEvidence(db, plan);
     await settle(db, plan, evidence);
-    expect(readLifecycle(sqlite, row.stablecoin_id, row.id).events[0])
+    expect(lifecycleOf(sqlite, row).events[0])
       .toMatchObject({ start_price: 0.98, peak_price: 0.94, peg_reference: 1, peak_deviation_bps: -600 });
   });
 
@@ -975,7 +977,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
     expect(evidence.poolStatus).toBe(confirmingCount === 1 ? "insufficient" : "confirm");
     expect(evidence.poolConfirmations).toHaveLength(confirmingCount === 1 ? 0 : 2);
     await settle(db, plan, evidence);
-    const event = readLifecycle(sqlite, row.stablecoin_id, row.id).events[0];
+    const event = lifecycleOf(sqlite, row).events[0];
     expect(event).toMatchObject({
       peak_deviation_bps: confirmingCount === 1 ? -200 : -2000,
       peak_price: confirmingCount === 1 ? 0.98 : 0.8,
@@ -998,7 +1000,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
       }],
     });
     await settle(db, plan, evidence);
-    expect(readLifecycle(sqlite, row.stablecoin_id, row.id).events[0]).toMatchObject({
+    expect(lifecycleOf(sqlite, row).events[0]).toMatchObject({
       peak_deviation_bps: -200, peak_price: 0.98,
       confirmation_sources: "temporal:15m+primary:oracle:pyth+primary:oracle:chainlink",
     });
@@ -1026,7 +1028,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
       ]]]),
     });
     await settle(db, plan, evidence);
-    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
+    const state = lifecycleOf(sqlite, row);
     if (opposingCount <= 1) {
       expect(state.pending).toBeUndefined();
       expect(state.events[0]).toMatchObject({ peak_deviation_bps: -2000, peak_price: 0.8, confirmation_sources: "temporal:15m+pool:curve:curve" });
@@ -1059,7 +1061,7 @@ describe("evaluatePromotionDecision promotion peak aggregation across channels",
 
     await settle(db, plan, evidence);
 
-    const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
+    const state = lifecycleOf(sqlite, row);
     expect(state.pending).toBeUndefined();
     expect(state.events[0]).toMatchObject({
       peak_deviation_bps: -700,

@@ -91,6 +91,8 @@ const SUPPLY_DATA = {
 
 const STALE_UPDATED_AT = Date.parse("2026-07-10T00:00:00Z");
 
+const mockReportCards = (data: unknown) => useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+
 describe("ContagionSnapshot", () => {
   beforeEach(() => {
     useNearViewportMock.mockReturnValue({ ref: vi.fn(), near: true });
@@ -115,7 +117,7 @@ describe("ContagionSnapshot", () => {
     detail.neighborhood = detail.neighborhood.map(({ id, grade, partialEvidence, sharedBookId }) => ({
       id, grade, partialEvidence, sharedBookId,
     }));
-    useReportCardsV9Mock.mockReturnValue({ data: detail, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    mockReportCards(detail);
     render(<ContagionSnapshot stablecoinId="usdc-circle" />);
     const graph = openGraph();
     expect(graph.getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
@@ -134,7 +136,7 @@ describe("ContagionSnapshot", () => {
       excludedComponentKeys: ["dex-liquidity"], causeGapRefs: [0],
     };
     data.cards[0] = { ...data.cards[0], grade, partialEvidence };
-    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    mockReportCards(data);
     render(<ContagionSnapshot stablecoinId="usdc-circle" />);
     const cards = JSON.parse(openGraph().getAttribute("data-cards") ?? "[]");
     expect(cards.find((card: { id: string }) => card.id === "usdc-circle")).toMatchObject({
@@ -169,7 +171,7 @@ describe("ContagionSnapshot", () => {
         } }),
       ],
     });
-    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    mockReportCards(data);
     const { rerender } = render(<ContagionSnapshot stablecoinId="usds-sky" />);
     expect(screen.getByRole("link", { name: /^spUSDC, Mechanism,/ })).toBeTruthy();
     expect(screen.queryByText("100%")).toBeNull();
@@ -187,7 +189,7 @@ describe("ContagionSnapshot", () => {
         } }),
       ],
     });
-    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    mockReportCards(data);
     const spark = CLIENT_TRACKED_META_BY_ID.get("susdc-spark")!;
     const keyrock = CLIENT_TRACKED_META_BY_ID.get("krusdc-keyrock")!;
     const { rerender } = render(
@@ -217,7 +219,7 @@ describe("ContagionSnapshot", () => {
         } }),
       ],
     });
-    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    mockReportCards(data);
     render(<ContagionSnapshot stablecoinId="usdc-circle" />);
     expect(screen.getByRole("link", { name: /^PUSD, Wrapper,/ })).toBeTruthy();
   });
@@ -236,7 +238,7 @@ describe("ContagionSnapshot", () => {
         } }),
       ],
     });
-    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    mockReportCards(data);
     render(<ContagionSnapshot stablecoinId="usdc-circle" />);
     expect(screen.getByRole("link", { name: (name) => name.startsWith(`${symbol}, ${label},`) })).toBeTruthy();
   });
@@ -261,7 +263,7 @@ describe("ContagionSnapshot", () => {
       from: upstream,
       to: "ebusd-ebisu",
     });
-    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    mockReportCards(data);
     render(<ContagionSnapshot stablecoinId={upstream} />);
     expect(screen.getByRole("link", { name: (name) => name.startsWith(`${symbol}, Collateral, ${weight * 100}% of backing`) })).toBeTruthy();
     expect(screen.queryByText("100%")).toBeNull();
@@ -439,7 +441,7 @@ describe("ContagionSnapshot", () => {
         makeV9Card({ id: "susde-ethena", dependencies: basketOn("usdc-circle") }),
       ],
     });
-    useReportCardsV9Mock.mockReturnValue({ data, error: null, dataUpdatedAt: 1, refetch: vi.fn() });
+    mockReportCards(data);
     useStablecoinsMock.mockReturnValue({
       data: { peggedAssets: [...SUPPLY_DATA.peggedAssets, { id: "susde-ethena", circulating: null }] },
       meta: { updatedAt: 1_752_534_000 }, error: null, dataUpdatedAt: 1, refetch: vi.fn(),

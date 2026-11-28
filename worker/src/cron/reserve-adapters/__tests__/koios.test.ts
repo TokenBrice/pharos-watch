@@ -56,6 +56,8 @@ function assetRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
+const koiosReader = (network: Parameters<typeof readerCtx>[0]) => createKoiosReader(BASE, SIGNAL, readerCtx(network));
+
 describe("createKoiosReader tip pinning", () => {
   it("parses the one-row tip array and stamps the pinned block on the context", async () => {
     const network = installAdapterNetwork({ json: { [`${BASE}/tip`]: [TIP] } });
@@ -78,7 +80,7 @@ describe("createKoiosReader tip pinning", () => {
     const network = installAdapterNetwork({
       json: { [`${BASE}/tip`]: [{ ...TIP, block_time: TIP.block_time - 1_300 }] },
     });
-    await expect(createKoiosReader(BASE, SIGNAL, readerCtx(network))).rejects.toThrow(
+    await expect(koiosReader(network)).rejects.toThrow(
       /stale or future-dated/,
     );
   });
@@ -87,7 +89,7 @@ describe("createKoiosReader tip pinning", () => {
     const network = installAdapterNetwork({
       json: { [`${BASE}/tip`]: [{ ...TIP, block_time: TIP.block_time + 200 }] },
     });
-    await expect(createKoiosReader(BASE, SIGNAL, readerCtx(network))).rejects.toThrow(
+    await expect(koiosReader(network)).rejects.toThrow(
       /stale or future-dated/,
     );
   });
@@ -101,7 +103,7 @@ describe("createKoiosReader read budget", () => {
         [`${BASE}/address_info`]: [addressRow()],
       },
     });
-    const reader = await createKoiosReader(BASE, SIGNAL, readerCtx(network));
+    const reader = await koiosReader(network);
     for (let i = 0; i < 12; i += 1) {
       await expect(reader.addressInfo([ADDRESS])).resolves.toHaveLength(1);
     }
@@ -117,7 +119,7 @@ describe("createKoiosReader cap rejection", () => {
         [`${BASE}/address_info`]: [addressRow({ utxo_set: Array.from({ length: 501 }, (_, i) => utxo(i)) })],
       },
     });
-    const reader = await createKoiosReader(BASE, SIGNAL, readerCtx(network));
+    const reader = await koiosReader(network);
     await expect(reader.addressInfo([ADDRESS])).rejects.toThrow(/500/);
   });
 
@@ -133,13 +135,13 @@ describe("createKoiosReader cap rejection", () => {
         [`${BASE}/address_info`]: [addressRow({ utxo_set: [utxo(0, { asset_list: assetList })] })],
       },
     });
-    const reader = await createKoiosReader(BASE, SIGNAL, readerCtx(network));
+    const reader = await koiosReader(network);
     await expect(reader.addressInfo([ADDRESS])).rejects.toThrow(/100/);
   });
 
   it("rejects an asset_info request for more than 16 units", async () => {
     const network = installAdapterNetwork({ json: { [`${BASE}/tip`]: [TIP] } });
-    const reader = await createKoiosReader(BASE, SIGNAL, readerCtx(network));
+    const reader = await koiosReader(network);
     const units = Array.from({ length: 17 }, () => [POLICY_ID, ASSET_NAME] as [string, string]);
     await expect(reader.assetInfo(units)).rejects.toThrow(/between 1 and 16/);
   });
@@ -153,7 +155,7 @@ describe("createKoiosReader echo validation", () => {
         [`${BASE}/address_info`]: [addressRow({ address: "addr1unrequested0000000000000000000000000000000000000000000000000000000000000000000000000000004" })],
       },
     });
-    const reader = await createKoiosReader(BASE, SIGNAL, readerCtx(network));
+    const reader = await koiosReader(network);
     await expect(reader.addressInfo([ADDRESS])).rejects.toThrow(/unrequested address/);
   });
 
@@ -164,7 +166,7 @@ describe("createKoiosReader echo validation", () => {
         [`${BASE}/address_info`]: [addressRow(), addressRow()],
       },
     });
-    const reader = await createKoiosReader(BASE, SIGNAL, readerCtx(network));
+    const reader = await koiosReader(network);
     await expect(reader.addressInfo([ADDRESS])).rejects.toThrow(/duplicate rows/);
   });
 
@@ -176,7 +178,7 @@ describe("createKoiosReader echo validation", () => {
         [`${BASE}/address_info`]: [addressRow()],
       },
     });
-    const reader = await createKoiosReader(BASE, SIGNAL, readerCtx(network));
+    const reader = await koiosReader(network);
     await expect(reader.addressInfo([ADDRESS, other])).rejects.toThrow(/returned 1 of 2 requested addresses/);
   });
 
@@ -187,7 +189,7 @@ describe("createKoiosReader echo validation", () => {
         [`${BASE}/asset_info`]: [assetRow({ asset_name: "deadbeef" })],
       },
     });
-    const reader = await createKoiosReader(BASE, SIGNAL, readerCtx(network));
+    const reader = await koiosReader(network);
     await expect(reader.assetInfo([[POLICY_ID, ASSET_NAME]])).rejects.toThrow(/unrequested unit/);
   });
 
@@ -198,7 +200,7 @@ describe("createKoiosReader echo validation", () => {
         [`${BASE}/asset_info`]: [assetRow(), assetRow()],
       },
     });
-    const reader = await createKoiosReader(BASE, SIGNAL, readerCtx(network));
+    const reader = await koiosReader(network);
     await expect(reader.assetInfo([[POLICY_ID, ASSET_NAME]])).rejects.toThrow(/duplicate rows/);
   });
 
@@ -209,7 +211,7 @@ describe("createKoiosReader echo validation", () => {
         [`${BASE}/asset_info`]: [assetRow()],
       },
     });
-    const reader = await createKoiosReader(BASE, SIGNAL, readerCtx(network));
+    const reader = await koiosReader(network);
     await expect(reader.assetInfo([[POLICY_ID, ASSET_NAME], [POLICY_ID, "5368656e4d6963726f555344"]]))
       .rejects.toThrow(/returned 1 of 2 requested units/);
   });
