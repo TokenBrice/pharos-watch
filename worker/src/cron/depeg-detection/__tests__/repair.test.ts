@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { advanceDepegPriceCoverage } from "@shared/lib/depeg-price-coverage";
-import { mergeDepegSeconds, mergeUnknownDepegSeconds } from "@shared/lib/peg-utils";
+import { activePegPeakBps, mergeDepegSeconds, mergeUnknownDepegSeconds } from "@shared/lib/peg-utils";
 import { rowToDepegEvent, type DepegRow } from "../../../lib/depeg-helpers";
 import { makeDepegRow } from "../../../test-helpers/__shared/fixtures";
 import { buildDuplicateOpenEventRepair, buildOrphanCloseRepair } from "../repair";
@@ -55,11 +55,19 @@ describe("buildDuplicateOpenEventRepair", () => {
     expect(mergeDepegSeconds([resumed], 0, 900)).toBe(350); expect(mergeUnknownDepegSeconds([resumed], 0, 900)).toBe(450);
   });
 
-  it("never re-imports a retained duplicate's superseded gap onto newer keeper coverage or resets its armed candidate", () => {
-    const keeper = { ...makeOpenRow({ id: 1, started_at: 100 }), price_coverage_json: '{"intervals":[[100,250],[500,900]],"lastObservationKind":"trusted-off-peg"}', last_trusted_price_at: 900, peak_escalation_candidate_at: 900, peak_escalation_candidate_seen_at: 900 };
-    const { commands, openEvents } = buildDuplicateOpenEventRepair([keeper, { ...makeOpenRow({ id: 2, started_at: 150 }), price_coverage_json: '{"intervals":[[150,250]]}', last_trusted_price_at: 250, price_coverage_gap_started_at: 300 }]);
-    expect(commands.map((c) => c.type)).toEqual(["delete-event", "update-peak"]);
-    expect(openEvents.get(keeper.stablecoin_id)).toMatchObject({ price_coverage_gap_started_at: null, peak_escalation_candidate_at: 900 });
+  // Keeper last trusted at 900. A duplicate gap is superseded only by strictly newer keeper coverage (either kind).
+  it.each([
+    ["older legacy gap, newer off-peg keeper", '{"intervals":[[100,250],[500,900]],"lastObservationKind":"trusted-off-peg"}', null, '{"intervals":[[150,250]]}', 250, 300, null, "trusted-off-peg"],
+    ["older blind gap, newer at-par keeper", '{"intervals":[[100,200]],"atParIntervals":[[600,900]],"lastObservationKind":"trusted-at-par"}', 600, '{"intervals":[[150,200]],"lastObservationKind":"blind"}', 200, 400, 600, "trusted-at-par"],
+    ["newer at-par then blind duplicate", '{"intervals":[[100,900]],"lastObservationKind":"trusted-off-peg"}', null, '{"intervals":[],"atParIntervals":[[300,950]],"lastObservationKind":"blind"}', 950, 300, 300, "blind"],
+    ["same-clock at-par duplicate", '{"intervals":[[100,900]],"lastObservationKind":"trusted-off-peg"}', null, '{"intervals":[],"atParIntervals":[[300,900]],"lastObservationKind":"trusted-at-par"}', 900, 300, 300, "blind"],
+  ] as const)("orders a retained duplicate's gap against keeper coverage by clock: %s", (_, keeperJson, keeperGap, dupeJson, dupeTrusted, dupeGap, gap, kind) => {
+    const keeper = { ...makeOpenRow({ id: 1, started_at: 100 }), price_coverage_json: keeperJson, last_trusted_price_at: 900, price_coverage_gap_started_at: keeperGap, peak_escalation_candidate_at: 900, peak_escalation_candidate_seen_at: 900 };
+    const { commands, openEvents } = buildDuplicateOpenEventRepair([keeper, { ...makeOpenRow({ id: 2, started_at: 150 }), price_coverage_json: dupeJson, last_trusted_price_at: dupeTrusted, price_coverage_gap_started_at: dupeGap }]);
+    const merged = rowToDepegEvent(openEvents.get(keeper.stablecoin_id)!);
+    expect(merged.priceCoverage).toMatchObject({ gapStartedAt: gap, lastObservationKind: kind });
+    if (gap !== keeperGap) expect(activePegPeakBps(merged, 1000, null)).toBeNull();
+    else expect([commands.map((c) => c.type), keeper.peak_escalation_candidate_at]).toEqual([["delete-event", "update-peak"], 900]);
   });
 
   it("retains known at-par intervals and their continuity across duplicate repair", async () => {

@@ -147,21 +147,26 @@ export function buildDuplicateOpenEventRepair<T extends DepegRow>(
           const intervals = mergeDepegIntervals(coverages.flatMap((coverage) => coverage.intervals));
           const atParIntervals = mergeDepegIntervals(coverages.flatMap((coverage) => coverage.atParIntervals ?? []));
           const nextLastTrusted = latest.lastTrustedObservationAt;
-          // Preserve unresolved blind gaps, but do not discard known at-par intervals. A trusted
-          // off-peg observation at or after a gap's onset ends it (`advanceDepegPriceCoverage`), so a
-          // retained duplicate's older gap never reopens the keeper's newer trusted coverage; the
-          // keeper's own gap always stands and the duplicate's intervals are still merged.
-          const keeperOffPegEnd = initialCoverage?.intervals.reduce((end, [, to]) => Math.max(end, to), -Infinity) ?? -Infinity;
-          const openGaps = coverages.filter((coverage) => coverage.gapStartedAt != null &&
-            (coverage === initialCoverage || coverage.gapStartedAt > keeperOffPegEnd));
+          // Preserve unresolved gaps, but do not discard known intervals. The keeper's own gap always
+          // stands. A duplicate's gap is superseded only when the keeper's last trusted observation
+          // (off-peg or at-par) is strictly newer than every clock the duplicate records (gap onset and
+          // last trusted observation), so a retained duplicate's older gap never reopens newer keeper
+          // coverage, while its newer at-par/blind evidence is never dropped. Unreadable keeper
+          // coverage, a missing keeper clock or a tie leaves the order unknown and keeps the gap.
+          const keeperTrustedAt = initialCoverage?.lastTrustedObservationAt ?? null;
+          const openGaps = coverages.filter((coverage) => coverage.gapStartedAt != null && (coverage === initialCoverage ||
+            keeperTrustedAt == null || keeperTrustedAt <= Math.max(coverage.gapStartedAt, coverage.lastTrustedObservationAt ?? -Infinity)));
           const nextGapStarted = openGaps.reduce<number | null>((gap, coverage) =>
             Math.min(gap ?? Infinity, coverage.gapStartedAt!), null);
+          // A trusted off-peg observation always ends a gap, so an open gap reads at-par only when
+          // the latest observation and every open gap are at-par; anything else fails closed to blind.
           const coverage = {
             intervals,
             atParIntervals,
             lastTrustedObservationAt: nextLastTrusted,
             gapStartedAt: nextGapStarted,
-            lastObservationKind: openGaps.some((value) => value.lastObservationKind !== "trusted-at-par")
+            lastObservationKind: nextGapStarted != null && (latest.lastObservationKind !== "trusted-at-par" ||
+              openGaps.some((value) => value.lastObservationKind !== "trusted-at-par"))
               ? "blind" as const : latest.lastObservationKind,
           };
           const serializedCoverage = serializeDepegPriceCoverage(coverage);
