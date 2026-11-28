@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.57",
+    "title": "Duplicate-repair gap supersession and replayed pre-Day-30 re-escalation quotes",
+    "date": "2026-11-28",
+    "effectiveAt": 1795824000,
+    "summary": "Stops a retained DDR-referenced duplicate from re-importing an older unresolved coverage gap onto a keeper whose own trusted off-peg coverage already reaches past it, and treats a replayed quote that predates Day 30 as a no-op instead of clearing an armed re-escalation candidate. Event opening, confirmation, recovery, PegScore, Safety Score V10, PSI, DEWS scores and DDR/DDRR core scoring are unchanged.",
+    "impact": [
+      "Duplicate open-event repair (`worker/src/cron/depeg-detection/repair.ts`): clean duplicates still union trusted off-peg and at-par intervals into the earliest verified-clean keeper, and the keeper's own unresolved gap always stands. A duplicate's `gapStartedAt` is inherited only when it is later than the keeper's own last trusted off-peg observation, matching `advanceDepegPriceCoverage` (a trusted off-peg observation at or after a gap's onset ends it). A duplicate retained because a canonical DDR incident references it therefore no longer rewrites the keeper's coverage every run or resets its armed `peak_escalation_candidate_at` / `peak_escalation_candidate_seen_at`.",
+      "Day-30+ re-escalation (`worker/src/cron/depeg-detection/escalation.ts`): an admitted observation clock at or before the recorded trusted clock is a replay even when it predates `incidentStartedAt + 30d`, so it reaches the existing replay branch (carry-forward sync or invalid-anchor cleanup only) instead of clearing an armed candidate on the age gate. A fresh pre-Day-30 clock or a missing clock still clears it.",
+      "Display only (`/depeg/` and homepage): the tracker board status pill and CSV `Status` column read the board's assessment clock, so a row whose FX reference expired is `unknown`, never `clear`; the `At peg` filter compares the unrounded deviation with the trigger threshold; legacy fixed-USD rows keep their unrounded deviation for materiality when it pairs with the published rounded value; and open-incident `Unconfirmed` / `Near par` qualifiers are shown only when the open-incident sidecar or the legacy active-events fallback was read."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.56",
     "title": "Long-running (>30d) open incident split, two-sample re-escalation, and materiality-tiered ranking",
     "date": "2026-11-27",
