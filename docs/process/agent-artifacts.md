@@ -32,24 +32,35 @@ A campaign README, per-artifact rows (path/kind/owner/status/dates/source/destin
 
 Agents run with memory off, so truly required post-session loops belong in GitHub issues rather than only in a final message or scratch — **default to `Follow-ups: none`** and file only loops that would silently slip without a ticket. Root [Do this last](../../AGENTS.md#do-this-last) makes filing at session end a standing authorization **only** within this bar:
 
-- **File:** (1) unmonitored post-deploy verification of high-risk Worker/D1/ingestion/methodology changes whose first proving execution falls after the session, only when no owning issue is open; (2) confirmed, material out-of-scope defects (`bug`) that cannot be fixed in-session; (3) hard external deadlines (statutory dates, issuer wind-downs, key rotations) or multi-week experiment readouts not tracked by any repo calendar; (4) owner decisions still unanswered when the session ends (`ops:decision`).
+- **File:** (1) custom/unmonitored post-deploy soaks or domain checks on high-risk Worker/D1/ingestion/methodology changes whose proving window falls after the session, only when no owning issue is open (routine Worker first-execution monitoring is automated); (2) confirmed, material out-of-scope defects (`bug`) that cannot be fixed in-session; (3) hard external deadlines (statutory dates, scheduled issuer shutdowns, key rotations) or 4–12w experiment readouts not tracked by any repo calendar (`ops:calendar`); (4) issues blocked on external vendors, issuers, or upstream protocols (`ops:upstream-wait`); (5) owner decisions still unanswered when the session ends (`ops:decision`).
 - **Do not file:**
   - Items already tracked by automated standing trackers or machine-checked calendars (`#945` Safety Score expiry sweep, `#1302` Agent maintenance candidates, `npm run digest:curation`, `reviewBy`/`expiresAtSec`/`nextReviewAt` registries, `ci:nightly-red`, `cron-liveness`, `worker-memory-monitor`). Record special renewal caveats (such as immutable checkpoint keys) in the registry entry's note or owning doc instead of opening a duplicate issue.
-  - Close-and-replace spin-offs or child tickets while a parent stays open: if an issue still has remaining soak/acceptance/7d clauses, keep the existing issue open and advance its `Due:`.
+  - Close-and-replace spin-offs or child tickets while a parent stays open: if an existing issue still has remaining soak/acceptance/7d clauses, keep it open and advance its `Due:`.
   - Split-date tickets for one feature or multi-PR rollout: keep **one** issue per theme/rollout and advance `Due:` to the earliest remaining gate; separate issues only for genuinely unrelated domains.
   - Review/council polish, optional refactors, unverified hypotheses, or unrequested plans/next waves (`agents/`). Ask decisions in-session; open `ops:campaign` only when the owner asks to track multi-PR work.
 
-Issues are public: write them as if published, with no row-level D1 data, chat IDs, partner or commercial detail, security gaps (use a private advisory) or credentials. Labels: `ops:followup` (a dated or event-gated check), `ops:decision` (only a decision left unanswered when the session ends), `ops:campaign` (only owner-approved multi-PR work the owner asked to track); plain defects keep `bug`. Use a milestone only when a campaign spans several PRs. The body must stand alone after the session ends and `agents/` is cleaned:
+Do not mix buildable fixes with passive external waits or post-deploy verification in one issue — finish and close the buildable part cleanly, and open a separate dated issue only when an unmonitored soak or external wait independently clears the bar above.
+
+Issues are public: write them as if published, with no row-level D1 data, chat IDs, partner or commercial detail, security gaps (use a private advisory) or credentials. Labels:
+
+- `ops:followup`: a dated or event-gated operational check carrying `Due: YYYY-MM-DD`.
+- `ops:calendar`: pure future-dated calendar triggers (statutory dates, scheduled issuer shutdowns, 4–12w experiment readouts) carrying `Due: YYYY-MM-DD`; `.github/workflows/ops-followups.yml` reminds on them, and clearance passes auto-skip them until within 7 days of `Due:`.
+- `ops:upstream-wait`: issues blocked on external vendors, issuers, or upstream protocols carrying `Due: YYYY-MM-DD`; subject to exponential backoff (`+14d` -> `+30d` -> forced owner decision: codify limitation & close, or quarterly `+90d` re-check).
+- `ops:decision`: only a decision left unanswered when the session ends.
+- `ops:campaign`: only owner-approved multi-PR work the owner asked to track (use a milestone only when a campaign spans several PRs).
+- `bug`: plain defects.
+
+The body must stand alone after the session ends and `agents/` is cleaned:
 
 ```
-Due: YYYY-MM-DD          (required with ops:followup; read by .github/workflows/ops-followups.yml)
+Due: YYYY-MM-DD          (required with ops:followup, ops:calendar, and ops:upstream-wait; read by .github/workflows/ops-followups.yml)
 Origin: PR #N / commit / ADR-N
 Check: exact query, command or URL that answers it
 Done when: closing condition
 Evidence: agents/<path> (local, may be gone)
 ```
 
-The daily reminder reads only `ops:followup` issues with a `Due:` line, so every `ops:followup` carries one: an event-gated check takes the date of its next re-check, and an issue with stepped gates (e.g. 1d then 7d) carries the earliest remaining date and advances `Due:` as each gate passes. Before opening an issue, search (`gh issue list --state all --search "<terms>"`) and add evidence as a comment on the existing one instead of a duplicate; move its `Due:` when rescheduled. Close with the PR (`Closes #N`) or a comment naming the evidence; distill durable truth into its owning doc first. Do not duplicate CI-failure issues or user intake.
+The daily reminder (`.github/workflows/ops-followups.yml`) reads open `ops:followup`, `ops:calendar`, and `ops:upstream-wait` issues with a `Due:` line, so every issue carrying one of those labels includes one: an event-gated check takes the date of its next re-check, and an issue with stepped gates (e.g. 1d then 7d) carries the earliest remaining date and advances `Due:` as each gate passes. Before opening an issue, search (`gh issue list --state all --search "<terms>"`) and add evidence as a comment on the existing one instead of a duplicate; move its `Due:` when rescheduled. Close with the PR (`Closes #N`) or a comment naming the evidence; distill durable truth into its owning doc first. Do not duplicate CI-failure issues or user intake.
 
 ## Pinned On-Chain Evidence
 

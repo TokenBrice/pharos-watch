@@ -50,12 +50,12 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 
 ## Do this last
 
-Agents run with memory off, so required post-session loops go in GitHub issues — **default to `Follow-ups: none`**.
+Agents run without memory, so required loops go in GitHub issues — **default to `Follow-ups: none`**.
 
-- Standing authorization at session end applies **only** to loops that would silently slip: unmonitored post-deploy checks on high-risk Worker/D1/ingestion changes (when no owning issue is open), confirmed material out-of-scope `bug`s, hard external deadlines or multi-week readouts untracked elsewhere, or unanswered owner decisions.
-- **Do not file** for: items already tracked by `#945`, `#1302`, `digest:curation`, `reviewBy`/`expiresAtSec`, or CI/liveness monitors (`ci:nightly-red`, `cron-liveness`, `worker-memory-monitor`); review polish, optional refactors, or unverified notes; plans/next waves (`agents/`); or extra tickets when an existing open issue can advance its `Due:`. Delegated workers pass loops to the lead.
-- Follow the bar, labels, `Due:` and body contract in `docs/process/agent-artifacts.md#follow-up-issues`. Public repo: no credentials, row-level D1 data, chat IDs, partner/commercial detail, or unpatched security gaps (private advisory).
-- End the final report with `Follow-ups:` and the issue numbers, or `none`.
+- Standing authorization at session end covers **only** loops that would silently slip: custom/unmonitored soaks/domain checks with no open owner (routine Worker first-execution monitoring is automated), confirmed material out-of-scope `bug`s, untracked external deadlines/multi-week readouts, or unanswered owner decisions.
+- **Do not file** for items tracked by `#945`, `#1302`, `digest:curation`, `reviewBy`/`expiresAtSec`, or CI/liveness monitors (`ci:nightly-red`, `cron-liveness`, `worker-memory-monitor`); review polish, optional refactors or unverified notes; plans/waves (`agents/`); or extra tickets when an open issue can advance `Due:`. Delegated workers pass loops to the lead.
+- Follow the bar, `Due:`, body and labels (`ops:followup`, `ops:calendar`, `ops:upstream-wait`) in `docs/process/agent-artifacts.md#follow-up-issues`. Public repo: no credentials, row-level D1 data, chat IDs, partner/commercial detail or unpatched security gaps (private advisory).
+- End the final report with `Follow-ups:` and issue numbers, or `none`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

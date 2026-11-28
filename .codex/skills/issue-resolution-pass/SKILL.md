@@ -7,14 +7,14 @@ description: Triage open GitHub issues, settle owner decisions and write an issu
 
 ## Trigger And Exclusions
 
-Use for a clearance pass over the open GitHub issue backlog, or for the sweep of due `ops:followup` issues. Not for executing a plan (the owner verifies the plan and starts execution separately), one bounded issue fix (root [Do this first](../../../AGENTS.md#do-this-first)), a failed gate ([CI failure triage](../pharos-ci-failure-triage/SKILL.md)) or a release ([release runner](../pharos-release-runner/SKILL.md)).
+Use for a clearance pass over the open GitHub issue backlog, or for the sweep of due dated issues (`ops:followup`, `ops:calendar`, `ops:upstream-wait`). Not for executing a plan (the owner verifies the plan and starts execution separately), one bounded issue fix (root [Do this first](../../../AGENTS.md#do-this-first)), a failed gate ([CI failure triage](../pharos-ci-failure-triage/SKILL.md)) or a release ([release runner](../pharos-release-runner/SKILL.md)).
 
 ## Classify The Operation
 
-- `clearance-plan`: inventory every open issue, triage, settle owner decisions, write the plan, stop. Read-only.
-- `due-followup-sweep`: only open `ops:followup` issues whose `Due:` date is today or past; run each check, then close or reschedule. Mutates those issues and nothing else.
+- `clearance-plan`: inventory every open issue, auto-skip `ops:calendar` and `ops:upstream-wait` issues whose `Due:` is more than 7 days out, triage the remaining active backlog, settle owner decisions, write a focused plan (actionable fixes plus at most 1–2 bounded `design-first` items buildable in-pass; route multi-PR architecture work to dedicated single-topic sessions), stop. Read-only.
+- `due-followup-sweep`: only open `ops:followup`, `ops:calendar`, and `ops:upstream-wait` issues whose `Due:` date is today or past; run each check, then close, apply upstream-wait backoff / 3-strike escalation, or reschedule. Mutates those issues and nothing else.
 
-Pick one before reading issues. A request to resume or execute an existing plan is outside this skill.
+Two-gear cadence: run `due-followup-sweep` frequently (e.g. twice weekly or before a fix pass) to close passing checks and apply upstream-wait backoff before launching a full `clearance-plan`. Pick one operation before reading issues; a request to resume or execute an existing plan is outside this skill.
 
 ## Mandatory Core
 
@@ -31,23 +31,23 @@ Read [Follow-up issues](../../../docs/process/agent-artifacts.md#follow-up-issue
 
 **`clearance-plan`**
 
-1. Inventory: record `origin/main` HEAD, open PRs and every open issue with its full body and all comments (`gh issue list --state open --limit 500 --json number,title,labels,updatedAt`, then `gh issue view <n> --comments`). Keep scratch in ignored `agents/<YYYY-MM-DD>-issue-resolution/` of the main checkout.
-2. Triage: give every issue one row and one verdict from the [triage schema](references/triage-schema.md), including a backlog-hygiene check (`close-redundant` / consolidation) on future-dated rows before assigning `excluded-dated`. With delegation, fan out disjoint read-only batches under the [worker brief](references/worker-common-brief.md); without it, work sequentially and say so. The table must reconcile to the inventory.
+1. Inventory: record `origin/main` HEAD, open PRs and every open issue (`gh issue list --state open --limit 500 --json number,title,labels,body,updatedAt`). Auto-skip `ops:calendar` and `ops:upstream-wait` issues whose `Due:` is more than 7 days out — record them in the plan's compact skipped-count line without spending triage worker batches on them. Fetch full comments (`gh issue view <n> --comments`) for the remaining active inventory. Keep scratch in ignored `agents/<YYYY-MM-DD>-issue-resolution/` of the main checkout.
+2. Triage: give every non-skipped open issue one row and one verdict from the [triage schema](references/triage-schema.md), including a backlog-hygiene check (`close-redundant` / consolidation) on future-dated rows before assigning `excluded-dated`. With delegation, fan out disjoint read-only batches under the [worker brief](references/worker-common-brief.md); without it, work sequentially and say so. Triaged rows plus the auto-skipped count must reconcile 1:1 to the open inventory.
 3. Decisions: collect every owner call in one numbered table, ask them in batches with the harness's ask-the-user capability, record each ruling verbatim, then re-verdict the affected rows. Ask again when a ruling opens a new question.
-4. Plan: write `PLAN.md` from the [plan template](references/plan-template.md), applying the [closure and batching rules](references/closure-and-batching.md), including the expected net issue delta (`closed − filed`) and justification for any newly proposed issue.
+4. Plan: write `PLAN.md` from the [plan template](references/plan-template.md), applying the [closure and batching rules](references/closure-and-batching.md): cap active execution scope to a focused batch of actionable fixes plus at most 1–2 bounded `design-first` items buildable in-pass (routing multi-PR architecture work to dedicated single-topic sessions), and include the expected net issue delta (`closed − filed`) and justification for any newly proposed issue.
 5. Stop: present the scope rollup, rulings, proposed batches and every unverified assumption. Execution starts only on the owner's separate instruction.
 
 **`due-followup-sweep`**
 
-1. Select with the rule in `.github/workflows/ops-followups.yml`: the first `Due: YYYY-MM-DD` body line, on or before today UTC. Report any open `ops:followup` without a `Due:` line as a contract defect.
-2. Run each issue's `Check` as written and assign a due-check verdict from the triage schema.
-3. Every `Done when` clause passes: close with a comment naming the evidence per clause. Anything else: comment the verdict and evidence, and move the body's `Due:` line to the next re-check date with a one-line reason. An issue bundling several dates takes the earliest remaining one.
+1. Select with the rule in `.github/workflows/ops-followups.yml`: open `ops:followup`, `ops:calendar`, and `ops:upstream-wait` issues whose first `Due: YYYY-MM-DD` body line is on or before today UTC. Report any open issue carrying those labels without a `Due:` line as a contract defect.
+2. Run each issue's `Check` as written and assign a due-check verdict from the [triage schema](references/triage-schema.md).
+3. Every `Done when` clause passes: close with a comment naming the evidence per clause. Unchanged `ops:upstream-wait` issue: apply the exponential backoff and 3-strike rule in the [triage schema](references/triage-schema.md) (`+14d` -> `+30d` -> `needs-decision`: codify limitation & close, or park on quarterly `+90d`). Anything else: comment the verdict and evidence, and move the body's `Due:` line to the next re-check date with a one-line reason. An issue bundling several dates takes the earliest remaining one.
 4. A `fail` that needs a code or data change is not fixed here: report it as a bounded fix for the owner to authorize, or as input to the next clearance plan.
 
 ## Checks Owned By The Verifier
 
-- Plan: every open issue appears exactly once in the rollup; every close-eligible issue lists each `Done when` clause with its coverage (or its surviving owner/tracker for `close-redundant`); every decision has a verbatim ruling or is marked unanswered; every excluded issue names its gate or date and passed the redundancy check; every proposed new issue clears [Follow-up issues](../../../docs/process/agent-artifacts.md#follow-up-issues) without duplicating an open issue or standing tracker; cited paths, commands, issue and PR numbers exist; `git status` shows no tracked change.
-- Sweep: each closing comment cites evidence read this run for every clause; each swept issue left open carries a future `Due:`.
+- Plan: every open issue appears exactly once across the scope rollup (triaged rows plus auto-skipped `ops:calendar` / `ops:upstream-wait` >7d count); every close-eligible issue lists each `Done when` clause with its coverage (or its surviving owner/tracker for `close-redundant`); every decision has a verbatim ruling or is marked unanswered; every excluded issue names its gate or date and passed the redundancy check; every proposed new issue clears [Follow-up issues](../../../docs/process/agent-artifacts.md#follow-up-issues) without duplicating an open issue or standing tracker; cited paths, commands, issue and PR numbers exist; `git status` shows no tracked change.
+- Sweep: each closing comment cites evidence read this run for every clause; each swept issue left open carries a future `Due:` (applying upstream-wait backoff / 3-strike escalation where unchanged).
 
 ## Completion Evidence
 

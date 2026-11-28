@@ -11,7 +11,8 @@ Write `agents/<YYYY-MM-DD>-issue-resolution/PLAN.md` in the main checkout. The e
 
 ## 1. Scope rollup
 | Verdict | Count | Issues |
-(every open issue exactly once; counts sum to the inventory)
+(every triaged open issue once; triaged counts plus auto-skipped sum 1:1 to the open inventory)
+- Auto-skipped (ops:calendar / ops:upstream-wait, Due > +7d): <n> (<#list or none>)
 - Expected net issue delta: closed (<n>) − newly filed (<n>) = <delta>
 - Consolidation / pruning: <tracker duplicates, split-date merges, and retired low-value rows>
 
@@ -35,7 +36,7 @@ Write `agents/<YYYY-MM-DD>-issue-resolution/PLAN.md` in the main checkout. The e
 ## 5. Lanes, batches and order
 | Wave | Lane | Issues | Write scope | Depends on | Release PR batch |
 - Ordering constraints: <shared generated artifacts, methodology versions, budget, expiries>
-- Design-first lanes: <design memo → review → owner approval → build>
+- Design-first lanes (cap 1–2 bounded, buildable in-pass): <design memo → review → owner approval → Build-ready: comment → build>
 
 ## 6. Review
 Every write lane gets an independent diff review before integration. Cap: 3 rounds per lane, then re-scope or escalate to the owner.
@@ -54,6 +55,10 @@ Every write lane gets an independent diff review before integration. Cap: 3 roun
 
 ## 11. Closure rules
 <the closure audit from references/closure-and-batching.md; proposed new issues (default none — each must pass the filing bar and name why no existing open issue or standing tracker can hold it)>
+- Resolution-efficiency metrics to report in `CLOSURE.md`:
+  1. Actionable open backlog (excluding standing trackers, `ops:calendar` >7d, `ops:upstream-wait`): <before> → <after>
+  2. Full-closure ratio (`closed / (closed + partial-advance + design-first)`): <ratio>
+  3. Net issue delta (`closed − newly filed`): <delta>
 ```
 
 ## Filling Rules
